@@ -17,4 +17,4 @@ services:
       - ai-unlimited
 
 networks:
-  ai-unlimited:
+  td-ai-unlimited:
