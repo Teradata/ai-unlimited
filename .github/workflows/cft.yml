@@ -1,0 +1,47 @@
+name: Lint CloudFormation Templates
+
+on: [push]
+
+jobs:
+
+  # WILL RE ENABLE AFTER EVALUATION OF INIITAL FINDINGS
+
+  # sast-cfn-lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: grolston/cfn-security@v2
+  #     with:
+  #       cloudformation_directory: './deployments/aws/'
+  #       scanner: "cfn-lint"
+
+  # sast-cfn-nag:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: grolston/cfn-security@v2
+  #     with:
+  #       cloudformation_directory: './deployments/aws/'
+  #       scanner: "cfn-nag"
+
+  # sast-checkov:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: grolston/cfn-security@v2
+  #     with:
+  #       cloudformation_directory: './deployments/aws/'
+  #       scanner: "checkov"
+
+  cloudformation-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Cloud Formation Formatter
+        run: |
+          gh release download --repo aws-cloudformation/rain --pattern "*_linux-amd64.zip" --output "rain.zip"
+          unzip -j "rain.zip" "*/rain"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Check Formatting
+        run: ./rain fmt --verify ./deployments/aws/*.yaml

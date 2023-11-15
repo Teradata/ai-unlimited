@@ -1,0 +1,13 @@
+#cloud-config
+write_files:
+- encoding: b64
+  content: "{0}"
+  owner: root:root
+  path: /usr/lib/systemd/system/workspaces.service
+  permissions: '0640'
+
+runcmd:
+- while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
+- sleep 60
+- systemctl enable workspaces.service
+- systemctl start workspaces.service

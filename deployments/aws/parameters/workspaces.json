@@ -1,0 +1,82 @@
+[
+  {
+    "ParameterKey": "AccessCIDR",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "PrefixList",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "SecurityGroup",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "AvailabilityZone",
+    "ParameterValue": "us-west-2a"
+  },
+  {
+    "ParameterKey": "LoadBalancerScheme",
+    "ParameterValue": "internet-facing"
+  },
+  {
+    "ParameterKey": "LoadBalancing",
+    "ParameterValue": "NetworkLoadBalancer"
+  },
+  {
+    "ParameterKey": "PersistentVolumeDeletionPolicy",
+    "ParameterValue": "Retain"
+  },
+  {
+    "ParameterKey": "PersistentVolumeSize",
+    "ParameterValue": "20"
+  },
+  {
+    "ParameterKey": "RootVolumeSize",
+    "ParameterValue": "20"
+  },
+  {
+    "ParameterKey": "Session",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "Private",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "Subnet",
+    "ParameterValue": "subnet-0123456789abcdef1g"
+  },
+  {
+    "ParameterKey": "UsePersistentVolume",
+    "ParameterValue": "New"
+  },
+  {
+    "ParameterKey": "Vpc",
+    "ParameterValue": "vpc-0123456789abcdefg"
+  },
+  {
+    "ParameterKey": "WorkspacesName",
+    "ParameterValue": "workspaces"
+  },
+  {
+    "ParameterKey": "TerminationProtection",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "IamRole",
+    "ParameterValue": "New"
+  },
+  {
+    "ParameterKey": "IamRoleName",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "IamPermissionsBoundary",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": ""
+  }
+]

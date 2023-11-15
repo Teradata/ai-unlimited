@@ -1,0 +1,88 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.18.4.5664",
+      "templateHash": "11608979749384228954"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "accessCidrs": {
+      "type": "array"
+    },
+    "sshAccess": {
+      "type": "bool"
+    },
+    "httpPort": {
+      "type": "string"
+    },
+    "grpcPort": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2022-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "SSH",
+            "properties": {
+              "priority": 700,
+              "protocol": "Tcp",
+              "access": "[if(parameters('sshAccess'), 'Allow', 'Deny')]",
+              "direction": "Inbound",
+              "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22"
+            }
+          },
+          {
+            "name": "HTTP",
+            "properties": {
+              "priority": 701,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "[parameters('httpPort')]"
+            }
+          },
+          {
+            "name": "GRPC",
+            "properties": {
+              "priority": 702,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "[parameters('grpcPort')]"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "Id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+[Unit]
+Description=workspaces
+After=docker.service
+Requires=docker.service
+StartLimitInterval=200
+StartLimitBurst=10
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=2
+ExecStartPre=-/usr/bin/mkdir -p /etc/td
+ExecStartPre=-/usr/bin/docker exec %n stop || true
+ExecStartPre=-/usr/bin/docker rm %n || true
+ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
+
+ExecStart=/usr/bin/docker run \
+    -e accept_license=Y \
+    -e PLATFORM=azure \
+    -e ARM_USE_MSI=true \
+    -e ARM_SUBSCRIPTION_ID={5} \
+    -e ARM_TENANT_ID={6} \
+    -v /etc/td:/etc/td \
+    -p {3}:3000 \
+    -p {4}:3282 \
+    --rm --name %n {0}/{1}:{2} workspaces serve -v
+
+[Install]
+WantedBy=multi-user.target

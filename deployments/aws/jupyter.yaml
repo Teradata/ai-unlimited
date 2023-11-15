@@ -1,0 +1,783 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
+
+Metadata:
+  License: TODO
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Jupyter
+        Parameters:
+          - JupyterName
+          - InstanceType
+          - RootVolumeSize
+          - TerminationProtection
+          - JupyterToken
+          - IamRole
+          - IamRoleName
+          - IamPermissionsBoundary
+      - Label:
+          default: Jupyter connection
+        Parameters:
+          - AvailabilityZone
+          - LoadBalancing
+          - LoadBalancerScheme
+          - Private
+          - Session
+          - Vpc
+          - Subnet
+
+          # - ApplicationLoadBalancerSubnets
+          - KeyName
+          - AccessCIDR
+          - PrefixList
+          - SecurityGroup
+          - JupyterToken
+          - JupyterHttpPort
+          - JupyterVersion
+      - Label:
+          default: Persistent volume
+        Parameters:
+          - UsePersistentVolume
+          - PersistentVolumeSize
+          - ExistingPersistentVolumeId
+          - PersistentVolumeDeletionPolicy
+
+Parameters:
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+  JupyterName:
+    Description: The jupyter service instance name
+    Type: String
+    Default: jupyter
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9-]*
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    MaxLength: "20"
+    MinLength: "1"
+
+  JupyterToken:
+    Description: The token or password equivalent used to access Jupyter.
+    Type: String
+    NoEcho: true
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9-]*
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    MaxLength: "64"
+
+  Private:
+    Description: Will Jupyter be deployed in a private network without public IPs?
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  LoadBalancing:
+    Description: "Will Jupyter be accessed via a ALB or NLB? \nThis Load balancer in intended to provide TLS termination and access to private networks,\nnot to add multiple Jupyter instance for workload distribution.\n"
+    Type: String
+    AllowedValues:
+      - None
+      - NetworkLoadBalancer
+
+      # - ApplicationLoadBalancer
+    Default: NetworkLoadBalancer
+
+  LoadBalancerScheme:
+    Description: "If using a LoadBalancer, will it be internal or internet-facing? \nThe DNS name of an Internet-facing load balancer is publicly resolvable to the public IP addresses of the nodes.\nTherefore, Internet-facing load balancers can route requests from clients over the internet. The nodes of an \ninternal load balancer have only private IP addresses. The DNS name of an internal load balancer is publicly\nresolvable to the private IP addresses of the nodes. Therefore, internal load balancers can route requests only\nfrom clients with access to the VPC for the load balancer.\n"
+    Type: String
+    AllowedValues:
+      - internal
+      - internet-facing
+    Default: internet-facing
+
+  Session:
+    Description: Should Jupyter be accessible via AWS Session Manager?
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  Vpc:
+    Description: Network to deploy the jupyter service to.
+    Type: AWS::EC2::VPC::Id
+    ConstraintDescription: must be the name of an existing vpc.
+
+  Subnet:
+    Description: |
+      Subnetwork to deploy the Jupyter service to.
+      If using an ApplicationLoadBalancer for Access, Please select at least two subnets.
+    Type: AWS::EC2::Subnet::Id
+    ConstraintDescription: must be the name of a existing subnet.
+
+  AvailabilityZone:
+    Description: "Availability zone to deploy the Jupyter service to.\nThis must match the subnet, the zone of any pre existing volumes if used, \nand the instance type must be available in the selected zone.\n"
+    Type: AWS::EC2::AvailabilityZone::Name
+    ConstraintDescription: must be the name of a existing subnet.
+
+  # ApplicationLoadBalancerSubnets:
+  #   ConstraintDescription: optional subnets if using Application Load Balancers, must be the names of existing subnets.
+  #   Description: |
+  #     Subnetwork(s) to deploy the Application Load Balancer to.
+  #     If using an ApplicationLoadBalancer for Access, Please select at least two subnets.
+  #   Type: List<AWS::EC2::Subnet::Id>
+  #   Default: []
+  JupyterHttpPort:
+    Description: port to access the jupyter service ui.
+    Type: Number
+    Default: 8888
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
+  JupyterVersion:
+    Description: Which version of jupyter to deploy, uses container version tags, defaults to "latest"
+    Type: String
+    Default: latest
+
+  RootVolumeSize:
+    Description: size of the root disk to the jupyter server.
+    Type: Number
+    Default: 20
+    ConstraintDescription: Size in GB, between 10 and 1000.
+    MinValue: 8
+    MaxValue: 1000
+
+  UsePersistentVolume:
+    Description: size of the optional persistent disk to the jupyter server.
+    Type: String
+    AllowedValues:
+      - None
+      - New
+      - Existing
+    Default: None
+    ConstraintDescription: Specify if you are using a a new persistent volume, an existing one, or none.
+
+  PersistentVolumeSize:
+    Description: size of the optional persistent disk to the jupyter server.
+    Type: Number
+    Default: 20
+    ConstraintDescription: Size in GB, between 10 and 1000.
+    MinValue: 8
+    MaxValue: 1000
+
+  ExistingPersistentVolumeId:
+    Description: Id of the existing persistent volume to attach. Must be int the same availability zone as the Jupyter instance.
+    Type: String
+    Default: None
+
+  PersistentVolumeDeletionPolicy:
+    Description: Behavior for the Persistent Volume when deleting the cloudformations deployment.
+    Type: String
+    AllowedValues:
+      - Delete
+      - Retain
+      - RetainExceptOnCreate
+      - Snapshot
+    Default: Retain
+
+  TerminationProtection:
+    Description: Enable instance termination protection.
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  InstanceType:
+    Description: jupyter EC2 instance type
+    Type: String
+    AllowedValues:
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m3.medium
+      - m3.large
+      - m3.xlarge
+      - m3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - c3.large
+      - c3.xlarge
+      - c3.2xlarge
+      - c3.4xlarge
+      - c3.8xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - r3.large
+      - r3.xlarge
+      - r3.2xlarge
+      - r3.4xlarge
+      - r3.8xlarge
+      - i2.xlarge
+      - i2.2xlarge
+      - i2.4xlarge
+      - i2.8xlarge
+    Default: t3.micro
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances, leave empty if no ssh keys should be included
+    Type: String
+
+  IamRole:
+    Description: |
+      Create a new IAM role for jupyter or use an exiting one.
+      Requires CAPABILITY_IAM if creating a new IAM Role
+    Type: String
+    AllowedValues:
+      - None
+      - New
+      - Existing
+
+  IamRoleName:
+    Description: |
+      Name of an existing IAM Role to assign to Workspaces,
+      or the name to give to the newly created role.
+      Leave blank to use an autogenerated name.
+      Requires CAPABILITY_NAMED_IAM if naming a new IAM Role.
+    Type: String
+    Default: jupyter-iam-role
+
+  IamPermissionsBoundary:
+    Description: |
+      Optional: Arn of a permissions boundary to pass to the IAM Role assigned to Workspaces.
+    Type: String
+
+  AccessCIDR:
+    Description: The IP address range that can be used to communicate with the juptyer instance.
+    Type: String
+    AllowedPattern: ((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2}))|^$
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  PrefixList:
+    Description: The PrefixList that can be used to communicate with the jupyter instance.
+    Type: String
+    ConstraintDescription: must be a valid prefixlist
+
+  SecurityGroup:
+    Description: The SecurityGroup that can be used to communicate with the workspaces instance.
+    Type: String
+    ConstraintDescription: must be a valid securityGroup ID
+
+Rules:
+  subnetsInVpc:
+    Assertions:
+      - Assert:
+          Fn::EachMemberEquals:
+            - Fn::ValueOfAll:
+                - AWS::EC2::Subnet::Id
+                - VpcId
+            - !Ref Vpc
+        AssertDescription: The subnet you selected is not in the VPC
+
+  instanceTypeInZone:
+    Assertions:
+      - Assert:
+          Fn::EachMemberEquals:
+            - Fn::ValueOfAll:
+                - AWS::EC2::Subnet::Id
+                - VpcId
+            - !Ref Vpc
+        AssertDescription: The subnet you selected is not in the VPC
+
+Conditions:
+  HASALB: !Equals [!Ref LoadBalancing, ApplicationLoadBalancer]
+
+  HASNLB: !Equals [!Ref LoadBalancing, NetworkLoadBalancer]
+
+  HASLB: !Or
+    - !Condition HASALB
+    - !Condition HASNLB
+
+  NEEDSROLE: !Equals [!Ref IamRole, New]
+
+  HASPUBLICIP: !Not [!Equals [!Ref Private, "true"]]
+
+  HASKEY: !Not [!Equals [!Ref KeyName, ""]]
+
+  HASCIDRANDLB: !And
+    - !Condition HASLB
+    - !Condition HASCIDR
+
+  HASPREFIXLISTANDLB: !And
+    - !Condition HASLB
+    - !Condition HASPREFIXLIST
+
+  HASSECGROUPANDLB: !And
+    - !Condition HASLB
+    - !Condition HASSECURITYGROUP
+
+  HASLBORNOCIDR: !Or
+    - !Condition HASLB
+    - !Equals [!Ref AccessCIDR, ""]
+
+  HASLBORNOPREFIX: !Or
+    - !Condition HASLB
+    - !Equals [!Ref PrefixList, ""]
+
+  HASLBORNOSECURITYGROUP: !Or
+    - !Condition HASLB
+    - !Equals [!Ref SecurityGroup, ""]
+
+  HASCIDR: !Not [!Equals [!Ref AccessCIDR, ""]]
+
+  HASPREFIXLIST: !Not [!Equals [!Ref PrefixList, ""]]
+
+  HASSECURITYGROUP: !Not [!Equals [!Ref SecurityGroup, ""]]
+
+  HASCIDRORPREFIXLISTORSECGROUP: !Or
+    - !Condition HASCIDR
+    - !Condition HASPREFIXLIST
+    - !Condition HASSECURITYGROUP
+
+  HASCIDRORPREFIXLISTORSECGROUPANDLB: !Or
+    - !Condition HASCIDRANDLB
+    - !Condition HASPREFIXLISTANDLB
+    - !Condition HASSECGROUPANDLB
+
+  USESESSIONMANAGER: !Equals [!Ref Session, "true"]
+
+  NEEDSROLEANDSESSIONMANAGER: !And
+    - !Condition NEEDSROLE
+    - !Condition USESESSIONMANAGER
+
+  NEEDINSTANCEPROFILE: !Or
+    - !Not [!Condition NEEDSROLE]
+    - !Condition NEEDSROLEANDSESSIONMANAGER
+
+  HASKEYANDCIDR: !And
+    - !Condition HASKEY
+    - !Condition HASCIDR
+
+  HASKEYANDPUBLIC: !And
+    - !Condition HASKEY
+    - !Condition HASPUBLICIP
+
+  USENEWPERSISTENTVOLUME: !Equals [!Ref UsePersistentVolume, New]
+
+  USEEXISTINGPERSISTENTVOLUME: !Equals [!Ref UsePersistentVolume, Existing]
+
+  USEPERSISTENTVOLUME: !Or
+    - !Condition USENEWPERSISTENTVOLUME
+    - !Condition USEEXISTINGPERSISTENTVOLUME
+
+  HASIAMPERMISSIONSBOUNDARY: !Not [!Equals [!Ref IamPermissionsBoundary, ""]]
+
+  HASIAMROLENAME: !Not [!Equals [!Ref IamRoleName, ""]]
+
+Resources:
+  JupyterVolume:
+    DeletionPolicy: !Ref PersistentVolumeDeletionPolicy
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      Size: !Ref PersistentVolumeSize
+      Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref JupyterName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+        - Key: Usage
+          Value: persistent storage
+    Condition: USENEWPERSISTENTVOLUME
+
+  JupyterServer:
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          jupyter_install:
+            - prepare_directory
+            - !If
+              - USENEWPERSISTENTVOLUME
+              - prepare_new_storage
+              - !Ref AWS::NoValue
+            - !If
+              - USEPERSISTENTVOLUME
+              - bind_storage
+              - !Ref AWS::NoValue
+            - !If
+              - USEPERSISTENTVOLUME
+              - mount_storage
+              - !Ref AWS::NoValue
+            - install_docker
+            - configure_jupyter_service
+            - start_jupyter_service
+        prepare_directory:
+          commands:
+            mkdir:
+              command: !Sub |
+                #!/bin/bash -xe
+                /usr/bin/mkdir -p /etc/td
+        prepare_new_storage:
+          commands:
+            mkfs:
+              command: !Sub |
+                #!/bin/bash -xe
+                /usr/sbin/mkfs -t ext4 /dev/nvme1n1
+        bind_storage:
+          commands:
+            fstab:
+              command: !Sub |
+                #!/bin/bash -xe
+                /usr/bin/echo "/dev/nvme1n1 /etc/td ext4 defaults 0 2" >> /etc/fstab
+        mount_storage:
+          commands:
+            mount:
+              command: !Sub |
+                #!/bin/bash -xe
+                /usr/bin/mount -a
+        install_docker:
+          commands:
+            install_docker:
+              command: !Sub |
+                #!/bin/bash -xe
+                amazon-linux-extras install docker -y
+                amazon-linux-extras enable docker
+          services:
+            systemd:
+              docker:
+                enabled: "true"
+                ensureRunning: "true"
+        configure_jupyter_service:
+          files:
+            /usr/lib/systemd/system/jupyter.service:
+              content: !Sub |
+                [Unit]
+                Description=jupyter
+                After=docker.service
+                Requires=docker.service
+                StartLimitInterval=200
+                StartLimitBurst=10
+
+                [Service]
+                TimeoutStartSec=0
+                Restart=always
+                RestartSec=2
+                ExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter
+                ExecStartPre=-/usr/bin/docker exec %n stop || true
+                ExecStartPre=-/usr/bin/docker rm %n || true
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-jupyter:${ JupyterVersion }
+                ExecStart=/usr/bin/docker run \
+                    -e accept_license=Y \
+                    -e JUPYTER_TOKEN=${ JupyterToken } \
+                    -v /etc/td/jupyter:/home/jovyan/JupyterLabRoot/userdata \
+                    -p ${ JupyterHttpPort }:8888 \
+                    --rm --name %n teradata/ai-unlimited-jupyter:${ JupyterVersion }
+
+                [Install]
+                WantedBy=multi-user.target
+              group: root
+              mode: "000400"
+              owner: root
+        start_jupyter_service:
+          services:
+            systemd:
+              jupyter:
+                enabled: "true"
+                ensureRunning: "true"
+    Properties:
+      PropagateTagsToVolumeOnCreation: true
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref RootVolumeSize
+            Encrypted: true
+      SubnetId: !Ref Subnet
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !If
+        - HASKEY
+        - !Ref KeyName
+        - !Ref AWS::NoValue
+      DisableApiTermination: !Ref TerminationProtection
+      SecurityGroupIds: [!GetAtt JupyterSecurityGroup.GroupId]
+      IamInstanceProfile: !If
+        - NEEDINSTANCEPROFILE
+        - !Ref JupyterInstanceProfile
+        - !Ref AWS::NoValue
+      Volumes:
+        - !If
+          - USEPERSISTENTVOLUME
+          - Device: /dev/xvdb
+            VolumeId: !If
+              - USENEWPERSISTENTVOLUME
+              - !Ref JupyterVolume
+              - !Ref ExistingPersistentVolumeId
+          - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref JupyterName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+      UserData: !Base64
+        Fn::Sub: |
+          #!/bin/bash -xe
+          yum update -y
+          yum update -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource JupyterServer --configsets jupyter_install --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource JupyterServer --region ${AWS::Region}
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to Jupyter server from LoadBalancer over http, grpc, and ssh
+      SecurityGroupIngress:
+        - FromPort: !Ref JupyterHttpPort
+          IpProtocol: tcp
+          ToPort: !Ref JupyterHttpPort
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+    Condition: HASCIDRORPREFIXLISTORSECGROUPANDLB
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Subnets: [!Ref Subnet]
+      SecurityGroups:
+        - !GetAtt LoadBalancerSecurityGroup.GroupId
+      Type: !If
+        - HASALB
+        - application
+        - network
+    Condition: HASLB
+
+  JupyterHTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !If
+            - HASALB
+            - !Ref JupyterALBHTTPTargetGroup
+            - !Ref JupyterNLBHTTPTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: !Ref JupyterHttpPort
+      Protocol: !If
+        - HASALB
+        - HTTP
+        - TCP
+    Condition: HASLB
+
+  JupyterALBHTTPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      Matcher:
+        HttpCode: "200"
+      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], jupyter, ui, http]]
+      Port: !Ref JupyterHttpPort
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: app_cookie
+        - Key: stickiness.app_cookie.cookie_name
+          Value: TDJUPYTERHTTPSSESSION
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref JupyterServer
+          Port: !Ref JupyterHttpPort
+      VpcId: !Ref Vpc
+    Condition: HASALB
+
+  JupyterNLBHTTPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], jupyter, ui, http]]
+      Port: !Ref JupyterHttpPort
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref JupyterServer
+          Port: !Ref JupyterHttpPort
+      VpcId: !Ref Vpc
+    Condition: HASNLB
+
+  JupyterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to jupyter server over http
+      SecurityGroupIngress:
+        - !If
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref JupyterHttpPort
+            ToPort: !Ref JupyterHttpPort
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - IpProtocol: tcp
+          FromPort: !Ref JupyterHttpPort
+          ToPort: !Ref JupyterHttpPort
+          SourceSecurityGroupId: !If
+            - HASLB
+            - !GetAtt LoadBalancerSecurityGroup.GroupId
+            - !Ref AWS::NoValue
+          CidrIp: !If
+            - HASLBORNOCIDR
+            - !Ref AWS::NoValue
+            - !Ref AccessCIDR
+          SourcePrefixListId: !If
+            - HASLBORNOPREFIX
+            - !Ref AWS::NoValue
+            - !Ref PrefixList
+    Condition: HASCIDRORPREFIXLISTORSECGROUP
+
+  SecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt JupyterSecurityGroup.GroupId
+      CidrIp: !Ref AccessCIDR
+      FromPort: 22
+      IpProtocol: tcp
+      ToPort: 22
+    Condition: HASKEYANDCIDR
+
+  JupyterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+    Condition: NEEDSROLEANDSESSIONMANAGER
+
+  SessionManagerPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join ['-', [jupyter, session, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:DescribeAssociation
+              - ssm:GetDeployablePatchSnapshotForInstance
+              - ssm:GetDocument
+              - ssm:DescribeDocument
+              - ssm:GetManifest
+              - ssm:ListAssociations
+              - ssm:ListInstanceAssociations
+              - ssm:PutInventory
+              - ssm:PutComplianceItems
+              - ssm:PutConfigurePackageResult
+              - ssm:UpdateAssociationStatus
+              - ssm:UpdateInstanceAssociationStatus
+              - ssm:UpdateInstanceInformation
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - ssmmessages:CreateControlChannel
+              - ssmmessages:CreateDataChannel
+              - ssmmessages:OpenControlChannel
+              - ssmmessages:OpenDataChannel
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - ec2messages:AcknowledgeMessage
+              - ec2messages:DeleteMessage
+              - ec2messages:FailMessage
+              - ec2messages:GetEndpoint
+              - ec2messages:GetMessages
+              - ec2messages:SendReply
+            Resource: '*'
+      Roles:
+        - !Ref JupyterRole
+    Condition: NEEDSROLEANDSESSIONMANAGER
+
+  JupyterInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: !If
+        - NEEDSROLEANDSESSIONMANAGER
+        - [!Ref JupyterRole]
+        - [!Ref IamRole]
+    Condition: NEEDINSTANCEPROFILE
+
+Outputs:
+  PublicIP:
+    Description: EC2 public IP
+    Value: !GetAtt JupyterServer.PublicIp
+    Condition: HASPUBLICIP
+
+  PrivateIP:
+    Description: EC2 private IP
+    Value: !GetAtt JupyterServer.PrivateIp
+
+  LoadBalancerJupyterUIAccess:
+    Description: Loadbalancer access endpoint for API Access
+    Value: !Sub "${ LoadBalancer.DNSName }:${ JupyterHttpPort }?token=${ JupyterToken }"
+    Condition: HASLB
+
+  JupyterPublicHttpAccess:
+    Description: Teradata Jupyter Server
+    Value: !Sub "http://${JupyterServer.PublicDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }"
+    Condition: HASPUBLICIP
+
+  JupyterPrivateHttpAccess:
+    Description: Teradata jupyter Server
+    Value: !Sub "http://${JupyterServer.PrivateDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }"
+
+  SecurityGroup:
+    Description: Jupyter Security Group
+    Value: !GetAtt JupyterSecurityGroup.GroupId
+
+  PublicSSHConeection:
+    Description: Jupyter ssh connnection string
+    Value: !Sub "ssh ec2-user@${ JupyterServer.PublicIp }"
+    Condition: HASKEYANDPUBLIC
+
+  PrivateSSHConeection:
+    Description: jupyter ssh connnection string
+    Value: !Sub "ssh ec2-user@${ JupyterServer.PrivateIp }"
+    Condition: HASKEY
+
+  PersistentVolumeId:
+    Description: Id of the new persistent volume created for Jupyter
+    Value: !Ref JupyterVolume
+    Condition: USENEWPERSISTENTVOLUME

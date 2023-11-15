@@ -1,0 +1,327 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.19.5.34762",
+      "templateHash": "8057482723144473764"
+    }
+  },
+  "parameters": {
+    "jupyterName": {
+      "type": "string",
+      "defaultValue": "jupyter",
+      "metadata": {
+        "description": "Name for the jupyter service virtual machine."
+      }
+    },
+    "sshPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key value"
+      }
+    },
+    "jupyterToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "jupyter token value"
+      }
+    },
+    "ubuntuOSVersion": {
+      "type": "string",
+      "defaultValue": "Ubuntu-2004",
+      "allowedValues": [
+        "Ubuntu-1804",
+        "Ubuntu-2004",
+        "Ubuntu-2204"
+      ],
+      "metadata": {
+        "description": "The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+        "description": "The size of the VM"
+      }
+    },
+    "networkName": {
+      "type": "string",
+      "metadata": {
+        "description": "ID of the subnet in the virtual network"
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "ID of the subnet in the virtual network"
+      }
+    },
+    "accessCidrs": {
+      "type": "array",
+      "defaultValue": [
+        "0.0.0.0/0"
+      ],
+      "metadata": {
+        "description": "The CIDR ranges that can be used to communicate with the jupyter instance."
+      }
+    },
+    "httpPort": {
+      "type": "string",
+      "defaultValue": "8888",
+      "metadata": {
+        "description": "port to access the jupyter service UI."
+      }
+    },
+    "sshAccess": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "allow access the jupyter ssh port from the access cidr."
+      }
+    }
+  },
+  "variables": {
+    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable jupyter.service\n- systemctl start jupyter.service",
+    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/mkdir -p /etc/td\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td:/home/jovyan/JupyterLabRoot/userdata \\\n    -p {3}:8888 \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
+    "imageReference": {
+      "Ubuntu-1804": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "18_04-lts-gen2",
+        "version": "latest"
+      },
+      "Ubuntu-2004": {
+        "publisher": "Canonical",
+        "offer": "0001-com-ubuntu-server-focal",
+        "sku": "20_04-lts-gen2",
+        "version": "latest"
+      },
+      "Ubuntu-2204": {
+        "publisher": "Canonical",
+        "offer": "0001-com-ubuntu-server-jammy",
+        "sku": "22_04-lts-gen2",
+        "version": "latest"
+      }
+    },
+    "publicIPAddressName": "[format('{0}PublicIP', parameters('jupyterName'))]",
+    "networkInterfaceName": "[format('{0}NetInt', parameters('jupyterName'))]",
+    "networkSecurityGroupName": "[format('{0}SecGroup', parameters('jupyterName'))]",
+    "osDiskType": "Standard_LRS",
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "/home/azureuser/.ssh/authorized_keys",
+            "keyData": "[parameters('sshPublicKey')]"
+          }
+        ]
+      }
+    },
+    "trustedExtensionName": "GuestAttestation",
+    "trustedExtensionPublisher": "Microsoft.Azure.Security.LinuxAttestation",
+    "trustedExtensionVersion": "1.0",
+    "trustedMaaTenantName": "GuestAttestation",
+    "trustedMaaEndpoint": "[substring('emptystring', 0, 0)]",
+    "dockerExtensionName": "DockerExtension",
+    "dockerExtensionPublisher": "Microsoft.Azure.Extensions",
+    "dockerExtensionVersion": "1.1",
+    "registry": "teradata",
+    "repository": "ai-unlimited-jupyter",
+    "version": "latest",
+    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('repository'), variables('version'), parameters('httpPort'), parameters('jupyterToken')))))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2022-11-01",
+      "name": "[variables('networkInterfaceName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('networkName'), parameters('subnetName'))]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2022-11-01",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "SSH",
+            "properties": {
+              "priority": 700,
+              "protocol": "Tcp",
+              "access": "[if(parameters('sshAccess'), 'Allow', 'Deny')]",
+              "direction": "Inbound",
+              "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22"
+            }
+          },
+          {
+            "name": "HTTP",
+            "properties": {
+              "priority": 701,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "[parameters('httpPort')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2022-11-01",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "publicIPAddressVersion": "IPv4",
+        "dnsSettings": {
+          "domainNameLabel": "[uniqueString(resourceGroup().id, deployment().name, parameters('jupyterName'))]"
+        },
+        "idleTimeoutInMinutes": 4
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-03-01",
+      "name": "[parameters('jupyterName')]",
+      "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[variables('osDiskType')]"
+            }
+          },
+          "imageReference": "[variables('imageReference')[parameters('ubuntuOSVersion')]]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[parameters('jupyterName')]",
+          "adminUsername": "azureuser",
+          "linuxConfiguration": "[variables('linuxConfiguration')]"
+        },
+        "securityProfile": {
+          "securityType": "TrustedLaunch",
+          "uefiSettings": {
+            "secureBootEnabled": true,
+            "vTpmEnabled": true
+          }
+        },
+        "userData": "[variables('cloudInitData')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-03-01",
+      "name": "[format('{0}/{1}', parameters('jupyterName'), variables('trustedExtensionName'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publisher": "[variables('trustedExtensionPublisher')]",
+        "type": "[variables('trustedExtensionName')]",
+        "typeHandlerVersion": "[variables('trustedExtensionVersion')]",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "AttestationConfig": {
+            "MaaSettings": {
+              "maaEndpoint": "[variables('trustedMaaEndpoint')]",
+              "maaTenantName": "[variables('trustedMaaTenantName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('jupyterName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-03-01",
+      "name": "[format('{0}/{1}', parameters('jupyterName'), variables('dockerExtensionName'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publisher": "[variables('dockerExtensionPublisher')]",
+        "type": "[variables('dockerExtensionName')]",
+        "typeHandlerVersion": "[variables('dockerExtensionVersion')]",
+        "autoUpgradeMinorVersion": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('jupyterName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "PublicIP": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')), '2022-11-01').ipAddress]"
+    },
+    "PrivateIP": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2022-11-01').ipConfigurations[0].properties.privateIPAddress]"
+    },
+    "PublicHttpAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}?token={2}', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')), '2022-11-01').ipAddress, parameters('httpPort'), parameters('jupyterToken'))]"
+    },
+    "PrivateHttpAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}', reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2022-11-01').ipConfigurations[0].properties.privateIPAddress, parameters('httpPort'))]"
+    },
+    "sshCommand": {
+      "type": "string",
+      "value": "[format('ssh azureuser@{0}', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')), '2022-11-01').ipAddress)]"
+    }
+  }
+}

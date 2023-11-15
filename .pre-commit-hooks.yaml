@@ -1,0 +1,5 @@
+- id: cfn-format
+  name: Format CloudFormation templates
+  entry: rain fmt -w
+  files: deployment/aws/*.yaml
+  description: Format CloudFormation templates
