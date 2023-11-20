@@ -1,0 +1,829 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.23.1.45101",
+      "templateHash": "4527859388330076542"
+    }
+  },
+  "parameters": {
+    "ResourceGroupName": {
+      "type": "string",
+      "defaultValue": "ai-unlimited-workspace",
+      "metadata": {
+        "description": "name for the resource group."
+      }
+    },
+    "WorkspacesName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name for the Workspace service's virtual machine."
+      }
+    },
+    "PublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key value"
+      }
+    },
+    "OSVersion": {
+      "type": "string",
+      "defaultValue": "Ubuntu-2004",
+      "allowedValues": [
+        "Ubuntu-1804",
+        "Ubuntu-2004",
+        "Ubuntu-2204"
+      ],
+      "metadata": {
+        "description": "The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version."
+      }
+    },
+    "InstanceType": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+        "description": "The Workspace VM type"
+      }
+    },
+    "Network": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the network to run the Workspace service in"
+      }
+    },
+    "Subnet": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the subnet to run the Workspace service in"
+      }
+    },
+    "SecurityGroup": {
+      "type": "string",
+      "defaultValue": "WorkspacesSecurityGroup",
+      "metadata": {
+        "description": "Name of the network security group"
+      }
+    },
+    "AccessCIDRs": {
+      "type": "array",
+      "defaultValue": [
+        "0.0.0.0/0"
+      ],
+      "metadata": {
+        "description": "The CIDR ranges that can be used to communicate with the Workspace service instance."
+      }
+    },
+    "JupyterHttpPort": {
+      "type": "string",
+      "defaultValue": "8888",
+      "metadata": {
+        "description": "port to access the Jupyter Labs UI."
+      }
+    },
+    "WorkspacesHttpPort": {
+      "type": "string",
+      "defaultValue": "3000",
+      "metadata": {
+        "description": "port to access the workspaces service UI."
+      }
+    },
+    "WorkspacesGrpcPort": {
+      "type": "string",
+      "defaultValue": "3282",
+      "metadata": {
+        "description": "port to access the workspaces service api."
+      }
+    },
+    "SourceAppSecGroups": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Source Application Security Groups to access the workspaces service api."
+      }
+    },
+    "detinationAppSecGroups": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Destination Application Security Groups to give access to workspaces service instance."
+      }
+    },
+    "RoleDefinitionId": {
+      "type": "string",
+      "metadata": {
+        "description": "GUID of the Workspaces Role"
+      }
+    },
+    "AllowPublicSSH": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "allow access the workspaces ssh port from the access cidr."
+      }
+    },
+    "UsePersistentVolume": {
+      "type": "string",
+      "defaultValue": "New",
+      "allowedValues": [
+        "New",
+        "None",
+        "Existing"
+      ],
+      "metadata": {
+        "description": "should we use a new or existing volume for persistent data on the workspace server."
+      }
+    },
+    "PersistentVolumeSize": {
+      "type": "int",
+      "defaultValue": 100,
+      "metadata": {
+        "description": "size of the optional persistent disk to the workspace server."
+      }
+    },
+    "ExistingPersistentVolume": {
+      "type": "string",
+      "defaultValue": "NONE",
+      "metadata": {
+        "description": "Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the workspaces server."
+      }
+    },
+    "WorkspacesVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container Version of the Workspace service"
+      }
+    },
+    "JupyterVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container Version of the Jupyter Labs service"
+      }
+    },
+    "JupyterToken": {
+      "type": "string",
+      "defaultValue": "[uniqueString(subscription().id, utcNow())]",
+      "metadata": {
+        "description": "Join token for the Jupyter Labs service"
+      }
+    }
+  },
+  "variables": {
+    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/workspaces.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{1}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable workspace.service\n- systemctl start workspaces.service\n- systemctl enable jupyter.service\n- systemctl start jupyter.service\n",
+    "$fxv#1": "[Unit]\nDescription=workspaces\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/workspace\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -v /etc/td/workspace:/etc/td \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
+    "$fxv#2": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
+    "roleAssignmentName": "[guid(subscription().id, parameters('WorkspacesName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
+    "registry": "teradata",
+    "workspaceRepository": "ai-unlimited-workspaces",
+    "jupyterRepository": "ai-unlimited-jupyter",
+    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('WorkspacesVersion'), parameters('WorkspacesHttpPort'), parameters('WorkspacesGrpcPort'), subscription().subscriptionId, subscription().tenantId)), base64(format(variables('$fxv#2'), variables('registry'), variables('jupyterRepository'), parameters('JupyterVersion'), parameters('JupyterHttpPort'), parameters('JupyterToken')))))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[variables('roleAssignmentName')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('RoleDefinitionId'))]",
+        "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrincipleId.value]"
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "firewall",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "name": {
+            "value": "[parameters('SecurityGroup')]"
+          },
+          "accessCidrs": {
+            "value": "[parameters('AccessCIDRs')]"
+          },
+          "sshAccess": {
+            "value": "[parameters('AllowPublicSSH')]"
+          },
+          "workspacesHttpPort": {
+            "value": "[parameters('WorkspacesHttpPort')]"
+          },
+          "workspacesGrpcPort": {
+            "value": "[parameters('WorkspacesGrpcPort')]"
+          },
+          "jupyterHttpPort": {
+            "value": "[parameters('JupyterHttpPort')]"
+          },
+          "sourceAppSecGroups": {
+            "value": "[parameters('SourceAppSecGroups')]"
+          },
+          "detinationAppSecGroups": {
+            "value": "[parameters('detinationAppSecGroups')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "16212577407509280702"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "accessCidrs": {
+              "type": "array",
+              "defaultValue": []
+            },
+            "sourceAppSecGroups": {
+              "type": "array",
+              "defaultValue": []
+            },
+            "detinationAppSecGroups": {
+              "type": "array",
+              "defaultValue": []
+            },
+            "sshAccess": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "workspacesHttpPort": {
+              "type": "string",
+              "defaultValue": "None"
+            },
+            "workspacesGrpcPort": {
+              "type": "string",
+              "defaultValue": "None"
+            },
+            "jupyterHttpPort": {
+              "type": "string",
+              "defaultValue": "None"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2022-11-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]"
+            },
+            {
+              "condition": "[parameters('sshAccess')]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), format('{0}-ssh-allow', parameters('name')))]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "destinationApplicationSecurityGroups",
+                    "count": "[length(parameters('detinationAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('detinationAppSecGroups')[copyIndex('destinationApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  },
+                  {
+                    "name": "sourceApplicationSecurityGroups",
+                    "count": "[length(parameters('sourceAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('sourceAppSecGroups')[copyIndex('sourceApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  }
+                ],
+                "access": "Allow",
+                "description": "allow ssh to the workspace instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "22",
+                "direction": "Inbound",
+                "priority": 700,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(parameters('sshAccess'))]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), format('{0}-ssh-deny', parameters('name')))]",
+              "properties": {
+                "access": "[if(parameters('sshAccess'), 'Allow', 'Deny')]",
+                "description": "deny ssh to the workspace instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "22",
+                "direction": "Inbound",
+                "priority": 700,
+                "protocol": "Tcp",
+                "sourceAddressPrefix": "*",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(equals(parameters('workspacesHttpPort'), 'None'))]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-http-allow', parameters('name')))]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "destinationApplicationSecurityGroups",
+                    "count": "[length(parameters('detinationAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('detinationAppSecGroups')[copyIndex('destinationApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  },
+                  {
+                    "name": "sourceApplicationSecurityGroups",
+                    "count": "[length(parameters('sourceAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('sourceAppSecGroups')[copyIndex('sourceApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  }
+                ],
+                "access": "Allow",
+                "description": "allow http to the workspace instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "[parameters('workspacesHttpPort')]",
+                "direction": "Inbound",
+                "priority": 701,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(equals(parameters('workspacesGrpcPort'), 'None'))]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-grpc-allow', parameters('name')))]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "destinationApplicationSecurityGroups",
+                    "count": "[length(parameters('detinationAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('detinationAppSecGroups')[copyIndex('destinationApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  },
+                  {
+                    "name": "sourceApplicationSecurityGroups",
+                    "count": "[length(parameters('sourceAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('sourceAppSecGroups')[copyIndex('sourceApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  }
+                ],
+                "access": "Allow",
+                "description": "allow grpc to the workspace instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "[parameters('workspacesGrpcPort')]",
+                "direction": "Inbound",
+                "priority": 702,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+              ]
+            },
+            {
+              "condition": "[not(equals(parameters('jupyterHttpPort'), 'None'))]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), format('{0}-juptyer-http-allow', parameters('name')))]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "destinationApplicationSecurityGroups",
+                    "count": "[length(parameters('detinationAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('detinationAppSecGroups')[copyIndex('destinationApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  },
+                  {
+                    "name": "sourceApplicationSecurityGroups",
+                    "count": "[length(parameters('sourceAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('sourceAppSecGroups')[copyIndex('sourceApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  }
+                ],
+                "access": "Allow",
+                "description": "allow http to the jupyter instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "[parameters('jupyterHttpPort')]",
+                "direction": "Inbound",
+                "priority": 703,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "Id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "workspaces",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "name": {
+            "value": "[parameters('WorkspacesName')]"
+          },
+          "adminUsername": {
+            "value": "azureuser"
+          },
+          "sshPublicKey": {
+            "value": "[parameters('PublicKey')]"
+          },
+          "dnsLabelPrefix": {
+            "value": "[uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('WorkspacesName'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('InstanceType')]"
+          },
+          "subnetId": {
+            "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Network/virtualNetworks/subnets', parameters('Network'), parameters('Subnet'))]"
+          },
+          "networkSecurityGroupID": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall'), '2022-09-01').outputs.Id.value]"
+          },
+          "osVersion": {
+            "value": "[parameters('OSVersion')]"
+          },
+          "cloudInitData": {
+            "value": "[variables('cloudInitData')]"
+          },
+          "usePersistentVolume": {
+            "value": "[parameters('UsePersistentVolume')]"
+          },
+          "persistentVolumeSize": {
+            "value": "[parameters('PersistentVolumeSize')]"
+          },
+          "existingPersistentVolume": {
+            "value": "[parameters('ExistingPersistentVolume')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "16549388062424742652"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "adminUsername": {
+              "type": "string"
+            },
+            "sshPublicKey": {
+              "type": "string"
+            },
+            "dnsLabelPrefix": {
+              "type": "string",
+              "defaultValue": "[toLower(format('$td{0}', uniqueString('ai unlimited', resourceGroup().id)))]"
+            },
+            "vmSize": {
+              "type": "string"
+            },
+            "subnetId": {
+              "type": "string"
+            },
+            "networkSecurityGroupID": {
+              "type": "string"
+            },
+            "osVersion": {
+              "type": "string"
+            },
+            "usePersistentVolume": {
+              "type": "string"
+            },
+            "persistentVolumeSize": {
+              "type": "int"
+            },
+            "existingPersistentVolume": {
+              "type": "string"
+            },
+            "cloudInitData": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "imageReference": {
+              "Ubuntu-1804": {
+                "publisher": "Canonical",
+                "offer": "UbuntuServer",
+                "sku": "18_04-lts-gen2",
+                "version": "latest"
+              },
+              "Ubuntu-2004": {
+                "publisher": "Canonical",
+                "offer": "0001-com-ubuntu-server-focal",
+                "sku": "20_04-lts-gen2",
+                "version": "latest"
+              },
+              "Ubuntu-2204": {
+                "publisher": "Canonical",
+                "offer": "0001-com-ubuntu-server-jammy",
+                "sku": "22_04-lts-gen2",
+                "version": "latest"
+              }
+            },
+            "publicIPAddressName": "[format('{0}PublicIP', parameters('name'))]",
+            "networkInterfaceName": "[format('{0}NetInt', parameters('name'))]",
+            "osDiskType": "Standard_LRS",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": true,
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                    "keyData": "[parameters('sshPublicKey')]"
+                  }
+                ]
+              }
+            },
+            "trustedExtensionName": "GuestAttestation",
+            "trustedExtensionPublisher": "Microsoft.Azure.Security.LinuxAttestation",
+            "trustedExtensionVersion": "1.0",
+            "trustedMaaTenantName": "GuestAttestation",
+            "trustedMaaEndpoint": "[substring('emptystring', 0, 0)]",
+            "dockerExtensionName": "DockerExtension",
+            "dockerExtensionPublisher": "Microsoft.Azure.Extensions",
+            "dockerExtensionVersion": "1.1"
+          },
+          "resources": [
+            {
+              "condition": "[equals(parameters('usePersistentVolume'), 'New')]",
+              "type": "Microsoft.Compute/disks",
+              "apiVersion": "2023-04-02",
+              "name": "[format('{0}-disk', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "creationData": {
+                  "createOption": "Empty"
+                },
+                "diskSizeGB": "[parameters('persistentVolumeSize')]",
+                "maxShares": 1,
+                "osType": "Linux"
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2022-11-01",
+              "name": "[variables('networkInterfaceName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic",
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+                      }
+                    }
+                  }
+                ],
+                "networkSecurityGroup": {
+                  "id": "[parameters('networkSecurityGroupID')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2022-11-01",
+              "name": "[variables('publicIPAddressName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static",
+                "publicIPAddressVersion": "IPv4",
+                "dnsSettings": {
+                  "domainNameLabel": "[parameters('dnsLabelPrefix')]"
+                },
+                "idleTimeoutInMinutes": 4
+              }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('vmSize')]"
+                },
+                "storageProfile": {
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "[variables('osDiskType')]"
+                    }
+                  },
+                  "dataDisks": "[if(not(equals(parameters('usePersistentVolume'), 'None')), createArray(), createArray(createObject('lun', 0, 'createOption', 'Attach', 'managedDisk', createObject('id', if(equals(parameters('usePersistentVolume'), 'New'), resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name'))), resourceId('Microsoft.Compute/disks', parameters('existingPersistentVolume')))))))]",
+                  "imageReference": "[variables('imageReference')[parameters('osVersion')]]"
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+                    }
+                  ]
+                },
+                "osProfile": {
+                  "computerName": "[parameters('name')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "linuxConfiguration": "[variables('linuxConfiguration')]"
+                },
+                "securityProfile": {
+                  "securityType": "TrustedLaunch",
+                  "uefiSettings": {
+                    "secureBootEnabled": true,
+                    "vTpmEnabled": true
+                  }
+                },
+                "userData": "[parameters('cloudInitData')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]",
+                "[resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2023-03-01",
+              "name": "[format('{0}/{1}', parameters('name'), variables('trustedExtensionName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "[variables('trustedExtensionPublisher')]",
+                "type": "[variables('trustedExtensionName')]",
+                "typeHandlerVersion": "[variables('trustedExtensionVersion')]",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                  "AttestationConfig": {
+                    "MaaSettings": {
+                      "maaEndpoint": "[variables('trustedMaaEndpoint')]",
+                      "maaTenantName": "[variables('trustedMaaTenantName')]"
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2023-03-01",
+              "name": "[format('{0}/{1}', parameters('name'), variables('dockerExtensionName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "[variables('dockerExtensionPublisher')]",
+                "type": "[variables('dockerExtensionName')]",
+                "typeHandlerVersion": "[variables('dockerExtensionVersion')]",
+                "autoUpgradeMinorVersion": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "PublicIP": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')), '2022-11-01').ipAddress]"
+            },
+            "PrivateIP": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2022-11-01').ipConfigurations[0].properties.privateIPAddress]"
+            },
+            "PrincipleId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Compute/virtualMachines', parameters('name')), '2023-03-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "PublicIP": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value]"
+    },
+    "PrivateIP": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value]"
+    },
+    "WorkspacesPublicHttpAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value, parameters('WorkspacesHttpPort'))]"
+    },
+    "WorkspacesPrivateHttpAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value, parameters('WorkspacesHttpPort'))]"
+    },
+    "WorkspacesPublicGrpcAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value, parameters('WorkspacesGrpcPort'))]"
+    },
+    "WorkspacesPrivateGrpcAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value, parameters('WorkspacesGrpcPort'))]"
+    },
+    "JupyterLabPublicHttpAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+    },
+    "JupyterLabPrivateHttpAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+    },
+    "sshCommand": {
+      "type": "string",
+      "value": "[format('ssh azureuser@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value)]"
+    },
+    "SecurityGroup": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall'), '2022-09-01').outputs.Id.value]"
+    }
+  }
+}

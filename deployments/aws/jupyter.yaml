@@ -147,7 +147,7 @@ Parameters:
     MaxValue: 1000
 
   UsePersistentVolume:
-    Description: size of the optional persistent disk to the jupyter server.
+    Description: Should we use a new or existing volume for persistent data on the jupyter server.
     Type: String
     AllowedValues:
       - None

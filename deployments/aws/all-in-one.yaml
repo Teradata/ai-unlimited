@@ -173,7 +173,7 @@ Parameters:
     MaxValue: 1000
 
   UsePersistentVolume:
-    Description: size of the optional persistent disk to the workspaces server.
+    Description: Should we use a new or existing volume for persistent data on the workspaces/jupyter server.
     Type: String
     AllowedValues:
       - None
@@ -191,7 +191,7 @@ Parameters:
     MaxValue: 1000
 
   ExistingPersistentVolumeId:
-    Description: Id of the existing persistent volume to attach. Must be int the same availability zone as the workspaces instance.
+    Description: Id of the existing persistent volume to attach. Must be in the same availability zone as the workspaces instance.
     Type: String
     Default: None
 

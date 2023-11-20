@@ -4,11 +4,11 @@ targetScope = 'subscription'
 param name string = 'workspaces'
 
 @description('...')
-@allowed(['West US'])
+@allowed([ 'West US' ])
 param location string = 'West US'
 
 @description('New network CIDR.')
-param networkCidr array = ['10.0.0.0/16']
+param networkCidr array = [ '10.0.0.0/16' ]
 
 @description('New subnet CIDR.')
 param subnetCidr string = '10.0.0.0/24'
@@ -18,7 +18,7 @@ resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   location: location
 }
 
-module network './modules/network.bicep' = {
+module network '../modules/network.bicep' = {
   scope: rg
   name: 'networkDeployment'
   params: {
@@ -30,7 +30,7 @@ module network './modules/network.bicep' = {
 }
 
 resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
-  name:  guid(subscription().id, rg.id)
+  name: guid(subscription().id, rg.id)
   properties: {
     roleName: 'Custom Role - Workspaces ${name} Regulus Deployment Permissions'
     description: 'Subscription level permissions for workspaces to create ai-unlimited deployments in there own resource groups'
@@ -58,6 +58,9 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.ManagedIdentity/userAssignedIdentities/listAssociatedResources/action'
           'Microsoft.ManagedIdentity/userAssignedIdentities/read'
           'Microsoft.ManagedIdentity/userAssignedIdentities/write'
+          'Microsoft.Network/applicationSecurityGroups/read'
+          'Microsoft.Network/applicationSecurityGroups/write'
+          'Microsoft.Network/applicationSecurityGroups/joinIpConfiguration/action'
           'Microsoft.Network/virtualNetworks/read'
           'Microsoft.Network/virtualNetworks/write'
           'Microsoft.Network/virtualNetworks/delete'

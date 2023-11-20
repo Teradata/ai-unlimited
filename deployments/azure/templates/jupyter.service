@@ -9,7 +9,8 @@ StartLimitBurst=10
 TimeoutStartSec=0
 Restart=always
 RestartSec=2
-ExecStartPre=-/usr/bin/mkdir -p /etc/td
+ExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited
+ExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}
 ExecStartPre=-/usr/bin/docker exec %n stop || true
 ExecStartPre=-/usr/bin/docker rm %n || true
 ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
@@ -17,8 +18,10 @@ ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
 ExecStart=/usr/bin/docker run \
     -e accept_license=Y \
     -e JUPYTER_TOKEN={4} \
-    -v /etc/td:/home/jovyan/JupyterLabRoot/userdata \
+    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \
+    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \
     -p {3}:8888 \
+    --network ai_unlimited \
     --rm --name %n {0}/{1}:{2}
 
 [Install]

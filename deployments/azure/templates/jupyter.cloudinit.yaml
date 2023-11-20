@@ -7,6 +7,12 @@ write_files:
   permissions: '0640'
 
 runcmd:
+- mkdir -p /etc/td 
+- |
+    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');
+    if [ -n "${{PERMDISK}}" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi
+    /usr/bin/echo "LABEL=WORKSPACES /etc/td ext4 defaults 0 2" >> /etc/fstab
+    /usr/bin/mount -a
 - while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
 - sleep 60
 - systemctl enable jupyter.service
