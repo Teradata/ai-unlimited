@@ -69,6 +69,8 @@ var roleAssignmentName = guid(subscription().id, WorkspacesName, rg.id, RoleDefi
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 
+var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, WorkspacesName)}'
+
 var cloudInitData = base64(
   format(
     loadTextContent('../templates/workspaces.cloudinit.yaml'),
@@ -124,7 +126,7 @@ module workspaces '../modules/instance.bicep' = {
     name: WorkspacesName
     adminUsername: 'azureuser'
     sshPublicKey: PublicKey
-    dnsLabelPrefix: uniqueString(rg.id, deployment().name, WorkspacesName)
+    dnsLabelPrefix: dnsLabelPrefix
     vmSize: InstanceType
     subnetId: subnet.id
     networkSecurityGroupID: firewall.outputs.Id

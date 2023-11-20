@@ -64,6 +64,8 @@ param JupyterToken string = uniqueString(subscription().id, utcNow())
 var registry = 'teradata'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
+var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, JupyterName)}'
+
 var cloudInitData = base64(
   format(
     loadTextContent('../templates/jupyter.cloudinit.yaml'),
@@ -116,7 +118,7 @@ module workspaces '../modules/instance.bicep' = {
     name: JupyterName
     adminUsername: 'azureuser'
     sshPublicKey: PublicKey
-    dnsLabelPrefix: uniqueString(rg.id, deployment().name, JupyterName)
+    dnsLabelPrefix: dnsLabelPrefix
     vmSize: InstanceType
     subnetId: subnet.id
     networkSecurityGroupID: firewall.outputs.Id
