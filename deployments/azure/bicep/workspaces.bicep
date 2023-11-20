@@ -1,14 +1,14 @@
 targetScope = 'subscription'
 
 @description('name for the resource group.')
-param resourceGroupName string = 'workspaces'
+param ResourceGroupName string = 'ai-unlimited-workspace'
 
-@description('Name for the workspaces service virtual machine.')
-param workspacesName string
+@description('Name for the Workspace service\'s virtual machine.')
+param WorkspacesName string
 
 @description('SSH public key value')
 @secure()
-param sshPublicKey string
+param PublicKey string
 
 @description('The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version.')
 @allowed([
@@ -16,79 +16,123 @@ param sshPublicKey string
   'Ubuntu-2004'
   'Ubuntu-2204'
 ])
-param ubuntuOSVersion string = 'Ubuntu-2004'
+param OSVersion string = 'Ubuntu-2004'
 
-@description('The size of the VM')
-param vmSize string = 'Standard_D2s_v3'
+@description('The Workspace VM type')
+param InstanceType string = 'Standard_D2s_v3'
 
-@description('Name of the subnet to run Workspaces in')
-param  networkName string
+@description('Name of the network to run the Workspace service in')
+param Network string
 
-@description('Name of the subnet to run Workspaces in')
-param subnetName string
+@description('Name of the subnet to run the Workspace service in')
+param Subnet string
 
-@description('Name of the Network Security Group')
-param networkSecurityGroupName string = 'WorkspacesSecurityGroup'
+@description('Name of the network security group')
+param SecurityGroup string = 'WorkspacesSecurityGroup'
 
-@description('The CIDR ranges that can be used to communicate with the workspaces instance.')
-param accessCidrs array = ['0.0.0.0/0']
+@description('The CIDR ranges that can be used to communicate with the Workspace service instance.')
+param AccessCIDRs array = [ '0.0.0.0/0' ]
 
 @description('port to access the workspaces service UI.')
-param httpPort string = '3000'
+param WorkspacesHttpPort string = '3000'
 
 @description('port to access the workspaces service api.')
-param grpcPort string = '3282'
+param WorkspacesGrpcPort string = '3282'
+
+@description('Source Application Security Groups to access the workspaces service api.')
+param SourceAppSecGroups array = []
+
+@description('Destination Application Security Groups to give access to workspaces service instance.')
+param detinationAppSecGroups array = []
 
 @description('GUID of the Workspaces Role')
-param roleDefinitionId string
+param RoleDefinitionId string
 
 @description('allow access the workspaces ssh port from the access cidr.')
-param sshAccess bool = true
+param AllowPublicSSH bool = true
 
-var roleAssignmentName = guid(subscription().id, workspacesName, rg.id , roleDefinitionId)
+@description('should we use a new or existing volume for persistent data on the workspace server.')
+@allowed([ 'New', 'None', 'Existing' ])
+param UsePersistentVolume string = 'New'
+
+@description('size of the optional persistent disk to the workspace server.')
+param PersistentVolumeSize int = 100
+
+@description('Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the workspaces server.')
+param ExistingPersistentVolume string = 'NONE'
+
+@description('Container Version of the Workspace service')
+param WorkspacesVersion string = 'latest'
+
+var roleAssignmentName = guid(subscription().id, WorkspacesName, rg.id, RoleDefinitionId)
+
+var registry = 'teradata'
+var workspaceRepository = 'ai-unlimited-workspaces'
+
+var cloudInitData = base64(
+  format(
+    loadTextContent('../templates/workspaces.cloudinit.yaml'),
+    base64(
+      format(
+        loadTextContent('../templates/workspaces.service'),
+        registry,
+        workspaceRepository,
+        WorkspacesVersion,
+        WorkspacesHttpPort,
+        WorkspacesGrpcPort,
+        subscription().subscriptionId,
+        subscription().tenantId
+      )
+    )
+  )
+)
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
-  name: resourceGroupName
+  name: ResourceGroupName
 }
 
 resource network 'Microsoft.Network/virtualNetworks@2022-11-01' existing = {
   scope: rg
-  name: networkName
+  name: Network
 }
 
 resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' existing = {
   parent: network
-  name: subnetName
+  name: Subnet
 }
 
-module firewall 'modules/firewall.bicep' = {
+module firewall '../modules/firewall.bicep' = {
   scope: rg
   name: 'firewall'
   params: {
     location: rg.location
-    name: networkSecurityGroupName
-    accessCidrs: accessCidrs
-    sshAccess: sshAccess
-    httpPort: httpPort
-    grpcPort: grpcPort
+    name: SecurityGroup
+    accessCidrs: AccessCIDRs
+    sshAccess: AllowPublicSSH
+    workspacesHttpPort: WorkspacesHttpPort
+    workspacesGrpcPort: WorkspacesGrpcPort
+    sourceAppSecGroups: SourceAppSecGroups
+    detinationAppSecGroups: detinationAppSecGroups
   }
 }
 
-module workspaces 'modules/instance.bicep' = {
+module workspaces '../modules/instance.bicep' = {
   scope: rg
   name: 'workspaces'
   params: {
     location: rg.location
-    name: workspacesName
+    name: WorkspacesName
     adminUsername: 'azureuser'
-    sshPublicKey: sshPublicKey
-    dnsLabelPrefix: uniqueString(rg.id, deployment().name, workspacesName)
-    vmSize: vmSize
+    sshPublicKey: PublicKey
+    dnsLabelPrefix: uniqueString(rg.id, deployment().name, WorkspacesName)
+    vmSize: InstanceType
     subnetId: subnet.id
     networkSecurityGroupID: firewall.outputs.Id
-    httpPort: httpPort
-    grpcPort: grpcPort
-    ubuntuOSVersion: ubuntuOSVersion
+    osVersion: OSVersion
+    cloudInitData: cloudInitData
+    usePersistentVolume: UsePersistentVolume
+    persistentVolumeSize: PersistentVolumeSize
+    existingPersistentVolume: ExistingPersistentVolume
   }
 }
 
@@ -96,16 +140,16 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: subscription()
   name: roleAssignmentName
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitionId)
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', RoleDefinitionId)
     principalId: workspaces.outputs.PrincipleId
   }
 }
 
 output PublicIP string = workspaces.outputs.PublicIP
 output PrivateIP string = workspaces.outputs.PrivateIP
-output PublicHttpAccess string = 'http://${ workspaces.outputs.PublicIP }:${ httpPort }'
-output PrivateHttpAccess string = 'http://${ workspaces.outputs.PrivateIP }:${ httpPort }'
-output PublicGrpcAccess string = 'http://${ workspaces.outputs.PublicIP }:${ grpcPort }'
-output PrivateGrpcAccess string = 'http://${ workspaces.outputs.PrivateIP }:${ grpcPort }'
-output SecurityGroup string = firewall.outputs.Id
+output WorkspacesPublicHttpAccess string = 'http://${workspaces.outputs.PublicIP}:${WorkspacesHttpPort}'
+output WorkspacesPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesHttpPort}'
+output WorkspacesPublicGrpcAccess string = 'http://${workspaces.outputs.PublicIP}:${WorkspacesGrpcPort}'
+output WorkspacesPrivateGrpcAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesGrpcPort}'
 output sshCommand string = 'ssh azureuser@${workspaces.outputs.PublicIP}'
+output SecurityGroup string = firewall.outputs.Id

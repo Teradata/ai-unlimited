@@ -1,13 +1,14 @@
-@description('Name for the jupyter service virtual machine.')
-param jupyterName string = 'jupyter'
+targetScope = 'subscription'
+
+@description('name for the resource group.')
+param ResourceGroupName string = 'ai-unlimited-jupyter'
+
+@description('Name for the Jupyter Labs service\'s virtual machine.')
+param JupyterName string
 
 @description('SSH public key value')
 @secure()
-param sshPublicKey string
-
-@description('jupyter token value')
-@secure()
-param jupyterToken string
+param PublicKey string
 
 @description('The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version.')
 @allowed([
@@ -15,252 +16,121 @@ param jupyterToken string
   'Ubuntu-2004'
   'Ubuntu-2204'
 ])
-param ubuntuOSVersion string = 'Ubuntu-2004'
+param OSVersion string = 'Ubuntu-2004'
 
-@description('The size of the VM')
-param vmSize string = 'Standard_D2s_v3'
+@description('The Jupyter Labs VM type')
+param InstanceType string = 'Standard_D2s_v3'
 
-@description('ID of the subnet in the virtual network')
-param networkName string
+@description('Name of the network to run the Jupyter Labs service in')
+param Network string
 
-@description('ID of the subnet in the virtual network')
-param subnetName string
+@description('Name of the subnet to run the Jupyter Labs service in')
+param Subnet string
 
-@description('The CIDR ranges that can be used to communicate with the jupyter instance.')
-param accessCidrs array = ['0.0.0.0/0']
+@description('Name of the network security group')
+param SecurityGroup string = 'JupyterSecurityGroup'
 
-@description('port to access the jupyter service UI.')
-param httpPort string = '8888'
+@description('The CIDR ranges that can be used to communicate with the Jupyter Labs service instance.')
+param AccessCIDRs array = [ '0.0.0.0/0' ]
 
-@description('allow access the jupyter ssh port from the access cidr.')
-param sshAccess bool = true
+@description('port to access the Jupyter Labs UI.')
+param JupyterHttpPort string = '8888'
 
-var imageReference = {
-  'Ubuntu-1804': {
-    publisher: 'Canonical'
-    offer: 'UbuntuServer'
-    sku: '18_04-lts-gen2'
-    version: 'latest'
-  }
-  'Ubuntu-2004': {
-    publisher: 'Canonical'
-    offer: '0001-com-ubuntu-server-focal'
-    sku: '20_04-lts-gen2'
-    version: 'latest'
-  }
-  'Ubuntu-2204': {
-    publisher: 'Canonical'
-    offer: '0001-com-ubuntu-server-jammy'
-    sku: '22_04-lts-gen2'
-    version: 'latest'
-  }
-}
-var publicIPAddressName = '${jupyterName}PublicIP'
-var networkInterfaceName = '${jupyterName}NetInt'
-var networkSecurityGroupName = '${jupyterName}SecGroup'
+@description('Source Application Security Groups to access the Jupyter Labs service api.')
+param SourceAppSecGroups array = []
 
-var osDiskType = 'Standard_LRS'
-var linuxConfiguration = {
-  disablePasswordAuthentication: true
-  ssh: {
-    publicKeys: [
-      {
-        path: '/home/azureuser/.ssh/authorized_keys'
-        keyData: sshPublicKey
-      }
-    ]
-  }
-}
+@description('Destination Application Security Groups to give access to Jupyter Labs service instance.')
+param detinationAppSecGroups array = []
 
-var trustedExtensionName = 'GuestAttestation'
-var trustedExtensionPublisher = 'Microsoft.Azure.Security.LinuxAttestation'
-var trustedExtensionVersion = '1.0'
-var trustedMaaTenantName = 'GuestAttestation'
-var trustedMaaEndpoint = substring('emptystring', 0, 0)
-var dockerExtensionName = 'DockerExtension'
-var dockerExtensionPublisher = 'Microsoft.Azure.Extensions'
-var dockerExtensionVersion = '1.1'
+@description('allow access the Jupyter Labs ssh port from the access cidr.')
+param AllowPublicSSH bool = true
+
+@description('should we use a new or existing volume for persistent data on the workspace server.')
+@allowed([ 'New', 'None', 'Existing' ])
+param UsePersistentVolume string = 'New'
+
+@description('size of the optional persistent disk to the workspace server.')
+param PersistentVolumeSize int = 100
+
+@description('Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the Jupyter Labs server.')
+param ExistingPersistentVolume string = 'NONE'
+
+@description('Container Version of the Jupyter Labs service')
+param JupyterVersion string = 'latest'
+
+@description('Join token for the Jupyter Labs service')
+param JupyterToken string = uniqueString(subscription().id, utcNow())
 
 var registry = 'teradata'
-var repository = 'ai-unlimited-jupyter'
-var version = 'latest'
+var jupyterRepository = 'ai-unlimited-jupyter'
+
 var cloudInitData = base64(
   format(
-    loadTextContent('templates/jupyter.cloudinit.yaml'), 
+    loadTextContent('../templates/jupyter.cloudinit.yaml'),
     base64(
       format(
-        loadTextContent('templates/jupyter.service'),
+        loadTextContent('../templates/jupyter.service'),
         registry,
-        repository,
-        version,
-        httpPort,
-        jupyterToken
+        jupyterRepository,
+        JupyterVersion,
+        JupyterHttpPort,
+        JupyterToken
       )
     )
   )
 )
 
+resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
+  name: ResourceGroupName
+}
+
 resource network 'Microsoft.Network/virtualNetworks@2022-11-01' existing = {
-  name: networkName
+  scope: rg
+  name: Network
 }
 
 resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' existing = {
   parent: network
-  name: subnetName
+  name: Subnet
 }
 
-resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
-  name: networkInterfaceName
-  location: resourceGroup().location
-  properties: {
-    ipConfigurations: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          subnet: {
-            id: subnet.id
-          }
-          privateIPAllocationMethod: 'Dynamic'
-          publicIPAddress: {
-            id: publicIPAddress.id
-          }
-        }
-      }
-    ]
-    networkSecurityGroup: {
-      id: networkSecurityGroup.id
-    }
+module firewall '../modules/firewall.bicep' = {
+  scope: rg
+  name: 'firewall'
+  params: {
+    location: rg.location
+    name: SecurityGroup
+    accessCidrs: AccessCIDRs
+    sshAccess: AllowPublicSSH
+    jupyterHttpPort: JupyterHttpPort
+    sourceAppSecGroups: SourceAppSecGroups
+    detinationAppSecGroups: detinationAppSecGroups
   }
 }
 
-resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
-  name: networkSecurityGroupName
-  location: resourceGroup().location
-  properties: {
-    securityRules: [
-      {
-        name: 'SSH'
-        properties: {
-          priority: 700
-          protocol: 'Tcp'
-          access: sshAccess ? 'Allow' : 'Deny'
-          direction: 'Inbound'
-          sourceAddressPrefixes: accessCidrs
-          sourcePortRange: '*'
-          destinationAddressPrefix: '*'
-          destinationPortRange: '22'
-        }
-      }
-      {
-        name: 'HTTP'
-        properties: {
-          priority: 701
-          protocol: 'Tcp'
-          access: 'Allow'
-          direction: 'Inbound'
-          sourceAddressPrefixes: accessCidrs
-          sourcePortRange: '*'
-          destinationAddressPrefix: '*'
-          destinationPortRange: httpPort
-        }
-      }
-    ]
+module workspaces '../modules/instance.bicep' = {
+  scope: rg
+  name: 'workspaces'
+  params: {
+    location: rg.location
+    name: JupyterName
+    adminUsername: 'azureuser'
+    sshPublicKey: PublicKey
+    dnsLabelPrefix: uniqueString(rg.id, deployment().name, JupyterName)
+    vmSize: InstanceType
+    subnetId: subnet.id
+    networkSecurityGroupID: firewall.outputs.Id
+    osVersion: OSVersion
+    cloudInitData: cloudInitData
+    usePersistentVolume: UsePersistentVolume
+    persistentVolumeSize: PersistentVolumeSize
+    existingPersistentVolume: ExistingPersistentVolume
   }
 }
 
-resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2022-11-01' = {
-  name: publicIPAddressName
-  location: resourceGroup().location
-  sku: {
-    name: 'Basic'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: uniqueString(resourceGroup().id, deployment().name, jupyterName)
-    }
-    idleTimeoutInMinutes: 4
-  }
-}
-
-resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
-  name: jupyterName
-  location: resourceGroup().location
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    hardwareProfile: {
-      vmSize: vmSize
-    }
-    storageProfile: {
-      osDisk: {
-        createOption: 'FromImage'
-        managedDisk: {
-          storageAccountType: osDiskType
-        }
-      }
-      imageReference: imageReference[ubuntuOSVersion]
-    }
-    networkProfile: {
-      networkInterfaces: [
-        {
-          id: networkInterface.id
-        }
-      ]
-    }
-    
-    osProfile: {
-      computerName: jupyterName
-      adminUsername: 'azureuser'
-      linuxConfiguration: linuxConfiguration
-    }
-    securityProfile: {
-      securityType: 'TrustedLaunch'
-      uefiSettings: {
-        secureBootEnabled: true
-        vTpmEnabled: true
-      }
-    }
-    userData: cloudInitData
-  }
-}
-
-resource jupyterName_extension_trusted 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {
-  parent: vm
-  name: trustedExtensionName
-  location: resourceGroup().location
-  properties: {
-    publisher: trustedExtensionPublisher
-    type: trustedExtensionName
-    typeHandlerVersion: trustedExtensionVersion
-    autoUpgradeMinorVersion: true
-    settings: {
-      AttestationConfig: {
-        MaaSettings: {
-          maaEndpoint: trustedMaaEndpoint
-          maaTenantName: trustedMaaTenantName
-        }
-      }
-    }
-  }
-}
-
-resource jupyterName_extension_docker 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {
-  parent: vm
-  name: dockerExtensionName
-  location: resourceGroup().location
-  properties: {
-    publisher: dockerExtensionPublisher
-    type: dockerExtensionName
-    typeHandlerVersion: dockerExtensionVersion
-    autoUpgradeMinorVersion: true
-  }
-}
-
-output PublicIP string = publicIPAddress.properties.ipAddress
-output PrivateIP string = networkInterface.properties.ipConfigurations[0].properties.privateIPAddress
-output PublicHttpAccess string = 'http://${ publicIPAddress.properties.ipAddress }:${ httpPort }?token=${ jupyterToken }'
-output PrivateHttpAccess string = 'http://${ networkInterface.properties.ipConfigurations[0].properties.privateIPAddress }:${ httpPort }'
-output sshCommand string = 'ssh azureuser@${ publicIPAddress.properties.ipAddress }'
+output PublicIP string = workspaces.outputs.PublicIP
+output PrivateIP string = workspaces.outputs.PrivateIP
+output JupyterLabPublicHttpAccess string = 'http://${workspaces.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output JupyterLabPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output sshCommand string = 'ssh azureuser@${workspaces.outputs.PublicIP}'
+output SecurityGroup string = firewall.outputs.Id

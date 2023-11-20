@@ -468,15 +468,18 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
-                ExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter
+                ExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited
+                ExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{userdata,ipython}
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-jupyter:${ JupyterVersion }
                 ExecStart=/usr/bin/docker run \
                     -e accept_license=Y \
                     -e JUPYTER_TOKEN=${ JupyterToken } \
-                    -v /etc/td/jupyter:/home/jovyan/JupyterLabRoot/userdata \
+                    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \
+                    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \
                     -p ${ JupyterHttpPort }:8888 \
+                    --network ai_unlimited \
                     --rm --name %n teradata/ai-unlimited-jupyter:${ JupyterVersion }
 
                 [Install]
