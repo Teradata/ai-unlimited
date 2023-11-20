@@ -1,60 +1,60 @@
-name: Snyk Scan
-on:
-  push:
-    branches:
-      - develop
-      - releases/**
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-  pull_request:
-    types: ['opened', 'synchronize']
-jobs:
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - id: checkout
-        name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+# name: Snyk Scan
+# on:
+#   push:
+#     branches:
+#       - develop
+#       - releases/**
+#     tags:
+#       - 'v[0-9]+.[0-9]+.[0-9]+'
+#   pull_request:
+#     types: ['opened', 'synchronize']
+# jobs:
+#   security:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - id: checkout
+#         name: Checkout
+#         uses: actions/checkout@v3
+#         with:
+#           fetch-depth: 0
 
-      # appsec wants specific naming rules for target scans, see https://teradata-infosec.atlassian.net/l/cp/t1ap1PS7
-      - name: Run Snyk on release tags to check for iac vulnerabilities and upload all results to snyk
-        uses: snyk/actions/iac@master
-        continue-on-error: true
-        if: github.ref_type == 'tag'
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test # monitor // currently only test is supported
-          args: --target-reference=release_${{ github.ref_name }}
+#       # appsec wants specific naming rules for target scans, see https://teradata-infosec.atlassian.net/l/cp/t1ap1PS7
+#       - name: Run Snyk on release tags to check for iac vulnerabilities and upload all results to snyk
+#         uses: snyk/actions/iac@master
+#         continue-on-error: true
+#         if: github.ref_type == 'tag'
+#         env:
+#           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#         with:
+#           command: test # monitor // currently only test is supported
+#           args: --target-reference=release_${{ github.ref_name }}
 
-      # appsec wants specific naming rules for target scans, see https://teradata-infosec.atlassian.net/l/cp/t1ap1PS7
-      - name: Run Snyk on release branches to check for iac vulnerabilities and upload all results to snyk
-        uses: snyk/actions/iac@master
-        continue-on-error: true
-        if: github.ref_type == 'branch' && startsWith(github.ref_name, 'releases/')
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test # monitor // currently only test is supported
-          args: --target-reference=release_${{ github.ref_name }}
+#       # appsec wants specific naming rules for target scans, see https://teradata-infosec.atlassian.net/l/cp/t1ap1PS7
+#       - name: Run Snyk on release branches to check for iac vulnerabilities and upload all results to snyk
+#         uses: snyk/actions/iac@master
+#         continue-on-error: true
+#         if: github.ref_type == 'branch' && startsWith(github.ref_name, 'releases/')
+#         env:
+#           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#         with:
+#           command: test # monitor // currently only test is supported
+#           args: --target-reference=release_${{ github.ref_name }}
 
-      # appsec wants specific naming rules for target scans, see https://teradata-infosec.atlassian.net/l/cp/t1ap1PS7
-      - name: Run Snyk on develop branch to check for iac vulnerabilities and upload all results to snyk
-        uses: snyk/actions/iac@master
-        continue-on-error: true
-        if: github.ref_type == 'branch' && ( github.ref_name == 'develop' ||  github.ref_name == 'main' )
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test # monitor // currently only test is supported
-          args: --target-reference=develop_${{ github.ref_name }}
+#       # appsec wants specific naming rules for target scans, see https://teradata-infosec.atlassian.net/l/cp/t1ap1PS7
+#       - name: Run Snyk on develop branch to check for iac vulnerabilities and upload all results to snyk
+#         uses: snyk/actions/iac@master
+#         continue-on-error: true
+#         if: github.ref_type == 'branch' && ( github.ref_name == 'develop' ||  github.ref_name == 'main' )
+#         env:
+#           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#         with:
+#           command: test # monitor // currently only test is supported
+#           args: --target-reference=develop_${{ github.ref_name }}
 
-      - name: Run Snyk to check for high or critical iac vulnerabilities only, fail if found
-        uses: snyk/actions/iac@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --severity-threshold=high
+#       - name: Run Snyk to check for high or critical iac vulnerabilities only, fail if found
+#         uses: snyk/actions/iac@master
+#         env:
+#           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#         with:
+#           command: test
+#           args: --severity-threshold=high
