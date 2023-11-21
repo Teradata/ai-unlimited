@@ -61,6 +61,7 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.Network/applicationSecurityGroups/read'
           'Microsoft.Network/applicationSecurityGroups/write'
           'Microsoft.Network/applicationSecurityGroups/joinIpConfiguration/action'
+          'Microsoft.Network/applicationSecurityGroups/delete'
           'Microsoft.Network/virtualNetworks/read'
           'Microsoft.Network/virtualNetworks/write'
           'Microsoft.Network/virtualNetworks/delete'

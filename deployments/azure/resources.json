@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "9865267277444874121"
+      "templateHash": "1606176255021497120"
     }
   },
   "parameters": {
@@ -56,7 +56,7 @@
       "name": "[guid(subscription().id, subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('name')))]",
       "properties": {
         "roleName": "[format('Custom Role - Workspaces {0} Regulus Deployment Permissions', parameters('name'))]",
-        "description": "Subscription level permissions for workspaces to create regulus deployments in there own resource groups",
+        "description": "Subscription level permissions for workspaces to create ai-unlimited deployments in there own resource groups",
         "type": "customRole",
         "permissions": [
           {
@@ -84,6 +84,7 @@
               "Microsoft.Network/applicationSecurityGroups/read",
               "Microsoft.Network/applicationSecurityGroups/write",
               "Microsoft.Network/applicationSecurityGroups/joinIpConfiguration/action",
+              "Microsoft.Network/applicationSecurityGroups/delete",
               "Microsoft.Network/virtualNetworks/read",
               "Microsoft.Network/virtualNetworks/write",
               "Microsoft.Network/virtualNetworks/delete",
