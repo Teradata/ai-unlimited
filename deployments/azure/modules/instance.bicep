@@ -2,13 +2,15 @@ param location string
 param name string
 param adminUsername string
 param sshPublicKey string
-param dnsLabelPrefix string = toLower('${name}-${uniqueString(resourceGroup().id)}')
+param dnsLabelPrefix string = toLower('$td${uniqueString('ai unlimited', resourceGroup().id)}')
 param vmSize string
 param subnetId string
 param networkSecurityGroupID string
-param httpPort string
-param grpcPort string
-param ubuntuOSVersion string
+param osVersion string
+param usePersistentVolume string
+param persistentVolumeSize int
+param existingPersistentVolume string
+param cloudInitData string
 
 var imageReference = {
   'Ubuntu-1804': {
@@ -55,26 +57,23 @@ var dockerExtensionName = 'DockerExtension'
 var dockerExtensionPublisher = 'Microsoft.Azure.Extensions'
 var dockerExtensionVersion = '1.1'
 
-var registry = 'teradata'
-var repository = 'ai-unlimited-workspaces'
-var version = 'devtest' //'latest'
-var cloudInitData = base64(
-  format(
-    loadTextContent('../templates/workspaces.cloudinit.yaml'), 
-    base64(
-      format(
-        loadTextContent('../templates/workspaces.service'),
-        registry,
-        repository,
-        version,
-        httpPort,
-        grpcPort,
-        subscription().subscriptionId,
-        subscription().tenantId 
-      )
-    )
-  )
-)
+resource existingPersistentDisk 'Microsoft.Compute/disks@2023-04-02' existing = if (usePersistentVolume == 'Existing') {
+  name: existingPersistentVolume
+}
+
+resource newPersistentDisk 'Microsoft.Compute/disks@2023-04-02' = if (usePersistentVolume == 'New') {
+  location: location
+  name: '${name}-disk'
+
+  properties: {
+    creationData: {
+      createOption: 'Empty'
+    }
+    diskSizeGB: persistentVolumeSize
+    maxShares: 1
+    osType: 'Linux'
+  }
+}
 
 resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
   name: networkInterfaceName
@@ -133,7 +132,16 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
           storageAccountType: osDiskType
         }
       }
-      imageReference: imageReference[ubuntuOSVersion]
+      dataDisks: usePersistentVolume != 'None' ? [] : [
+        {
+          lun: 0
+          createOption: 'Attach'
+          managedDisk: {
+            id: usePersistentVolume == 'New' ? newPersistentDisk.id : existingPersistentDisk.id
+          }
+        }
+      ]
+      imageReference: imageReference[osVersion]
     }
     networkProfile: {
       networkInterfaces: [
@@ -142,7 +150,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
         }
       ]
     }
-    
+
     osProfile: {
       computerName: name
       adminUsername: adminUsername

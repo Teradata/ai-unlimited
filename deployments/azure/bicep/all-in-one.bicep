@@ -33,6 +33,9 @@ param SecurityGroup string = 'WorkspacesSecurityGroup'
 @description('The CIDR ranges that can be used to communicate with the Workspace service instance.')
 param AccessCIDRs array = [ '0.0.0.0/0' ]
 
+@description('port to access the Jupyter Labs UI.')
+param JupyterHttpPort string = '8888'
+
 @description('port to access the workspaces service UI.')
 param WorkspacesHttpPort string = '3000'
 
@@ -64,16 +67,23 @@ param ExistingPersistentVolume string = 'NONE'
 @description('Container Version of the Workspace service')
 param WorkspacesVersion string = 'latest'
 
+@description('Container Version of the Jupyter Labs service')
+param JupyterVersion string = 'latest'
+
+@description('Join token for the Jupyter Labs service')
+param JupyterToken string = uniqueString(subscription().id, utcNow())
+
 var roleAssignmentName = guid(subscription().id, WorkspacesName, rg.id, RoleDefinitionId)
 
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
+var jupyterRepository = 'ai-unlimited-jupyter'
 
 var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, WorkspacesName)}'
 
 var cloudInitData = base64(
   format(
-    loadTextContent('../templates/workspaces.cloudinit.yaml'),
+    loadTextContent('../templates/all-in-one.cloudinit.yaml'),
     base64(
       format(
         loadTextContent('../templates/workspaces.service'),
@@ -84,6 +94,16 @@ var cloudInitData = base64(
         WorkspacesGrpcPort,
         subscription().subscriptionId,
         subscription().tenantId
+      )
+    ),
+    base64(
+      format(
+        loadTextContent('../templates/jupyter.service'),
+        registry,
+        jupyterRepository,
+        JupyterVersion,
+        JupyterHttpPort,
+        JupyterToken
       )
     )
   )
@@ -113,6 +133,7 @@ module firewall '../modules/firewall.bicep' = {
     sshAccess: AllowPublicSSH
     workspacesHttpPort: WorkspacesHttpPort
     workspacesGrpcPort: WorkspacesGrpcPort
+    jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
   }
@@ -153,5 +174,7 @@ output WorkspacesPublicHttpAccess string = 'http://${workspaces.outputs.PublicIP
 output WorkspacesPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesHttpPort}'
 output WorkspacesPublicGrpcAccess string = 'http://${workspaces.outputs.PublicIP}:${WorkspacesGrpcPort}'
 output WorkspacesPrivateGrpcAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesGrpcPort}'
+output JupyterLabPublicHttpAccess string = 'http://${workspaces.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output JupyterLabPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output sshCommand string = 'ssh azureuser@${workspaces.outputs.PublicIP}'
 output SecurityGroup string = firewall.outputs.Id

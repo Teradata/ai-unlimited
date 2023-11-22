@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.19.5.34762",
-      "templateHash": "5259534896949154499"
+      "version": "0.23.1.45101",
+      "templateHash": "1606176255021497120"
     }
   },
   "parameters": {
@@ -81,6 +81,10 @@
               "Microsoft.ManagedIdentity/userAssignedIdentities/listAssociatedResources/action",
               "Microsoft.ManagedIdentity/userAssignedIdentities/read",
               "Microsoft.ManagedIdentity/userAssignedIdentities/write",
+              "Microsoft.Network/applicationSecurityGroups/read",
+              "Microsoft.Network/applicationSecurityGroups/write",
+              "Microsoft.Network/applicationSecurityGroups/joinIpConfiguration/action",
+              "Microsoft.Network/applicationSecurityGroups/delete",
               "Microsoft.Network/virtualNetworks/read",
               "Microsoft.Network/virtualNetworks/write",
               "Microsoft.Network/virtualNetworks/delete",
@@ -147,8 +151,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.19.5.34762",
-              "templateHash": "8841300181762250120"
+              "version": "0.23.1.45101",
+              "templateHash": "2636051152564020606"
             }
           },
           "parameters": {

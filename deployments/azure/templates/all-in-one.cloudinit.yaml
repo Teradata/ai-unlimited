@@ -5,6 +5,11 @@ write_files:
   owner: root:root
   path: /usr/lib/systemd/system/workspaces.service
   permissions: '0640'
+- encoding: b64
+  content: "{1}"
+  owner: root:root
+  path: /usr/lib/systemd/system/jupyter.service
+  permissions: '0640'
 
 runcmd:
 - mkdir -p /etc/td 
@@ -17,3 +22,5 @@ runcmd:
 - sleep 60
 - systemctl enable workspaces.service
 - systemctl start workspaces.service
+- systemctl enable jupyter.service
+- systemctl start jupyter.service
