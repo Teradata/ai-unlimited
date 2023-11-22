@@ -141,20 +141,20 @@ in the Custom deployment Dialog, set values for
 
 Then select review and create
 
-[arm_create_new_all_in_one_project_details](images/015_arm_create_new_all_in_one_project_details.png?raw=true)
+![arm_create_new_all_in_one_project_details](images/015_arm_create_new_all_in_one_project_details.png?raw=true)
 
 review the information, confirm your settigns, and select the create button.
 
-[arm_create_new_all_in_one_review_create](images/016_arm_create_new_all_in_one_review_create.png?raw=true)
+![arm_create_new_all_in_one_review_create](images/016_arm_create_new_all_in_one_review_create.png?raw=true)
 
 The template will proceed to deploy
 
-[arm_create_new_all_in_one_deployment_complete](images/017_arm_create_new_all_in_one_deployment_complete.png?raw=true)
+![arm_create_new_all_in_one_deployment_complete](images/017_arm_create_new_all_in_one_deployment_complete.png?raw=true)
 
 After the template has completed, select the ouput tab and make note of the network names and the `RoleDefinitionId`. 
 These value will be needed by the workspace deployment
 
-[arm_create_new_all_in_one_ouputs](images/018_arm_create_new_all_in_one_ouputs.png?raw=true)
+![arm_create_new_all_in_one_ouputs](images/018_arm_create_new_all_in_one_ouputs.png?raw=true)
 
 ## Configuring Workspaces
 
