@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ResourceGroupName": {
+      "value": "ai-unlimited-workspace"
+    },
+    "WorkspacesName": {
+      "value": ""
+    },
+    "PublicKey": {
+      "value": ""
+    },
+    "OSVersion": {
+      "value": "Ubuntu-2004"
+    },
+    "InstanceType": {
+      "value": "Standard_D2s_v3"
+    },
+    "Network": {
+      "value": ""
+    },
+    "Subnet": {
+      "value": ""
+    },
+    "SecurityGroup": {
+      "value": "WorkspacesSecurityGroup"
+    },
+    "AccessCIDRs": {
+      "value": [
+        "0.0.0.0/0"
+      ]
+    },
+    "WorkspacesHttpPort": {
+      "value": "3000"
+    },
+    "WorkspacesGrpcPort": {
+      "value": "3282"
+    },
+    "SourceAppSecGroups": {
+      "value": []
+    },
+    "detinationAppSecGroups": {
+      "value": []
+    },
+    "RoleDefinitionId": {
+      "value": ""
+    },
+    "AllowPublicSSH": {
+      "value": true
+    },
+    "UsePersistentVolume": {
+      "value": "New"
+    },
+    "PersistentVolumeSize": {
+      "value": 100
+    },
+    "ExistingPersistentVolume": {
+      "value": "NONE"
+    },
+    "WorkspacesVersion": {
+      "value": "latest"
+    }
+  }
+}

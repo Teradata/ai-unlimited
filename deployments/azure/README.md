@@ -1,22 +1,23 @@
-# TODO UPDATE FOR AZURE - THIS IS THE AWS README
+# Workspaces and Jupyter Deployments for Azure
 
----
+This directory contains sample Azure Resource Manager templates to deploy Workspaces and Jupyter.
 
-# Workspaces and Jupyter Deployments for AWS
-
-This directory contains sample CloudFormation templates to deploy Workspaces and Jupyter.
-
-## Cloud Formations Templates
+## Azure Resource Manager (ARM) Templates
 
 ### Workspaces Template
 The all in one template deploys a single instance with Workspaces running in a container controlled by systemd.
-- [workspaces.yaml](workspaces.yaml) cloudformation template 
+- [workspaces.json](workspaces.json) cloudformation template 
 - [parameters/workspaces.json](workspaces.json) parameter file
+
+![arm_visualization](images/900_workspaces_arm_visualization.png?raw=true)
 
 ### Jupyter Template
 The all in one template deploys a single instance with Jupyter Lab running in a container controlled by systemd.
-- [jupyter.yaml](jupyter.yaml) cloudformation template 
+- [jupyter.json](jupyter.json) cloudformation template 
 - [parameters/jupyter.json](jupyter.json) parameter file
+
+![arm_visualization](images/901_jupyter_arm_visualization.png?raw=true)
+
 
 ### All-In-One Template
 The all in one template deploys a single instance with both Workspaces and Jupyter running on the same instance.
@@ -25,64 +26,182 @@ It uses all the common parameters, as well as the addiitonal parameters from Wor
 If deploying the all in one, it is possible to use the embedded Jupyter Lab service, or connect external Jupyter labs as well.
 You must set the appropriate connection address in the Jupyter notebook, 127.0.0.1 if connecting from the embedded Jupyter service,
 or appropriate public,private ip or dns name when connecting from external clients.
-- [all-in-one.yaml](all-in-one.yaml) cloudformation template 
+- [all-in-one.json](all-in-one.yaml) cloudformation template 
 - [parameters/all-in-one.json](all-in-one.json) parameter file
 
-## Deployment via AWS Console
-Create New CloudFormation Template Deployment
-![Create New CloudFormation Template Deployment](images/001_cft_create_new.png?raw=true)
-Upload New CloudFormation Template
-![Upload New CloudFormation Template](images/002_cft_create_new_file_upload.png?raw=true)
-Fill out the input dialog
-![Fill out the input dialog](images/003_cft_create_dialog.png?raw=true)
-Add tags and configure cloudformation options
-![Add tags and configure cloudformation options](images/004_cft_create_second_dialog.png?raw=true)
-Accept and capability requirements and submit the template
-![Accept and capability requirements and submit the template](images/005_cft_create_submit.png?raw=true)
+![arm_visualization](images/900_workspaces_arm_visualization.png?raw=true)
 
-### Cloudformation use CLI
 
-#### Cloudformation Commands
+### Resources Template
+The resources template deploys a simple resource group, a role with permissions policy, a network and subnet. This is intended only for quick demonstration purposes and production deployments should use existing well defined and secure network best practices.
+- [resources.json](jupyter.json) cloudformation template 
+- [parameters/resources.json](jupyter.json) parameter file
 
-This stack can be deployed via aws cloudformation create-stack or aws cloudformation deploy,
-Examples given here are for create-stack. Please reference aws cloudformation deploy help for syntax differences between create-stack and deploy.
+![arm_visualization](images/902_resources_arm_visualization.png?raw=true)
 
-##### Creating a new stack
-With AWS credentials for an appropriatley permissioned user or service account, and an prepared parameters.json file. 
-```
-aws cloudformation create-stack --stack-name all-in-one \
-  --template-body file://all-in-one.yaml \
-  --parameters file://test_parameters/all-in-one.json \
-  --tags Key=ThisIsAKey,Value=AndThisIsAValue \
-  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-```
-**Note** CAPABILITY_IAM is required only if IamRole is set to New
-**Note** CAPABILITY_NAMED_IAM is required only if IamRole is set to New and IamRoleName has been given a value
 
-If you would prefer to pass in an existing role, the suggested policies for the role are listed in the Example IAM Policies section below.
+### Role-Policy Template
+The role-policy template creates the role with the required permissions for ai unlimited workspace.
+- [resources.json](jupyter.json) cloudformation template 
+- [parameters/resources.json](jupyter.json) parameter file
 
-##### Deleting a stack
-With AWS credentials for an appropriatley permissioned user or service account, and an the target stack's name. 
-```
-aws cloudformation delete-stack --stack-name <stackname> 
-```
+## Deployment via Azure Console
 
-##### Getting stack information
-With AWS credentials for an appropriatley permissioned user or service account, and an the target stack's name.
-```
-aws cloudformation delete-stack --stack-name <stackname> 
-aws cloudformation describe-stacks --stack-name <stackname> 
-aws cloudformation describe-stack-events --stack-name <stackname> 
-aws cloudformation describe-stack-instance --stack-name <stackname> 
-aws cloudformation describe-stack-resource --stack-name <stackname> 
-aws cloudformation describe-stack-resources --stack-name <stackname> 
-```
+### Creating the Resource Group, Network and Role via ARM Custom Template Deployment
 
-##### Getting a stack's outputs
-With AWS credentials for an appropriatley permissioned user or service account, and an the target stack's name. 
-```
-aws cloudformation describe-stacks --stack-name <stackname>  --query 'Stacks[0].Outputs' --output table
-```
+In the Azure Console,Search for "Deploy a Custom Template" and select the service icon.
+
+![arm_create_new_resources](images/001_arm_create_new_resources.png?raw=true)
+
+Select the "build your own template" link 
+
+![arm_create_new_resources_custom_deployment](images/002_arm_create_new_resources_custom_deployment.png?raw=true)
+
+In the edit the template dialog, select the "Load file" option.
+
+![arm_create_new_resources_edit_template](images/003_arm_create_new_resources_edit_template.png?raw=true)
+
+and select the resources.json template from the file picker dialog.
+
+![arm_create_new_resources_file_picker](images/004_arm_create_new_resources_file_picker.png?raw=true)
+
+With the file content loaded into the edit template dialog, select "Save"
+
+![arm_create_new_resources_loaded_file](images/005_arm_create_new_resources_loaded_file.png?raw=true)
+
+in the Custom deployment Dialog, select your Subcription.
+Also set:
+- The region to deploy in.
+- The name to use for the created resources ( the resouce group, network, subnet and role will use this value as their name )
+- The location to deploy in.
+- The CIDR to use for the Network
+- the CIDR to use for the Subnet in the new network
+
+Then select review and create
+
+![arm_create_new_resources_project_details](images/006_arm_create_new_resources_project_details.png?raw=true)
+
+review the information, confirm your settigns, and select the create button.
+
+![arm_create_new_resources_review_create](images/007_arm_create_new_resources_review_create.png?raw=true)
+
+The template will proceed to deploy
+
+![arm_create_new_resources_deployment_complete](images/008_arm_create_new_resources_deployment_complete.png?raw=true)
+
+After the template has completed, select the ouput tab and make note of the network names and the `RoleDefinitionId`. 
+These value will be needed by the workspace deployment
+
+![arm_create_new_resources_outputs](images/009_arm_create_new_resources_outputs.png?raw=true)
+
+### Creating the All In One Deployment via ARM Custom Template Deployment
+
+This template creates a single instance containing both AI Unlimited Workspace and Jupyter.
+Note: The process for deploying AI Unlimited Workspace or Jupyter separately using their respective templates is nearly the same. 
+
+In the Azure Console,Search for "Deploy a Custom Template" and select the service icon.
+
+![arm_create_new_all_in_one](images/010_arm_create_new_all_in_one.png?raw=true)
+
+Select the "build your own template" link 
+
+![arm_create_new_all_in_one_custom_deployment](images/011_arm_create_new_all_in_one_custom_deployment.png?raw=true)
+
+In the edit the template dialog, select the "Load file" option.
+
+![arm_create_new_all_in_one_edit_template](images/012_arm_create_new_all_in_one_edit_template.png?raw=true)
+
+and select the all-in-one.json template from the file picker dialog.
+
+![arm_create_new_all_in_one_file_picker](images/013_arm_create_new_all_in_one_file_picker.png?raw=true)
+
+With the file content loaded into the edit template dialog, select "Save"
+
+![arm_create_new_all_in_one_loaded_file](images/014_arm_create_new_all_in_one_loaded_file.png?raw=true)
+
+in the Custom deployment Dialog, set values for 
+- The Resource Group
+- The Name to use for the created resources
+- The ssh public key, ( this should start with "ssh-rsa" )
+- The name of the network to deploy into
+- The name of the subnet to deploy into
+- The name of the security group we will create for the workspace instance
+- The CIDRs that have permission to connect to the workspace instance
+- The Source Application Security Groups that have permission to connect to the workspace instance
+- The Destination Application Security Groups that have permission to connect to the workspace instance
+- The Ports for Workspaces HTTP and GRPC Access, and the Port used fro HTTP to Jupyter
+- The RoleDefinitionId of the role to use with workspaces
+- Will you Allow ssh from the firewall?
+- Will you use a persistent volume for storing the workspace and jupyter data?
+- If using a persistent volume, what size should it be.
+- if you are using an existing persistent volume, what is the volume Id.
+- the version of Workspaces
+- the version of Jupyter
+- the token to use for Jupyter authentication
+
+Then select review and create
+
+[arm_create_new_all_in_one_project_details](images/015_arm_create_new_all_in_one_project_details.png?raw=true)
+
+review the information, confirm your settigns, and select the create button.
+
+[arm_create_new_all_in_one_review_create](images/016_arm_create_new_all_in_one_review_create.png?raw=true)
+
+The template will proceed to deploy
+
+[arm_create_new_all_in_one_deployment_complete](images/017_arm_create_new_all_in_one_deployment_complete.png?raw=true)
+
+After the template has completed, select the ouput tab and make note of the network names and the `RoleDefinitionId`. 
+These value will be needed by the workspace deployment
+
+[arm_create_new_all_in_one_ouputs](images/018_arm_create_new_all_in_one_ouputs.png?raw=true)
+
+## Configuring Workspaces
+
+![workspaces_setup](images/020_workspaces_setup.png?raw=true)
+
+![workspaces_setup_update_url](images/021_workspaces_setup_update_url.png?raw=true)
+
+![workspaces_setup_use_tls](images/022_workspaces_setup_use_tls.png?raw=true)
+
+![workspaces_setup_gen_tls](images/023_workspaces_setup_gen_tls.png?raw=true)
+
+![workspaces_setup_tls_save](images/024_workspaces_setup_tls_save.png?raw=true)
+
+![workspaces_setup_azure](images/025_workspaces_setup_azure.png?raw=true)
+
+![workspaces_setup_github](images/026_workspaces_setup_github.png?raw=true)
+
+![workspaces_setup_github_oauth](images/027_workspaces_setup_github_oauth.png?raw=true)
+
+![workspaces_setup_api_key_and_restart](images/028_workspaces_setup_api_key_and_restart.png?raw=true)
+
+## Configuring Jupyter
+
+![jupyter_setup](images/030_jupyter_setup.png?raw=true)
+
+![jupyter_setup_regulus_folder](images/031_jupyter_setup_regulus_folder.png?raw=true)
+
+![jupyter_setup_get_started](images/032_jupyter_setup_get_started.png?raw=true)
+
+![jupyter_setup_select_host](images/033_jupyter_setup_select_host.png?raw=true)
+
+![jupyter_setup_updated_host](images/034_jupyter_setup_updated_host.png?raw=true)
+
+![jupyter_setup_project_create](images/035_jupyter_setup_project_create.png?raw=true)
+
+![jupyter_setup_list](images/036_jupyter_setup_list.png?raw=true)
+
+![jupyter_setup_create_auth](images/037_jupyter_setup_create_auth.png?raw=true)
+
+![jupyter_setup_auth_list](images/038_jupyter_setup_auth_list.png?raw=true)
+
+![jupyter_setup_start_deploy](images/039_jupyter_setup_start_deploy.png?raw=true)
+
+### ARM use CLI
+
+TODO: Pending updates for use with Deployment Manager
+
 
 ## Using a Persistent Volume
 The default behavior is to use the root volume of the instace for storage. This will persist any Jupyter notebook data saved under the userdata folder and the Workspaces database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or Workspaces database will be lost. 
@@ -90,293 +209,87 @@ This can be especially problematic if running on spot instances which may be ter
 You can enable the UsePersistentVolume parameter to move the Jupyter notebook data and/or Workspaces database to a seperate volume.
 
 ### Suggested Persistent Volume Flow
-1. Create a new deployment with UsePersistentVolume=New and PersistentVolumeDeletionPolicy=Retain.
-2. In the stack outputs, note the volume-id for later.
-3. Configure and use the instance until the instance is terminated.
-4. On the next deployment, use UsePersistentVolume=New, PersistentVolumeDeletionPolicy=Retain and set ExistingPersistentVolumeId to the volume-id from the first deploy
+1. Create a new deployment with UsePersistentVolume=New
+2. Configure and use the instance until the instance is terminated.
+3. On the next deployment, use UsePersistentVolume=New, ExistingPersistentVolumeId to the volume-id from the first deploy
 
 This will remount the volume and the instance will have the previous data available. This template can be relaunced with the same config whenever you need to recreate the instance with the previous data.
 
-### Common Parameters
+## Example Role Policies 
+If the account deploying Workspaces does not have sufficient IAM permissions to create the roles,
+The roles and can be defined prior to deployment and passed into the Workspaces template.
 
-| Parameter | Description | Required | Default | Notes |
-| --------- | ----------- | -------- | ------- | ----- |
-| **InstanceType** | The EC2 instance type to run the service on. | *required with default* | t3.small | t3.small should be suficent for most use cases. |
-| **RootVolumeSize** | The size of the root disk to attach to the instance, in GB | *required with default* | 8 | supports values between 8 and 1000 |
-| **TerminationProtection** | Enable instance termination protection. | *required with default* | false |  |
-| **IamRole** | Should cloudformations create a new IAM role for the instance or use an exiting one. Allowed values are "New" or "existing" | *required with default* | New |  |
-| **IamRoleName** | Name of an existing IAM Role to assign to the instance, or the name to give to the newly created role. Leave this blank to use an autogenerated name | *optional with default* | workspaces-iam-role | if naming a new IAM Role, cloudforamtions requires the CAPABILITY_NAMED_IAM capabilty |
-| **IamPermissionsBoundary** | The arn of a permissions boundary to pass to the IAM role assigned to the instance. | *optional* |  |  |
-| **AvailabilityZone** | Availability zone to deploy the instance to. | *required* |  |  This must match the subnet, the zone of any pre existing volumes if used, and the instance type must be available in the selected zone. |
-| **LoadBalancing** | Will the instance be accessed via a NLB? | *required with default* | NetworkLoadBalancer | Allowed values are  NetworkLoadBalancer or None |
-| **LoadBalancerScheme** | If using a LoadBalancer, will it be internal or internet-facing?  | *optional with default* | Internet-facing | The DNS name of an Internet-facing load balancer is publicly resolvable to the public IP addresses of the nodes.Therefore, Internet-facing load balancers can route requests from clients over the internet. The nodes of an internal load balancer have only private IP addresses. The DNS name of an internal load balancer is publicly resolvable to the private IP addresses of the nodes. Therefore, internal load balancers can route requests only\nfrom clients with access to the VPC for the load balancer. |
-| **Private** | Will the service be deployed in a private network without public IPs? | *required* | false |  |
-| **Session** | Should the instance be accessible via AWS Session Manager? | *required* | false |  |
-| **Vpc** | Network to deploy the instance to |  | *required* |  |
-| **Subnet** | Subnetwork to deploy the instance to | *required* |  |  |
-| **KeyName** | Name of an existing EC2 KeyPair to enable SSH access to the instances | *optional* |  | leave empty if no ssh keys should be included |
-| **AccessCIDR** | The IP address range that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
-| **PrefixList** | The PrefixList that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
-| **SecurityGroup** | The SecurityGroup that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
-| **UsePersistentVolume** | Specify if you are using a a new persistent volume, an existing one, or none |  *optional with default* | None |  |
-| **PersistentVolumeSize** | The size of the persistent volume to attach to the instance, in GB | *required with default* | 8 | supports values between 8 and 1000 |
-| **ExistingPersistentVolumeId** | Id of the existing persistent volume to attach. Must be in the same availability zone as the workspaces instance | *required if UsePersistentVolume is set to Existing* |  |  |
-| **PersistentVolumeDeletionPolicy** | Behavior for the Persistent Volume when deleting the cloudformations deployment | *required with default* | Delete | Allowed Values are Delete, Retain, RetainExceptOnCreate, and Snapshot |
-| **LatestAmiId** | The image is to use for the SSM lookup | *required with defaults* |  | This deployment uses the latest ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2 image available, Changing this value will likely break the stack. |
-
-### Workspaces specific Parameters
-
-| Parameter | Description | Required | Default | Notes |
-| --------- | ----------- | -------- | ------- | ----- |
-| **WorkspacesHttpPort** | The port to access the Workspaces service UI | *required with default* | 3000 |  |
-| **WorkspacesGrpcPort** | The port to access the Workspaces service API | *required with default* | 3282 |  |
-| **WorkspacesVersion** | Which version of Workspaces to deploy, uses container version tags | *required with default* | latest |  |
-
-### Jupyter specific Parameters
-
-| Parameter | Description | Required | Default | Notes |
-| --------- | ----------- | -------- | ------- | ----- |
-| **JupyterHttpPort** | The port to access the Jupyter service UI | *required with default* | 8888 |  |
-| **JupyterToken** | The token or password equivalent used to access Jupyter from the UI |  |  | The token must begin with a letter and contain only alphanumeric characters. The allowed pattern is ^[a-zA-Z][a-zA-Z0-9-]* |
-| **JupyterVersion** | Which version of Jupyter to deploy, uses container version tags | *required with default* | latest |  |
-
-## Example IAM Policies 
-If the account deploying Workspaces does not have sufficient IAM permissions to create IAM roles or IAM policies,
-roles and policies can be defined prior to deployment and passed into the Workspaces template.
-
-For Workspaces, a IAM role would need the following policies:
-### [workspaces-with-iam-role-permissions.json](policies/workspaces.json)
+For Workspaces, a Role would need the following policies:
+### [workspaces.json](policies/workspaces.json)
 which includes the permissions needed to create ai-unlimited instances and grants Workspaces the
-permissions to create cluster specific IAM roles and policies for the Regulus systems it 
+permissions to create cluster specific IAM roles and policies for the AI Unlimited Engines it 
 will deploy.
 ```
 {
-  "Version": "2012-10-17",
-  "Statement": [
+  "properties": {
+    "roleName": "Teradata AI-Unlimited Workspace Deployment Permissions",
+    "description": "Subscription level permissions for the Workspace service to create AI-Unlimited Engine deployments with their own resource groups",
+    "assignableScopes": [
+      "/subscriptions/<YOUR_SUBSCRIPTION_ID>"
+    ],
+    "permissions": [
       {
-          "Action": [
-              "iam:PassRole",
-              "iam:AddRoleToInstanceProfile",
-              "iam:CreateInstanceProfile",
-              "iam:CreateRole",
-              "iam:DeleteInstanceProfile",
-              "iam:DeleteRole",
-              "iam:DeleteRolePolicy",
-              "iam:GetInstanceProfile",
-              "iam:GetRole",
-              "iam:GetRolePolicy",
-              "iam:ListAttachedRolePolicies",
-              "iam:ListInstanceProfilesForRole",
-              "iam:ListRolePolicies",
-              "iam:PutRolePolicy",
-              "iam:RemoveRoleFromInstanceProfile",
-              "iam:TagRole",
-              "iam:TagInstanceProfile",
-              "ec2:TerminateInstances",
-              "ec2:RunInstances",
-              "ec2:RevokeSecurityGroupEgress",
-              "ec2:ModifyInstanceAttribute",
-              "ec2:ImportKeyPair",
-              "ec2:DescribeVpcs",
-              "ec2:DescribeVolumes",
-              "ec2:DescribeTags",
-              "ec2:DescribeSubnets",
-              "ec2:DescribeSecurityGroups",
-              "ec2:DescribePlacementGroups",
-              "ec2:DescribeNetworkInterfaces",
-              "ec2:DescribeLaunchTemplates",
-              "ec2:DescribeLaunchTemplateVersions",
-              "ec2:DescribeKeyPairs",
-              "ec2:DescribeInstanceTypes",
-              "ec2:DescribeInstanceTypeOfferings",
-              "ec2:DescribeInstances",
-              "ec2:DescribeInstanceAttribute",
-              "ec2:DescribeImages",
-              "ec2:DescribeAccountAttributes",
-              "ec2:DeleteSecurityGroup",
-              "ec2:DeletePlacementGroup",
-              "ec2:DeleteLaunchTemplate",
-              "ec2:DeleteKeyPair",
-              "ec2:CreateTags",
-              "ec2:CreateSecurityGroup",
-              "ec2:CreatePlacementGroup",
-              "ec2:CreateLaunchTemplateVersion",
-              "ec2:CreateLaunchTemplate",
-              "ec2:AuthorizeSecurityGroupIngress",
-              "ec2:AuthorizeSecurityGroupEgress",
-              "secretsmanager:CreateSecret",
-              "secretsmanager:DeleteSecret",
-              "secretsmanager:DescribeSecret",
-              "secretsmanager:GetResourcePolicy",
-              "secretsmanager:GetSecretValue",
-              "secretsmanager:PutSecretValue",
-              "secretsmanager:TagResource"
-          ],
-          "Resource": "*",
-          "Effect": "Allow"
+        "actions": [
+          "Microsoft.Compute/disks/read",
+          "Microsoft.Compute/disks/write",
+          "Microsoft.Compute/disks/delete",
+          "Microsoft.Compute/sshPublicKeys/read",
+          "Microsoft.Compute/sshPublicKeys/write",
+          "Microsoft.Compute/sshPublicKeys/delete",
+          "Microsoft.Compute/virtualMachines/read",
+          "Microsoft.Compute/virtualMachines/write",
+          "Microsoft.Compute/virtualMachines/delete",
+          "Microsoft.KeyVault/vaults/read",
+          "Microsoft.KeyVault/vaults/write",
+          "Microsoft.KeyVault/vaults/delete",
+          "Microsoft.KeyVault/vaults/accessPolicies/write",
+          "Microsoft.KeyVault/locations/operationResults/read",
+          "Microsoft.KeyVault/locations/deletedVaults/purge/action",
+          "Microsoft.ManagedIdentity/userAssignedIdentities/delete",
+          "Microsoft.ManagedIdentity/userAssignedIdentities/assign/action",
+          "Microsoft.ManagedIdentity/userAssignedIdentities/listAssociatedResources/action",
+          "Microsoft.ManagedIdentity/userAssignedIdentities/read",
+          "Microsoft.ManagedIdentity/userAssignedIdentities/write",
+          "Microsoft.Network/applicationSecurityGroups/read",
+          "Microsoft.Network/applicationSecurityGroups/write",
+          "Microsoft.Network/applicationSecurityGroups/joinIpConfiguration/action",
+          "Microsoft.Network/applicationSecurityGroups/delete",
+          "Microsoft.Network/virtualNetworks/read",
+          "Microsoft.Network/virtualNetworks/write",
+          "Microsoft.Network/virtualNetworks/delete",
+          "Microsoft.Network/virtualNetworks/subnets/read",
+          "Microsoft.Network/virtualNetworks/subnets/write",
+          "Microsoft.Network/virtualNetworks/subnets/delete",
+          "Microsoft.Network/virtualNetworks/subnets/join/action",
+          "Microsoft.Network/networkInterfaces/read",
+          "Microsoft.Network/networkInterfaces/write",
+          "Microsoft.Network/networkInterfaces/delete",
+          "Microsoft.Network/networkInterfaces/join/action",
+          "Microsoft.Network/networkSecurityGroups/read",
+          "Microsoft.Network/networkSecurityGroups/write",
+          "Microsoft.Network/networkSecurityGroups/delete",
+          "Microsoft.Network/networkSecurityGroups/securityRules/read",
+          "Microsoft.Network/networkSecurityGroups/securityRules/write",
+          "Microsoft.Network/networkSecurityGroups/securityRules/delete",
+          "Microsoft.Network/networkSecurityGroups/join/action",
+          "Microsoft.Network/publicIPAddresses/read",
+          "Microsoft.Network/publicIPAddresses/write",
+          "Microsoft.Network/publicIPAddresses/join/action",
+          "Microsoft.Network/publicIPAddresses/delete",
+          "Microsoft.Resources/subscriptions/resourcegroups/read",
+          "Microsoft.Resources/subscriptions/resourcegroups/write",
+          "Microsoft.Resources/subscriptions/resourcegroups/delete"
+        ],
+        "notActions": [],
+        "dataActions": [],
+        "notDataActions": []
       }
-  ]
+    ]
+  }
 }
-```
-If account restrictions do will not allow Workspaces to create IAM Roles and IAM policies,
-Then Workspaces should also be provided a IAM role with a Policy to pass to the Regulus clusters.
-In this case, a modifed Workspaces policy can be used which does not include permissions to
-create IAM Roles or IAM Policies.
-
-### [workspaces-without-iam-role-permissions.json](policies/workspaces-without-iam-role-permissions.json)
-which includes the permissions needed to create ai-unlimited instances
-```
-{
-  "Version": "2012-10-17",
-  "Statement": [
-      {
-          "Action": [
-              "iam:PassRole",
-              "iam:AddRoleToInstanceProfile",
-              "iam:CreateInstanceProfile",
-              "iam:DeleteInstanceProfile",
-              "iam:GetInstanceProfile",
-              "iam:GetRole",
-              "iam:GetRolePolicy",
-              "iam:ListAttachedRolePolicies",
-              "iam:ListInstanceProfilesForRole",
-              "iam:ListRolePolicies",
-              "iam:PutRolePolicy",
-              "iam:RemoveRoleFromInstanceProfile",
-              "iam:TagRole",
-              "iam:TagInstanceProfile",
-              "ec2:TerminateInstances",
-              "ec2:RunInstances",
-              "ec2:RevokeSecurityGroupEgress",
-              "ec2:ModifyInstanceAttribute",
-              "ec2:ImportKeyPair",
-              "ec2:DescribeVpcs",
-              "ec2:DescribeVolumes",
-              "ec2:DescribeTags",
-              "ec2:DescribeSubnets",
-              "ec2:DescribeSecurityGroups",
-              "ec2:DescribePlacementGroups",
-              "ec2:DescribeNetworkInterfaces",
-              "ec2:DescribeLaunchTemplates",
-              "ec2:DescribeLaunchTemplateVersions",
-              "ec2:DescribeKeyPairs",
-              "ec2:DescribeInstanceTypes",
-              "ec2:DescribeInstanceTypeOfferings",
-              "ec2:DescribeInstances",
-              "ec2:DescribeInstanceAttribute",
-              "ec2:DescribeImages",
-              "ec2:DescribeAccountAttributes",
-              "ec2:DeleteSecurityGroup",
-              "ec2:DeletePlacementGroup",
-              "ec2:DeleteLaunchTemplate",
-              "ec2:DeleteKeyPair",
-              "ec2:CreateTags",
-              "ec2:CreateSecurityGroup",
-              "ec2:CreatePlacementGroup",
-              "ec2:CreateLaunchTemplateVersion",
-              "ec2:CreateLaunchTemplate",
-              "ec2:AuthorizeSecurityGroupIngress",
-              "ec2:AuthorizeSecurityGroupEgress",
-              "secretsmanager:CreateSecret",
-              "secretsmanager:DeleteSecret",
-              "secretsmanager:DescribeSecret",
-              "secretsmanager:GetResourcePolicy",
-              "secretsmanager:GetSecretValue",
-              "secretsmanager:PutSecretValue",
-              "secretsmanager:TagResource"
-          ],
-          "Resource": "*",
-          "Effect": "Allow"
-      }
-  ]
-}
-```
-
-If you will be using AWS Session Manager to connect to the instance, an additional policy should be attached to
-the IAM Role used.
-
-### [session-manager.json](policies/session-manager.json)
-which includes the permissions needed to interact with Session Manager
-```
-{
-  "Version": "2012-10-17",
-  "Statement": [
-      {
-          "Action": [
-              "ssm:DescribeAssociation",
-              "ssm:GetDeployablePatchSnapshotForInstance",
-              "ssm:GetDocument",
-              "ssm:DescribeDocument",
-              "ssm:GetManifest",
-              "ssm:ListAssociations",
-              "ssm:ListInstanceAssociations",
-              "ssm:PutInventory",
-              "ssm:PutComplianceItems",
-              "ssm:PutConfigurePackageResult",
-              "ssm:UpdateAssociationStatus",
-              "ssm:UpdateInstanceAssociationStatus",
-              "ssm:UpdateInstanceInformation"
-          ],
-          "Resource": "*",
-          "Effect": "Allow"
-      },
-      {
-          "Action": [
-              "ssmmessages:CreateControlChannel",
-              "ssmmessages:CreateDataChannel",
-              "ssmmessages:OpenControlChannel",
-              "ssmmessages:OpenDataChannel"
-          ],
-          "Resource": "*",
-          "Effect": "Allow"
-      },
-      {
-          "Action": [
-              "ec2messages:AcknowledgeMessage",
-              "ec2messages:DeleteMessage",
-              "ec2messages:FailMessage",
-              "ec2messages:GetEndpoint",
-              "ec2messages:GetMessages",
-              "ec2messages:SendReply"
-          ],
-          "Resource": "*",
-          "Effect": "Allow"
-      }
-  ]
-}
-```
-
-If passing the Regulus Role to new ai-unlimited clusters instead of allowing Workspaces to create the cluster specific role,
-the following policy can be used as a starting point to template your desired policy.
-### [ai-unlimited-engine.json](policies/ai-unlimited-engine.json)
-
-```
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "secretsmanager:GetSecretValue",
-      "Effect": "Allow",
-      "Resource": [
-        "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:compute-engine/*"
-      ]
-    }
-  ]
-}
-
-```
-
-**Note:** When Workspaces creates policies for ai-unlimited, they are restricted to the form of
-```
-"Resource": [ "arn:aws:secretsmanager:<AI-UNLIMITED_REGION>:<AI-UNLIMITED_ACCOUNT_ID>:secret:compute-engine/<AI-UNLIMITED_CLUSTER_NAME>/<SECRET_NAME>"]
-```
-If providing a IAM Role and Policy, the cluster name will not be predictable, so some level of wildcarding will be needed in the replacement policy,
-
-such as 
-```
-"arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:compute-engine/*"
-or
-"arn:aws:secretsmanager:<REGION>:111111111111:secret:compute-engine/*"
-or
-"arn:aws:secretsmanager:us-west-2:111111111111:secret:compute-engine/*"
 ```

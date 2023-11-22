@@ -1,36 +1,10 @@
 targetScope = 'subscription'
 
-@description('name for the resource group, role and derived network and subnet names.')
-param name string = 'workspaces'
-
-@description('...')
-@allowed([ 'West US' ])
-param location string = 'West US'
-
-@description('New network CIDR.')
-param networkCidr array = [ '10.0.0.0/16' ]
-
-@description('New subnet CIDR.')
-param subnetCidr string = '10.0.0.0/24'
-
-resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
-  name: name
-  location: location
-}
-
-module network '../modules/network.bicep' = {
-  scope: rg
-  name: 'networkDeployment'
-  params: {
-    networkName: name
-    networkCidr: networkCidr
-    subnetCidr: subnetCidr
-    location: location
-  }
-}
+@description('name for the role to create for use with the workspaces instance.')
+param name string = 'workspaces-deployment-role'
 
 resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
-  name: guid(subscription().id, rg.id)
+  name: guid(name, subscription().id)
   properties: {
     roleName: 'Custom Role - Workspaces ${name} Regulus Deployment Permissions'
     description: 'Subscription level permissions for workspaces to create ai-unlimited deployments in there own resource groups'
@@ -97,5 +71,3 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
 }
 
 output RoleDefinitionId string = roleDef.name
-output NetworkName string = network.outputs.networkName
-output SubnetName string = network.outputs.subnetName

@@ -110,9 +110,9 @@ module firewall '../modules/firewall.bicep' = {
   }
 }
 
-module workspaces '../modules/instance.bicep' = {
+module jupyter '../modules/instance.bicep' = {
   scope: rg
-  name: 'workspaces'
+  name: 'jupyter'
   params: {
     location: rg.location
     name: JupyterName
@@ -130,9 +130,9 @@ module workspaces '../modules/instance.bicep' = {
   }
 }
 
-output PublicIP string = workspaces.outputs.PublicIP
-output PrivateIP string = workspaces.outputs.PrivateIP
-output JupyterLabPublicHttpAccess string = 'http://${workspaces.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output JupyterLabPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output sshCommand string = 'ssh azureuser@${workspaces.outputs.PublicIP}'
+output PublicIP string = jupyter.outputs.PublicIP
+output PrivateIP string = jupyter.outputs.PrivateIP
+output JupyterLabPublicHttpAccess string = 'http://${jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output sshCommand string = 'ssh azureuser@${jupyter.outputs.PublicIP}'
 output SecurityGroup string = firewall.outputs.Id
