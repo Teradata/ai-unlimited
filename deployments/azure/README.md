@@ -151,50 +151,114 @@ The template will proceed to deploy
 
 ![arm_create_new_all_in_one_deployment_complete](images/017_arm_create_new_all_in_one_deployment_complete.png?raw=true)
 
-After the template has completed, select the ouput tab and make note of the network names and the `RoleDefinitionId`. 
-These value will be needed by the workspace deployment
+After the template has completed, connection parameters to AI Unlimited Workspace and Jupyter with the AI Unlimited kernel are will be available in the ouput tab.
 
 ![arm_create_new_all_in_one_ouputs](images/018_arm_create_new_all_in_one_ouputs.png?raw=true)
 
 ## Configuring Workspaces
 
+Using the value of workspacesPublicHttpAccess from the Custom Deployment output tab, connect to the Workspace UI in you browser.
+
 ![workspaces_setup](images/020_workspaces_setup.png?raw=true)
+
+Replace the value of `Service Base URL` with the workspacesPublicHttpAccess value and click save.
 
 ![workspaces_setup_update_url](images/021_workspaces_setup_update_url.png?raw=true)
 
+to enable tls for the connection between worksapces abd jupyter or the workspacectl client, change the `Use TLS` to True.
+
 ![workspaces_setup_use_tls](images/022_workspaces_setup_use_tls.png?raw=true)
+
+then add your own TLS certs or the click generate tls button.
 
 ![workspaces_setup_gen_tls](images/023_workspaces_setup_gen_tls.png?raw=true)
 
+then click save changes before proceeding to the next section.
+
 ![workspaces_setup_tls_save](images/024_workspaces_setup_tls_save.png?raw=true)
+
+
+In the Cloud Integrations section, select the Azure tab and provide values for the fields.
+
+- `default region` is the region where new compute engines will be created by default.
+- `default CIDRs` are the network address ranges that will be allowed access to the compute engines.
+- `default security groups` are the security groups that will be allowed access to the compute engines.
+
+In this example we are only setting the default region to westus (or "West US") and allowing access from all address ranges.
+then click save changes before proceeding to the next section.
 
 ![workspaces_setup_azure](images/025_workspaces_setup_azure.png?raw=true)
 
+then in the Git Integrations section provide your GitHub OAuth client ID and Client Secret and click Authenticate
+
 ![workspaces_setup_github](images/026_workspaces_setup_github.png?raw=true)
+
+If you need to setup a Github Oauth first, proceed to your Github endpoint, and under your user, navigate to settings -> developer settings -> OAuth Apps, and create a new OAuth app.
+
+Set the `Application Name` field to whatever you'd like to identify your workspace
+Set the `Homepage URL` to the value of workspacesPublicHttpAccess from the deployment template output
+Set the `Authorization callback URL` to the same value as `Application Name` with `/auth/github/callback` appended
+and check the Enable Device Flow checkbox
 
 ![workspaces_setup_github_oauth](images/027_workspaces_setup_github_oauth.png?raw=true)
 
+back in the Workspace UI, click authenticate and then Accept the permissions presented by github Oauth.
+If successful you will be returned to your Workspace user page and presented with an API key for Workspace use.
+
 ![workspaces_setup_api_key_and_restart](images/028_workspaces_setup_api_key_and_restart.png?raw=true)
+
+To ensure all settings are finalized and TLS is enabled on the client interface, click restart to finsh the workspace configuration.
 
 ## Configuring Jupyter
 
+Using the value of JupyterLabPublicHttpAccess from the Custom Deployment output tab, connect to the Jupyter Lab UI in you browser. The output includes the access token, but you can also provide the token value directly you see the login page.
+
 ![jupyter_setup](images/030_jupyter_setup.png?raw=true)
+
+Navigate to the Regulus Folder
 
 ![jupyter_setup_regulus_folder](images/031_jupyter_setup_regulus_folder.png?raw=true)
 
+Open the Getting Started Notebook
+
 ![jupyter_setup_get_started](images/032_jupyter_setup_get_started.png?raw=true)
+
+Set the `%workspaces_config` `host` to the value of WorkspacesPublicAPIAccess from the Custom Template outputs.
+
+Set the `%workspaces_config` `apiKey` to the API key provided by workspaces
+
+Set the `%workspaces_config` `withtls` to `T` as we have enabled tls on workspaces
 
 ![jupyter_setup_select_host](images/033_jupyter_setup_select_host.png?raw=true)
 
+with the same text box selected, press shift+enter or click the play button on the menu bar.
+
+Jupyter is now configured to communicate with the Workspace service.
+
 ![jupyter_setup_updated_host](images/034_jupyter_setup_updated_host.png?raw=true)
+
+Now on the `%project_create` line, set a project name in the `project=` field and set the `env=` field to azure
+with the same text box selected, press shift+enter or click the play button on the menu bar.
+
+If github OAuth has been correctly configured, a project will be created in your github repo.
 
 ![jupyter_setup_project_create](images/035_jupyter_setup_project_create.png?raw=true)
 
+Now on the `%project_list` line, press shift+enter or click the play button on the menu bar.
+
+You should see your project included in the output table and have a working link back to the source repo.
+
 ![jupyter_setup_list](images/036_jupyter_setup_list.png?raw=true)
+
+Now on the `%project_auth_create` line, set an authorization name in the `name=` field, set the `project=` field to your project name, set the `key=` field to your objectstore access key, set the `secret=` field to your objectstore access secret, and set the `region=` field to the region of your object store. Press shift+enter or click the play button on the menu bar to create the objectstore authorization.
 
 ![jupyter_setup_create_auth](images/037_jupyter_setup_create_auth.png?raw=true)
 
+Verify the authorization using the `%project_auth_list` command, setting the `project=` field to your project name and pressing shift+enter or clicking the play button on the menu bar.
+
 ![jupyter_setup_auth_list](images/038_jupyter_setup_auth_list.png?raw=true)
+
+Deploy your first engine with the `%project_engine_deploy` command, setting the `project=` field to your project name and pressing shift+enter or clicking the play button on the menu bar.
 
 ![jupyter_setup_start_deploy](images/039_jupyter_setup_start_deploy.png?raw=true)
 
