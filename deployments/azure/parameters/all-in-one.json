@@ -52,6 +52,9 @@
     "AllowPublicSSH": {
       "value": true
     },
+    "UseKeyVault": {
+      "value": "New"
+    },
     "UsePersistentVolume": {
       "value": "New"
     },
