@@ -18,6 +18,7 @@ param SourceAppSecGroups = []
 param detinationAppSecGroups = []
 param RoleDefinitionId = ''
 param AllowPublicSSH = true
+param UseKeyVault = 'New'
 param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
