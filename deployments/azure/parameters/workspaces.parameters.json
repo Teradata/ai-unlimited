@@ -63,6 +63,9 @@
     },
     "WorkspacesVersion": {
       "value": "latest"
+    },
+    "UseNLB": {
+      "value": false
     }
   }
 }

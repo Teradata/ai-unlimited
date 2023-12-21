@@ -71,7 +71,10 @@
       "value": "latest"
     },
     "JupyterToken": {
-      "value": "some-value-with-token-complexity"
+      "value": "USE_A_SECURE_TOKEN"
+    },
+    "UseNLB": {
+      "value": false
     }
   }
 }
