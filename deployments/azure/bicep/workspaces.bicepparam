@@ -21,4 +21,5 @@ param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
 param WorkspacesVersion = 'latest'
+param UseNLB = false
 
