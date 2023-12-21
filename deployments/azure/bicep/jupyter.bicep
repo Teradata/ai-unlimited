@@ -61,6 +61,9 @@ param JupyterVersion string = 'latest'
 @description('Join token for the Jupyter Labs service')
 param JupyterToken string = uniqueString(subscription().id, utcNow())
 
+@description('Use a Network Load Balancer to connect to the Jupyter Labs server')
+param UseNLB bool = false
+
 var registry = 'teradata'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
@@ -110,6 +113,16 @@ module firewall '../modules/firewall.bicep' = {
   }
 }
 
+module nlb '../modules/nlb.bicep' = if (UseNLB) {
+  scope: rg
+  name: 'loadbalancer'
+  params: {
+    name: JupyterName
+    location: rg.location
+    jupyterHttpPort: int(JupyterHttpPort)
+  }
+}
+
 module jupyter '../modules/instance.bicep' = {
   scope: rg
   name: 'jupyter'
@@ -127,10 +140,13 @@ module jupyter '../modules/instance.bicep' = {
     usePersistentVolume: UsePersistentVolume
     persistentVolumeSize: PersistentVolumeSize
     existingPersistentVolume: ExistingPersistentVolume
+    nlbName: UseNLB ? JupyterName : ''
+    nlbPoolNames: UseNLB ? nlb.outputs.nlbPools : []
+    usePublicIp: !UseNLB
   }
 }
 
-output PublicIP string = jupyter.outputs.PublicIP
+output PublicIP string = UseNLB ? nlb.outputs.PublicIp : jupyter.outputs.PublicIP
 output PrivateIP string = jupyter.outputs.PrivateIP
 output JupyterLabPublicHttpAccess string = 'http://${jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'

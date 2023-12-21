@@ -19,4 +19,5 @@ param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
 param JupyterVersion = 'latest'
-param JupyterToken = 'some-value-with-token-complexity'
+param JupyterToken = 'USE_A_SECURE_TOKEN' /* TODO : please fix the value assigned to this parameter `uniqueString()` */
+param UseNLB = false

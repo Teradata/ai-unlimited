@@ -73,6 +73,9 @@ param JupyterVersion string = 'latest'
 @description('Join token for the Jupyter Labs service')
 param JupyterToken string = uniqueString(subscription().id, utcNow())
 
+@description('Use a Network Load Balancer to connect to the Workspace server')
+param UseNLB bool = false
+
 var roleAssignmentName = guid(subscription().id, WorkspacesName, rg.id, RoleDefinitionId)
 
 var registry = 'teradata'
@@ -139,6 +142,18 @@ module firewall '../modules/firewall.bicep' = {
   }
 }
 
+module nlb '../modules/nlb.bicep' = if (UseNLB) {
+  scope: rg
+  name: 'loadbalancer'
+  params: {
+    name: WorkspacesName
+    location: rg.location
+    workspacesHttpPort: int(WorkspacesHttpPort)
+    workspacesGrpcPort: int(WorkspacesGrpcPort)
+    jupyterHttpPort: int(JupyterHttpPort)
+  }
+}
+
 module workspaces '../modules/instance.bicep' = {
   scope: rg
   name: 'workspaces'
@@ -156,6 +171,9 @@ module workspaces '../modules/instance.bicep' = {
     usePersistentVolume: UsePersistentVolume
     persistentVolumeSize: PersistentVolumeSize
     existingPersistentVolume: ExistingPersistentVolume
+    nlbName: UseNLB ? WorkspacesName : ''
+    nlbPoolNames: UseNLB ? nlb.outputs.nlbPools : []
+    usePublicIp: !UseNLB
   }
 }
 
@@ -168,13 +186,13 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-output PublicIP string = workspaces.outputs.PublicIP
+output PublicIP string = UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP
 output PrivateIP string = workspaces.outputs.PrivateIP
-output WorkspacesPublicHttpAccess string = 'http://${workspaces.outputs.PublicIP}:${WorkspacesHttpPort}'
+output WorkspacesPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP}:${WorkspacesHttpPort}'
 output WorkspacesPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesHttpPort}'
-output WorkspacesPublicGrpcAccess string = 'http://${workspaces.outputs.PublicIP}:${WorkspacesGrpcPort}'
+output WorkspacesPublicGrpcAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP}:${WorkspacesGrpcPort}'
 output WorkspacesPrivateGrpcAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesGrpcPort}'
-output JupyterLabPublicHttpAccess string = 'http://${workspaces.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output JupyterLabPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output sshCommand string = 'ssh azureuser@${workspaces.outputs.PublicIP}'
 output SecurityGroup string = firewall.outputs.Id

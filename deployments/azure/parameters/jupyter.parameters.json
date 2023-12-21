@@ -3,9 +3,9 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "ResourceGroupName": {
-      "value": "ai-unlimited-workspace"
+      "value": "ai-unlimited-jupyter"
     },
-    "WorkspacesName": {
+    "JupyterName": {
       "value": ""
     },
     "PublicKey": {
@@ -24,7 +24,7 @@
       "value": ""
     },
     "SecurityGroup": {
-      "value": "WorkspacesSecurityGroup"
+      "value": "JupyterSecurityGroup"
     },
     "AccessCIDRs": {
       "value": [
@@ -34,20 +34,11 @@
     "JupyterHttpPort": {
       "value": "8888"
     },
-    "WorkspacesHttpPort": {
-      "value": "3000"
-    },
-    "WorkspacesGrpcPort": {
-      "value": "3282"
-    },
     "SourceAppSecGroups": {
       "value": []
     },
     "detinationAppSecGroups": {
       "value": []
-    },
-    "RoleDefinitionId": {
-      "value": ""
     },
     "AllowPublicSSH": {
       "value": true
@@ -61,14 +52,14 @@
     "ExistingPersistentVolume": {
       "value": "NONE"
     },
-    "WorkspacesVersion": {
-      "value": "latest"
-    },
     "JupyterVersion": {
       "value": "latest"
     },
     "JupyterToken": {
-      "value": "some-value-with-token-complexity"
+      "value": "USE_A_SECURE_TOKEN"
+    },
+    "UseNLB": {
+      "value": false
     }
   }
 }

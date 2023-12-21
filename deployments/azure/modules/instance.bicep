@@ -11,6 +11,9 @@ param usePersistentVolume string
 param persistentVolumeSize int
 param existingPersistentVolume string
 param cloudInitData string
+param usePublicIp bool
+param nlbName string = ''
+param nlbPoolNames array = []
 
 var imageReference = {
   'Ubuntu-1804': {
@@ -57,6 +60,8 @@ var dockerExtensionName = 'DockerExtension'
 var dockerExtensionPublisher = 'Microsoft.Azure.Extensions'
 var dockerExtensionVersion = '1.1'
 
+var resourcePools = [for poolName in nlbPoolNames: { id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', nlbName, poolName) }]
+
 resource existingPersistentDisk 'Microsoft.Compute/disks@2023-04-02' existing = if (usePersistentVolume == 'Existing') {
   name: existingPersistentVolume
 }
@@ -79,17 +84,26 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
   name: networkInterfaceName
   location: location
   properties: {
-    ipConfigurations: [
-      {
-        name: 'ipconfig1'
+    ipConfigurations: [ usePublicIp ? {
+        name: 'ipconfigpublic'
         properties: {
+          privateIPAllocationMethod: 'Dynamic'
           subnet: {
             id: subnetId
           }
-          privateIPAllocationMethod: 'Dynamic'
           publicIPAddress: {
             id: publicIPAddress.id
           }
+          loadBalancerBackendAddressPools: resourcePools
+        }
+      } : {
+        name: 'ipconfigprivate'
+        properties: {
+          privateIPAllocationMethod: 'Dynamic'
+          subnet: {
+            id: subnetId
+          }
+          loadBalancerBackendAddressPools: resourcePools
         }
       }
     ]
@@ -99,7 +113,7 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
   }
 }
 
-resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2022-11-01' = {
+resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2022-11-01' = if (usePublicIp) {
   name: publicIPAddressName
   location: location
   sku: {
@@ -132,7 +146,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
           storageAccountType: osDiskType
         }
       }
-      dataDisks: usePersistentVolume != 'None' ? [] : [
+      dataDisks: usePersistentVolume == 'None' ? [] : [
         {
           lun: 0
           createOption: 'Attach'
@@ -199,6 +213,6 @@ resource workspacesName_extension_docker 'Microsoft.Compute/virtualMachines/exte
   }
 }
 
-output PublicIP string = publicIPAddress.properties.ipAddress
+output PublicIP string = usePublicIp ? publicIPAddress.properties.ipAddress : ''
 output PrivateIP string = networkInterface.properties.ipConfigurations[0].properties.privateIPAddress
 output PrincipleId string = vm.identity.principalId
