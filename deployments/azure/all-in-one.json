@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.23.1.45101",
-      "templateHash": "854823583204323056"
+      "version": "0.24.24.22086",
+      "templateHash": "7836508991779513085"
     }
   },
   "parameters": {
@@ -169,6 +169,13 @@
       "metadata": {
         "description": "Join token for the Jupyter Labs service"
       }
+    },
+    "UseNLB": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Use a Network Load Balancer to connect to the Workspace server"
+      }
     }
   },
   "variables": {
@@ -240,8 +247,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.23.1.45101",
-              "templateHash": "16212577407509280702"
+              "version": "0.24.24.22086",
+              "templateHash": "1018858806142179392"
             }
           },
           "parameters": {
@@ -470,6 +477,170 @@
       }
     },
     {
+      "condition": "[parameters('UseNLB')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "loadbalancer",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('WorkspacesName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "workspacesHttpPort": {
+            "value": "[int(parameters('WorkspacesHttpPort'))]"
+          },
+          "workspacesGrpcPort": {
+            "value": "[int(parameters('WorkspacesGrpcPort'))]"
+          },
+          "jupyterHttpPort": {
+            "value": "[int(parameters('JupyterHttpPort'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.24.24.22086",
+              "templateHash": "6905843737085590430"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "workspacesHttpPort": {
+              "type": "int",
+              "defaultValue": 0
+            },
+            "workspacesGrpcPort": {
+              "type": "int",
+              "defaultValue": 0
+            },
+            "jupyterHttpPort": {
+              "type": "int",
+              "defaultValue": 0
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2021-08-01",
+              "name": "inbound",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static"
+              }
+            },
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2021-08-01",
+              "name": "outbound",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static"
+              }
+            },
+            {
+              "type": "Microsoft.Network/loadBalancers",
+              "apiVersion": "2021-08-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "frontendIPConfigurations": [
+                  {
+                    "name": "[format('{0}Inbound', parameters('name'))]",
+                    "properties": {
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'inbound')]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "[format('{0}Outbound', parameters('name'))]",
+                    "properties": {
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'outbound')]"
+                      }
+                    }
+                  }
+                ],
+                "backendAddressPools": [
+                  {
+                    "name": "[format('{0}InboundBackendPool', parameters('name'))]"
+                  },
+                  {
+                    "name": "[format('{0}OutboundBackendPool', parameters('name'))]"
+                  }
+                ],
+                "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('workspacesHttpPort'), 0)), createArray(createObject('name', 'WorkspacesUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('workspacesHttpPort'), 'backendPort', parameters('workspacesHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('workspacesGrpcPort'), 0)), createArray(createObject('name', 'WorkspacesAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('workspacesGrpcPort'), 'backendPort', parameters('workspacesGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray())))]",
+                "probes": "[flatten(createArray(if(not(equals(parameters('workspacesHttpPort'), 0)), createArray(createObject('name', format('{0}UILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('workspacesHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('workspacesGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('workspacesGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
+                "outboundRules": [
+                  {
+                    "name": "myOutboundRule",
+                    "properties": {
+                      "allocatedOutboundPorts": 10000,
+                      "protocol": "All",
+                      "enableTcpReset": false,
+                      "idleTimeoutInMinutes": 15,
+                      "backendAddressPool": {
+                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))]"
+                      },
+                      "frontendIPConfigurations": [
+                        {
+                          "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Outbound', parameters('name')))]"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'inbound')]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'outbound')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "nlbPools": {
+              "type": "array",
+              "value": [
+                "[format('{0}InboundBackendPool', parameters('name'))]",
+                "[format('{0}OutboundBackendPool', parameters('name'))]"
+              ]
+            },
+            "PublicIp": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'inbound'), '2021-08-01').ipAddress]"
+            }
+          }
+        }
+      }
+    },
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "workspaces",
@@ -518,6 +689,11 @@
           },
           "existingPersistentVolume": {
             "value": "[parameters('ExistingPersistentVolume')]"
+          },
+          "nlbName": "[if(parameters('UseNLB'), createObject('value', parameters('WorkspacesName')), createObject('value', ''))]",
+          "nlbPoolNames": "[if(parameters('UseNLB'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.nlbPools.value), createObject('value', createArray()))]",
+          "usePublicIp": {
+            "value": "[not(parameters('UseNLB'))]"
           }
         },
         "template": {
@@ -526,8 +702,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.23.1.45101",
-              "templateHash": "16549388062424742652"
+              "version": "0.24.24.22086",
+              "templateHash": "994520545106154152"
             }
           },
           "parameters": {
@@ -570,9 +746,29 @@
             },
             "cloudInitData": {
               "type": "string"
+            },
+            "usePublicIp": {
+              "type": "bool"
+            },
+            "nlbName": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "nlbPoolNames": {
+              "type": "array",
+              "defaultValue": []
             }
           },
           "variables": {
+            "copy": [
+              {
+                "name": "resourcePools",
+                "count": "[length(parameters('nlbPoolNames'))]",
+                "input": {
+                  "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('nlbName'), parameters('nlbPoolNames')[copyIndex('resourcePools')])]"
+                }
+              }
+            ],
             "imageReference": {
               "Ubuntu-1804": {
                 "publisher": "Canonical",
@@ -639,18 +835,7 @@
               "location": "[parameters('location')]",
               "properties": {
                 "ipConfigurations": [
-                  {
-                    "name": "ipconfig1",
-                    "properties": {
-                      "subnet": {
-                        "id": "[parameters('subnetId')]"
-                      },
-                      "privateIPAllocationMethod": "Dynamic",
-                      "publicIPAddress": {
-                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
-                      }
-                    }
-                  }
+                  "[if(parameters('usePublicIp'), createObject('name', 'ipconfigpublic', 'properties', createObject('privateIPAllocationMethod', 'Dynamic', 'subnet', createObject('id', parameters('subnetId')), 'publicIPAddress', createObject('id', resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))), 'loadBalancerBackendAddressPools', variables('resourcePools'))), createObject('name', 'ipconfigprivate', 'properties', createObject('privateIPAllocationMethod', 'Dynamic', 'subnet', createObject('id', parameters('subnetId')), 'loadBalancerBackendAddressPools', variables('resourcePools'))))]"
                 ],
                 "networkSecurityGroup": {
                   "id": "[parameters('networkSecurityGroupID')]"
@@ -661,6 +846,7 @@
               ]
             },
             {
+              "condition": "[parameters('usePublicIp')]",
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2022-11-01",
               "name": "[variables('publicIPAddressName')]",
@@ -696,7 +882,7 @@
                       "storageAccountType": "[variables('osDiskType')]"
                     }
                   },
-                  "dataDisks": "[if(not(equals(parameters('usePersistentVolume'), 'None')), createArray(), createArray(createObject('lun', 0, 'createOption', 'Attach', 'managedDisk', createObject('id', if(equals(parameters('usePersistentVolume'), 'New'), resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name'))), resourceId('Microsoft.Compute/disks', parameters('existingPersistentVolume')))))))]",
+                  "dataDisks": "[if(equals(parameters('usePersistentVolume'), 'None'), createArray(), createArray(createObject('lun', 0, 'createOption', 'Attach', 'managedDisk', createObject('id', if(equals(parameters('usePersistentVolume'), 'New'), resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name'))), resourceId('Microsoft.Compute/disks', parameters('existingPersistentVolume')))))))]",
                   "imageReference": "[variables('imageReference')[parameters('osVersion')]]"
                 },
                 "networkProfile": {
@@ -767,7 +953,7 @@
           "outputs": {
             "PublicIP": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')), '2022-11-01').ipAddress]"
+              "value": "[if(parameters('usePublicIp'), reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')), '2022-11-01').ipAddress, '')]"
             },
             "PrivateIP": {
               "type": "string",
@@ -781,14 +967,15 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer')]"
       ]
     }
   ],
   "outputs": {
     "PublicIP": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value]"
+      "value": "[if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value)]"
     },
     "PrivateIP": {
       "type": "string",
@@ -796,7 +983,7 @@
     },
     "WorkspacesPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value, parameters('WorkspacesHttpPort'))]"
+      "value": "[format('http://{0}:{1}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value), parameters('WorkspacesHttpPort'))]"
     },
     "WorkspacesPrivateHttpAccess": {
       "type": "string",
@@ -804,7 +991,7 @@
     },
     "WorkspacesPublicGrpcAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value, parameters('WorkspacesGrpcPort'))]"
+      "value": "[format('http://{0}:{1}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value), parameters('WorkspacesGrpcPort'))]"
     },
     "WorkspacesPrivateGrpcAccess": {
       "type": "string",
@@ -812,7 +999,7 @@
     },
     "JupyterLabPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+      "value": "[format('http://{0}:{1}?token={2}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value), parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
     },
     "JupyterLabPrivateHttpAccess": {
       "type": "string",
