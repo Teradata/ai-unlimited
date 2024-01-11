@@ -6,7 +6,7 @@ param jupyterHttpPort int = 0
 param tags object = {}
 
 resource lbPublicIPAddress 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
-  name: 'inbound'
+  name: '${name}-inbound'
   location: location
   sku: {
     name: 'Standard'
@@ -19,7 +19,7 @@ resource lbPublicIPAddress 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
 }
 
 resource lbPublicIPAddressOutbound 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
-  name: 'outbound'
+  name: '${name}-outbound'
   location: location
   sku: {
     name: 'Standard'

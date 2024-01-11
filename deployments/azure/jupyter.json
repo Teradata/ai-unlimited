@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "7118450702390745805"
+      "templateHash": "18234375492270445054"
     }
   },
   "parameters": {
@@ -475,7 +475,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.24.24.22086",
-              "templateHash": "296837087008094674"
+              "templateHash": "3385554541683646128"
             }
           },
           "parameters": {
@@ -506,7 +506,7 @@
             {
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2021-08-01",
-              "name": "inbound",
+              "name": "[format('{0}-inbound', parameters('name'))]",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "Standard"
@@ -520,7 +520,7 @@
             {
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2021-08-01",
-              "name": "outbound",
+              "name": "[format('{0}-outbound', parameters('name'))]",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "Standard"
@@ -545,7 +545,7 @@
                     "name": "[format('{0}Inbound', parameters('name'))]",
                     "properties": {
                       "publicIPAddress": {
-                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'inbound')]"
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name')))]"
                       }
                     }
                   },
@@ -553,7 +553,7 @@
                     "name": "[format('{0}Outbound', parameters('name'))]",
                     "properties": {
                       "publicIPAddress": {
-                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'outbound')]"
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-outbound', parameters('name')))]"
                       }
                     }
                   }
@@ -590,8 +590,8 @@
               },
               "tags": "[parameters('tags')]",
               "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'inbound')]",
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'outbound')]"
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name')))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-outbound', parameters('name')))]"
               ]
             }
           ],
@@ -605,7 +605,7 @@
             },
             "PublicIp": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'inbound'), '2021-08-01').ipAddress]"
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name'))), '2021-08-01').ipAddress]"
             }
           }
         }
