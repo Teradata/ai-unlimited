@@ -13,9 +13,13 @@ param networkCidr array = [ '10.0.0.0/16' ]
 @description('New subnet CIDR.')
 param subnetCidr string = '10.0.0.0/24'
 
+@description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
+param Tags object = {}
+
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: name
   location: location
+  tags: Tags
 }
 
 module network '../modules/network.bicep' = {
@@ -26,6 +30,7 @@ module network '../modules/network.bicep' = {
     networkCidr: networkCidr
     subnetCidr: subnetCidr
     location: location
+    tags: Tags
   }
 }
 

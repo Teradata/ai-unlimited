@@ -2,10 +2,12 @@ param networkName string
 param networkCidr array
 param subnetCidr string
 param location string
+param tags object = {}
 
 resource network 'Microsoft.Network/virtualNetworks@2022-11-01' = {
   name: networkName
   location: location
+  tags: tags
   properties: {
     addressSpace: {
       addressPrefixes: networkCidr

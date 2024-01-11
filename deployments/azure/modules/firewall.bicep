@@ -7,9 +7,11 @@ param sshAccess bool = false
 param workspacesHttpPort string = 'None'
 param workspacesGrpcPort string = 'None'
 param jupyterHttpPort string = 'None'
+param tags object = {}
 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
   name: name
+  tags: tags
   location: location
 }
 

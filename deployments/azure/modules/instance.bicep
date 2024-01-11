@@ -14,7 +14,7 @@ param cloudInitData string
 param usePublicIp bool
 param nlbName string = ''
 param nlbPoolNames array = []
-
+param tags object = {}
 var imageReference = {
   'Ubuntu-1804': {
     publisher: 'Canonical'
@@ -69,7 +69,7 @@ resource existingPersistentDisk 'Microsoft.Compute/disks@2023-04-02' existing = 
 resource newPersistentDisk 'Microsoft.Compute/disks@2023-04-02' = if (usePersistentVolume == 'New') {
   location: location
   name: '${name}-disk'
-
+  tags: tags
   properties: {
     creationData: {
       createOption: 'Empty'
@@ -83,6 +83,7 @@ resource newPersistentDisk 'Microsoft.Compute/disks@2023-04-02' = if (usePersist
 resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
   name: networkInterfaceName
   location: location
+  tags: tags
   properties: {
     ipConfigurations: [ usePublicIp ? {
         name: 'ipconfigpublic'
@@ -116,6 +117,7 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
 resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2022-11-01' = if (usePublicIp) {
   name: publicIPAddressName
   location: location
+  tags: tags
   sku: {
     name: 'Basic'
   }
@@ -132,6 +134,7 @@ resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2022-11-01' = if (
 resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
   name: name
   location: location
+  tags: tags
   identity: {
     type: 'SystemAssigned'
   }
@@ -184,6 +187,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
 resource workspacesName_extension_trusted 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {
   parent: vm
   name: trustedExtensionName
+  tags: tags
   location: location
   properties: {
     publisher: trustedExtensionPublisher
@@ -204,6 +208,7 @@ resource workspacesName_extension_trusted 'Microsoft.Compute/virtualMachines/ext
 resource workspacesName_extension_docker 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {
   parent: vm
   name: dockerExtensionName
+  tags: tags
   location: location
   properties: {
     publisher: dockerExtensionPublisher
