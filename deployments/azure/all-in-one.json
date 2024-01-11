@@ -123,6 +123,17 @@
         "description": "allow access the workspaces ssh port from the access cidr."
       }
     },
+    "UseKeyVault": {
+      "type": "string",
+      "defaultValue": "New",
+      "allowedValues": [
+        "New",
+        "None"
+      ],
+      "metadata": {
+        "description": "should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes."
+      }
+    },
     "UsePersistentVolume": {
       "type": "string",
       "defaultValue": "New",
@@ -197,6 +208,109 @@
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('RoleDefinitionId'))]",
         "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrincipleId.value]"
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces')]"
+      ]
+    },
+    {
+      "condition": "[equals(parameters('UseKeyVault'), 'New')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vault",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "encryptVolumes": {
+            "value": true
+          },
+          "keyVaultName": {
+            "value": "[parameters('WorkspacesName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "userClientId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrincipleId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "10179246844067754393"
+            }
+          },
+          "parameters": {
+            "encryptVolumes": {
+              "type": "bool"
+            },
+            "keyVaultName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "userClientId": {
+              "type": "securestring"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "softDeleteRetentionInDays": 7,
+                "enableSoftDelete": true,
+                "enablePurgeProtection": "[if(parameters('encryptVolumes'), true(), null())]",
+                "enabledForDiskEncryption": "[parameters('encryptVolumes')]",
+                "accessPolicies": [
+                  {
+                    "tenantId": "[subscription().tenantId]",
+                    "objectId": "[parameters('userClientId')]",
+                    "permissions": {
+                      "keys": "[if(parameters('encryptVolumes'), createArray('Create', 'Delete', 'Get', 'List', 'Update', 'Purge', 'Recover', 'Decrypt', 'Encrypt', 'Sign', 'UnwrapKey', 'Verify', 'WrapKey', 'GetRotationPolicy', 'SetRotationPolicy'), createArray('Get', 'List'))]",
+                      "secrets": [
+                        "Get",
+                        "Set",
+                        "Delete",
+                        "List",
+                        "Purge"
+                      ],
+                      "storage": [
+                        "Get"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('keyVaultName')]"
+            }
+          }
+        }
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces')]"
