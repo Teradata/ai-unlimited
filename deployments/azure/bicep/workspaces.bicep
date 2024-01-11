@@ -51,6 +51,10 @@ param RoleDefinitionId string
 @description('allow access the workspaces ssh port from the access cidr.')
 param AllowPublicSSH bool = true
 
+@description('should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes.')
+@allowed([ 'New', 'None' ])
+param UseKeyVault string = 'New'
+
 @description('should we use a new or existing volume for persistent data on the workspace server.')
 @allowed([ 'New', 'None', 'Existing' ])
 param UsePersistentVolume string = 'New'
@@ -104,6 +108,17 @@ resource network 'Microsoft.Network/virtualNetworks@2022-11-01' existing = {
 resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' existing = {
   parent: network
   name: Subnet
+}
+
+module vault '../modules/vault.bicep' = if (UseKeyVault == 'New') {
+  scope: rg
+  name: 'vault'
+  params: {
+    encryptVolumes: true
+    keyVaultName: WorkspacesName
+    location: rg.location
+    userClientId: workspaces.outputs.PrincipleId
+  }
 }
 
 module firewall '../modules/firewall.bicep' = {
