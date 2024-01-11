@@ -154,7 +154,7 @@ module jupyter '../modules/instance.bicep' = {
 
 output PublicIP string = UseNLB ? nlb.outputs.PublicIp : jupyter.outputs.PublicIP
 output PrivateIP string = jupyter.outputs.PrivateIP
-output JupyterLabPublicHttpAccess string = 'http://${jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output JupyterLabPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output sshCommand string = 'ssh azureuser@${jupyter.outputs.PublicIP}'
 output SecurityGroup string = firewall.outputs.Id

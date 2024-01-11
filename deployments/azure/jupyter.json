@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "18234375492270445054"
+      "templateHash": "11790579766503591956"
     }
   },
   "parameters": {
@@ -967,7 +967,7 @@
     },
     "JupyterLabPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PublicIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+      "value": "[format('http://{0}:{1}?token={2}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PublicIP.value), parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
     },
     "JupyterLabPrivateHttpAccess": {
       "type": "string",
