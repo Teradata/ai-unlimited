@@ -23,4 +23,5 @@ param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
 param WorkspacesVersion = 'latest'
 param UseNLB = false
+param Tags = {}
 

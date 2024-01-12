@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "4241018356025120269"
+      "templateHash": "14046707337037786478"
     }
   },
   "parameters": {
@@ -116,6 +116,17 @@
         "description": "allow access the workspaces ssh port from the access cidr."
       }
     },
+    "UseKeyVault": {
+      "type": "string",
+      "defaultValue": "New",
+      "allowedValues": [
+        "New",
+        "None"
+      ],
+      "metadata": {
+        "description": "should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes."
+      }
+    },
     "UsePersistentVolume": {
       "type": "string",
       "defaultValue": "New",
@@ -155,6 +166,13 @@
       "metadata": {
         "description": "Use a Network Load Balancer to connect to the Workspace server"
       }
+    },
+    "Tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to all newly created resources, in the form of {\"key_one\":\"value_one\",\"key_two\":\"value_two\"}"
+      }
     }
   },
   "variables": {
@@ -174,6 +192,117 @@
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('RoleDefinitionId'))]",
         "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrincipleId.value]"
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces')]"
+      ]
+    },
+    {
+      "condition": "[equals(parameters('UseKeyVault'), 'New')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vault",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "encryptVolumes": {
+            "value": true
+          },
+          "keyVaultName": {
+            "value": "[parameters('WorkspacesName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "userClientId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrincipleId.value]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.24.24.22086",
+              "templateHash": "11274348200796028004"
+            }
+          },
+          "parameters": {
+            "encryptVolumes": {
+              "type": "bool"
+            },
+            "keyVaultName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "userClientId": {
+              "type": "securestring"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "softDeleteRetentionInDays": 7,
+                "enableSoftDelete": true,
+                "enablePurgeProtection": "[if(parameters('encryptVolumes'), true(), null())]",
+                "enabledForDiskEncryption": "[parameters('encryptVolumes')]",
+                "accessPolicies": [
+                  {
+                    "tenantId": "[subscription().tenantId]",
+                    "objectId": "[parameters('userClientId')]",
+                    "permissions": {
+                      "keys": "[if(parameters('encryptVolumes'), createArray('Create', 'Delete', 'Get', 'List', 'Update', 'Purge', 'Recover', 'Decrypt', 'Encrypt', 'Sign', 'UnwrapKey', 'Verify', 'WrapKey', 'GetRotationPolicy', 'SetRotationPolicy'), createArray('Get', 'List'))]",
+                      "secrets": [
+                        "Get",
+                        "Set",
+                        "Delete",
+                        "List",
+                        "Purge"
+                      ],
+                      "storage": [
+                        "Get"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('keyVaultName')]"
+            }
+          }
+        }
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces')]"
@@ -213,6 +342,9 @@
           },
           "detinationAppSecGroups": {
             "value": "[parameters('detinationAppSecGroups')]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
           }
         },
         "template": {
@@ -222,7 +354,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.24.24.22086",
-              "templateHash": "1018858806142179392"
+              "templateHash": "3088606472882204851"
             }
           },
           "parameters": {
@@ -259,6 +391,10 @@
             "jupyterHttpPort": {
               "type": "string",
               "defaultValue": "None"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
             }
           },
           "resources": [
@@ -266,6 +402,7 @@
               "type": "Microsoft.Network/networkSecurityGroups",
               "apiVersion": "2022-11-01",
               "name": "[parameters('name')]",
+              "tags": "[parameters('tags')]",
               "location": "[parameters('location')]"
             },
             {
@@ -473,6 +610,9 @@
           },
           "workspacesGrpcPort": {
             "value": "[int(parameters('WorkspacesGrpcPort'))]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
           }
         },
         "template": {
@@ -482,7 +622,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.24.24.22086",
-              "templateHash": "6905843737085590430"
+              "templateHash": "3385554541683646128"
             }
           },
           "parameters": {
@@ -503,13 +643,17 @@
             "jupyterHttpPort": {
               "type": "int",
               "defaultValue": 0
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
             }
           },
           "resources": [
             {
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2021-08-01",
-              "name": "inbound",
+              "name": "[format('{0}-inbound', parameters('name'))]",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "Standard"
@@ -517,12 +661,13 @@
               "properties": {
                 "publicIPAddressVersion": "IPv4",
                 "publicIPAllocationMethod": "Static"
-              }
+              },
+              "tags": "[parameters('tags')]"
             },
             {
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2021-08-01",
-              "name": "outbound",
+              "name": "[format('{0}-outbound', parameters('name'))]",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "Standard"
@@ -530,7 +675,8 @@
               "properties": {
                 "publicIPAddressVersion": "IPv4",
                 "publicIPAllocationMethod": "Static"
-              }
+              },
+              "tags": "[parameters('tags')]"
             },
             {
               "type": "Microsoft.Network/loadBalancers",
@@ -546,7 +692,7 @@
                     "name": "[format('{0}Inbound', parameters('name'))]",
                     "properties": {
                       "publicIPAddress": {
-                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'inbound')]"
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name')))]"
                       }
                     }
                   },
@@ -554,7 +700,7 @@
                     "name": "[format('{0}Outbound', parameters('name'))]",
                     "properties": {
                       "publicIPAddress": {
-                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'outbound')]"
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-outbound', parameters('name')))]"
                       }
                     }
                   }
@@ -589,9 +735,10 @@
                   }
                 ]
               },
+              "tags": "[parameters('tags')]",
               "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'inbound')]",
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'outbound')]"
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name')))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-outbound', parameters('name')))]"
               ]
             }
           ],
@@ -605,7 +752,7 @@
             },
             "PublicIp": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'inbound'), '2021-08-01').ipAddress]"
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name'))), '2021-08-01').ipAddress]"
             }
           }
         }
@@ -665,6 +812,9 @@
           "nlbPoolNames": "[if(parameters('UseNLB'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.nlbPools.value), createObject('value', createArray()))]",
           "usePublicIp": {
             "value": "[not(parameters('UseNLB'))]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
           }
         },
         "template": {
@@ -674,7 +824,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.24.24.22086",
-              "templateHash": "994520545106154152"
+              "templateHash": "8152473424343277729"
             }
           },
           "parameters": {
@@ -728,6 +878,10 @@
             "nlbPoolNames": {
               "type": "array",
               "defaultValue": []
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
             }
           },
           "variables": {
@@ -790,6 +944,7 @@
               "apiVersion": "2023-04-02",
               "name": "[format('{0}-disk', parameters('name'))]",
               "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
               "properties": {
                 "creationData": {
                   "createOption": "Empty"
@@ -804,6 +959,7 @@
               "apiVersion": "2022-11-01",
               "name": "[variables('networkInterfaceName')]",
               "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
               "properties": {
                 "ipConfigurations": [
                   "[if(parameters('usePublicIp'), createObject('name', 'ipconfigpublic', 'properties', createObject('privateIPAllocationMethod', 'Dynamic', 'subnet', createObject('id', parameters('subnetId')), 'publicIPAddress', createObject('id', resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))), 'loadBalancerBackendAddressPools', variables('resourcePools'))), createObject('name', 'ipconfigprivate', 'properties', createObject('privateIPAllocationMethod', 'Dynamic', 'subnet', createObject('id', parameters('subnetId')), 'loadBalancerBackendAddressPools', variables('resourcePools'))))]"
@@ -822,6 +978,7 @@
               "apiVersion": "2022-11-01",
               "name": "[variables('publicIPAddressName')]",
               "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
               "sku": {
                 "name": "Basic"
               },
@@ -839,6 +996,7 @@
               "apiVersion": "2023-03-01",
               "name": "[parameters('name')]",
               "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
               "identity": {
                 "type": "SystemAssigned"
               },
@@ -886,6 +1044,7 @@
               "type": "Microsoft.Compute/virtualMachines/extensions",
               "apiVersion": "2023-03-01",
               "name": "[format('{0}/{1}', parameters('name'), variables('trustedExtensionName'))]",
+              "tags": "[parameters('tags')]",
               "location": "[parameters('location')]",
               "properties": {
                 "publisher": "[variables('trustedExtensionPublisher')]",
@@ -909,6 +1068,7 @@
               "type": "Microsoft.Compute/virtualMachines/extensions",
               "apiVersion": "2023-03-01",
               "name": "[format('{0}/{1}', parameters('name'), variables('dockerExtensionName'))]",
+              "tags": "[parameters('tags')]",
               "location": "[parameters('location')]",
               "properties": {
                 "publisher": "[variables('dockerExtensionPublisher')]",

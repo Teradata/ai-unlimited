@@ -64,6 +64,9 @@ param JupyterToken string = uniqueString(subscription().id, utcNow())
 @description('Use a Network Load Balancer to connect to the Jupyter Labs server')
 param UseNLB bool = false
 
+@description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
+param Tags object = {}
+
 var registry = 'teradata'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
@@ -110,6 +113,7 @@ module firewall '../modules/firewall.bicep' = {
     jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
+    tags: Tags
   }
 }
 
@@ -120,6 +124,7 @@ module nlb '../modules/nlb.bicep' = if (UseNLB) {
     name: JupyterName
     location: rg.location
     jupyterHttpPort: int(JupyterHttpPort)
+    tags: Tags
   }
 }
 
@@ -143,12 +148,13 @@ module jupyter '../modules/instance.bicep' = {
     nlbName: UseNLB ? JupyterName : ''
     nlbPoolNames: UseNLB ? nlb.outputs.nlbPools : []
     usePublicIp: !UseNLB
+    tags: Tags
   }
 }
 
 output PublicIP string = UseNLB ? nlb.outputs.PublicIp : jupyter.outputs.PublicIP
 output PrivateIP string = jupyter.outputs.PrivateIP
-output JupyterLabPublicHttpAccess string = 'http://${jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output JupyterLabPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output sshCommand string = 'ssh azureuser@${jupyter.outputs.PublicIP}'
 output SecurityGroup string = firewall.outputs.Id

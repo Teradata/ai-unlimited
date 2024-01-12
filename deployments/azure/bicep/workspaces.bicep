@@ -71,6 +71,9 @@ param WorkspacesVersion string = 'latest'
 @description('Use a Network Load Balancer to connect to the Workspace server')
 param UseNLB bool = false
 
+@description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
+param Tags object = {}
+
 var roleAssignmentName = guid(subscription().id, WorkspacesName, rg.id, RoleDefinitionId)
 
 var registry = 'teradata'
@@ -118,6 +121,7 @@ module vault '../modules/vault.bicep' = if (UseKeyVault == 'New') {
     keyVaultName: WorkspacesName
     location: rg.location
     userClientId: workspaces.outputs.PrincipleId
+    tags: Tags
   }
 }
 
@@ -133,6 +137,7 @@ module firewall '../modules/firewall.bicep' = {
     workspacesGrpcPort: WorkspacesGrpcPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
+    tags: Tags
   }
 }
 
@@ -144,6 +149,7 @@ module nlb '../modules/nlb.bicep' = if (UseNLB) {
     location: rg.location
     workspacesHttpPort: int(WorkspacesHttpPort)
     workspacesGrpcPort: int(WorkspacesGrpcPort)
+    tags: Tags
   }
 }
 
@@ -167,6 +173,7 @@ module workspaces '../modules/instance.bicep' = {
     nlbName: UseNLB ? WorkspacesName : ''
     nlbPoolNames: UseNLB ? nlb.outputs.nlbPools : []
     usePublicIp: !UseNLB
+    tags: Tags
   }
 }
 

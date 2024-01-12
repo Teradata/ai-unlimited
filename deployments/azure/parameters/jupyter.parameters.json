@@ -60,6 +60,9 @@
     },
     "UseNLB": {
       "value": false
+    },
+    "Tags": {
+      "value": {}
     }
   }
 }

@@ -26,3 +26,4 @@ param WorkspacesVersion = 'latest'
 param JupyterVersion = 'latest'
 param JupyterToken = 'USE_A_SECURE_TOKEN' /* TODO : please fix the value assigned to this parameter `uniqueString()` */
 param UseNLB = false
+param Tags = {}

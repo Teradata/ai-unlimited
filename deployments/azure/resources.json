@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.23.1.45101",
-      "templateHash": "1606176255021497120"
+      "version": "0.24.24.22086",
+      "templateHash": "2340957522267203160"
     }
   },
   "parameters": {
@@ -13,7 +13,7 @@
       "type": "string",
       "defaultValue": "workspaces",
       "metadata": {
-        "description": "name for the resource group and derived network name."
+        "description": "name for the resource group, role and derived network and subnet names."
       }
     },
     "location": {
@@ -41,6 +41,13 @@
       "metadata": {
         "description": "New subnet CIDR."
       }
+    },
+    "Tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to all newly created resources, in the form of {\"key_one\":\"value_one\",\"key_two\":\"value_two\"}"
+      }
     }
   },
   "resources": [
@@ -48,7 +55,8 @@
       "type": "Microsoft.Resources/resourceGroups",
       "apiVersion": "2022-09-01",
       "name": "[parameters('name')]",
-      "location": "[parameters('location')]"
+      "location": "[parameters('location')]",
+      "tags": "[parameters('Tags')]"
     },
     {
       "type": "Microsoft.Authorization/roleDefinitions",
@@ -143,6 +151,9 @@
           },
           "location": {
             "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
           }
         },
         "template": {
@@ -151,8 +162,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.23.1.45101",
-              "templateHash": "2636051152564020606"
+              "version": "0.24.24.22086",
+              "templateHash": "13399660050737531743"
             }
           },
           "parameters": {
@@ -167,6 +178,10 @@
             },
             "location": {
               "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
             }
           },
           "resources": [
@@ -175,6 +190,7 @@
               "apiVersion": "2022-11-01",
               "name": "[parameters('networkName')]",
               "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
               "properties": {
                 "addressSpace": {
                   "addressPrefixes": "[parameters('networkCidr')]"
