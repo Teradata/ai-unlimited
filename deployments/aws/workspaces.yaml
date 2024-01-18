@@ -688,7 +688,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: HTTP
+      HealthCheckProtocol: TCP
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
       Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], workspaces, api, grpc]]
