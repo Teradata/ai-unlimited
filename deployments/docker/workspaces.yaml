@@ -19,7 +19,7 @@ services:
     volumes:
       - ${WORKSPACES_HOME:-./volumes/workspaces}:/etc/td
     networks:
-      - td-ai-unlimited
+      - ai-unlimited
 
 networks:
-  td-ai-unlimited:
+  ai-unlimited:
