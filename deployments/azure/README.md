@@ -1,15 +1,15 @@
-# Workspaces and Jupyter Deployments for Azure
+# AI Unlimited and Jupyter Deployments for Azure
 
-This directory contains sample Azure Resource Manager templates to deploy Workspaces and Jupyter.
+This directory contains sample Azure Resource Manager templates to deploy AI Unlimited and Jupyter.
 
 ## Azure Resource Manager (ARM) Templates
 
-### Workspaces Template
-The all in one template deploys a single instance with Workspaces running in a container controlled by systemd.
-- [workspaces.json](workspaces.json) cloudformation template 
-- [parameters/workspaces.json](workspaces.json) parameter file
+### AI Unlimited Template
+The all in one template deploys a single instance with AI Unlimited running in a container controlled by systemd.
+- [ai-unlimited.json](ai-unlimited.json) cloudformation template 
+- [parameters/ai-unlimited.json](ai-unlimited.json) parameter file
 
-![arm_visualization](images/900_workspaces_arm_visualization.png?raw=true)
+![arm_visualization](images/900_ai_unlimited_arm_visualization.png?raw=true)
 
 ### Jupyter Template
 The all in one template deploys a single instance with Jupyter Lab running in a container controlled by systemd.
@@ -20,8 +20,8 @@ The all in one template deploys a single instance with Jupyter Lab running in a 
 
 
 ### All-In-One Template
-The all in one template deploys a single instance with both Workspaces and Jupyter running on the same instance.
-It uses all the common parameters, as well as the addiitonal parameters from Workspaces and Jupyter.
+The all in one template deploys a single instance with both AI Unlimited and Jupyter running on the same instance.
+It uses all the common parameters, as well as the addiitonal parameters from AI Unlimited and Jupyter.
 
 If deploying the all in one, it is possible to use the embedded Jupyter Lab service, or connect external Jupyter labs as well.
 You must set the appropriate connection address in the Jupyter notebook, 127.0.0.1 if connecting from the embedded Jupyter service,
@@ -29,7 +29,7 @@ or appropriate public,private ip or dns name when connecting from external clien
 - [all-in-one.json](all-in-one.yaml) cloudformation template 
 - [parameters/all-in-one.json](all-in-one.json) parameter file
 
-![arm_visualization](images/900_workspaces_arm_visualization.png?raw=true)
+![arm_visualization](images/900_ai_unlimited_arm_visualization.png?raw=true)
 
 
 ### Resources Template
@@ -125,17 +125,17 @@ in the Custom deployment Dialog, set values for
 - The ssh public key, ( this should start with "ssh-rsa" )
 - The name of the network to deploy into
 - The name of the subnet to deploy into
-- The name of the security group we will create for the workspace instance
-- The CIDRs that have permission to connect to the workspace instance
-- The Source Application Security Groups that have permission to connect to the workspace instance
-- The Destination Application Security Groups that have permission to connect to the workspace instance
-- The Ports for Workspaces HTTP and GRPC Access, and the Port used fro HTTP to Jupyter
-- The RoleDefinitionId of the role to use with workspaces
+- The name of the security group we will create for the AI Unlimited instance
+- The CIDRs that have permission to connect to the AI Unlimited instance
+- The Source Application Security Groups that have permission to connect to the AI Unlimited instance
+- The Destination Application Security Groups that have permission to connect to the AI Unlimited instance
+- The Ports for AI Unlimited HTTP and GRPC Access, and the Port used fro HTTP to Jupyter
+- The RoleDefinitionId of the role to use with AI Unlimited
 - Will you Allow ssh from the firewall?
-- Will you use a persistent volume for storing the workspace and jupyter data?
+- Will you use a persistent volume for storing the AI Unlimited and Jupyter data?
 - If using a persistent volume, what size should it be.
 - if you are using an existing persistent volume, what is the volume Id.
-- the version of Workspaces
+- the version of AI Unlimited
 - the version of Jupyter
 - the token to use for Jupyter authentication
 
@@ -155,27 +155,27 @@ After the template has completed, connection parameters to AI Unlimited Workspac
 
 ![arm_create_new_all_in_one_ouputs](images/018_arm_create_new_all_in_one_ouputs.png?raw=true)
 
-## Configuring Workspaces
+## Configuring AI Unlimited
 
-Using the value of workspacesPublicHttpAccess from the Custom Deployment output tab, connect to the Workspace UI in you browser.
+Using the value of aiUnlimitedPublicHttpAccess from the Custom Deployment output tab, connect to the AI Unlimited UI in you browser.
 
-![workspaces_setup](images/020_workspaces_setup.png?raw=true)
+![ai_unlimited_setup](images/020_ai_unlimited_setup.png?raw=true)
 
-Replace the value of `Service Base URL` with the workspacesPublicHttpAccess value and click save.
+Replace the value of `Service Base URL` with the aiUnlimitedPublicHttpAccess value and click save.
 
-![workspaces_setup_update_url](images/021_workspaces_setup_update_url.png?raw=true)
+![ai_unlimited_setup_update_url](images/021_ai_unlimited_setup_update_url.png?raw=true)
 
-to enable tls for the connection between worksapces abd jupyter or the workspacectl client, change the `Use TLS` to True.
+to enable tls for the connection between AI Unlimited abd Jupyter or the workspacectl client, change the `Use TLS` to True.
 
-![workspaces_setup_use_tls](images/022_workspaces_setup_use_tls.png?raw=true)
+![ai_unlimited_setup_use_tls](images/022_ai_unlimited_setup_use_tls.png?raw=true)
 
 then add your own TLS certs or the click generate tls button.
 
-![workspaces_setup_gen_tls](images/023_workspaces_setup_gen_tls.png?raw=true)
+![ai_unlimited_setup_gen_tls](images/023_ai_unlimited_setup_gen_tls.png?raw=true)
 
 then click save changes before proceeding to the next section.
 
-![workspaces_setup_tls_save](images/024_workspaces_setup_tls_save.png?raw=true)
+![ai_unlimited_setup_tls_save](images/024_ai_unlimited_setup_tls_save.png?raw=true)
 
 
 In the Cloud Integrations section, select the Azure tab and provide values for the fields.
@@ -187,25 +187,25 @@ In the Cloud Integrations section, select the Azure tab and provide values for t
 In this example we are only setting the default region to westus (or "West US") and allowing access from all address ranges.
 then click save changes before proceeding to the next section.
 
-![workspaces_setup_azure](images/025_workspaces_setup_azure.png?raw=true)
+![ai_unlimited_setup_azure](images/025_ai_unlimited_setup_azure.png?raw=true)
 
 then in the Git Integrations section provide your GitHub OAuth client ID and Client Secret and click Authenticate
 
-![workspaces_setup_github](images/026_workspaces_setup_github.png?raw=true)
+![ai_unlimited_setup_github](images/026_ai_unlimited_setup_github.png?raw=true)
 
 If you need to setup a Github Oauth first, proceed to your Github endpoint, and under your user, navigate to settings -> developer settings -> OAuth Apps, and create a new OAuth app.
 
 Set the `Application Name` field to whatever you'd like to identify your workspace
-Set the `Homepage URL` to the value of workspacesPublicHttpAccess from the deployment template output
+Set the `Homepage URL` to the value of aiUnlimitedPublicHttpAccess from the deployment template output
 Set the `Authorization callback URL` to the same value as `Application Name` with `/auth/github/callback` appended
 and check the Enable Device Flow checkbox
 
-![workspaces_setup_github_oauth](images/027_workspaces_setup_github_oauth.png?raw=true)
+![ai_unlimited_setup_github_oauth](images/027_ai_unlimited_setup_github_oauth.png?raw=true)
 
 back in the Workspace UI, click authenticate and then Accept the permissions presented by github Oauth.
 If successful you will be returned to your Workspace user page and presented with an API key for Workspace use.
 
-![workspaces_setup_api_key_and_restart](images/028_workspaces_setup_api_key_and_restart.png?raw=true)
+![ai_unlimited_setup_api_key_and_restart](images/028_ai_unlimited_setup_api_key_and_restart.png?raw=true)
 
 To ensure all settings are finalized and TLS is enabled on the client interface, click restart to finsh the workspace configuration.
 
@@ -223,11 +223,11 @@ Open the Getting Started Notebook
 
 ![jupyter_setup_get_started](images/032_jupyter_setup_get_started.png?raw=true)
 
-Set the `%workspaces_config` `host` to the value of WorkspacesPublicAPIAccess from the Custom Template outputs.
+Set the `%workspaces_config` `host` to the value of AiUnlimitedPublicAPIAccess from the Custom Template outputs.
 
-Set the `%workspaces_config` `apiKey` to the API key provided by workspaces
+Set the `%workspaces_config` `apiKey` to the API key provided by AI Unlimited
 
-Set the `%workspaces_config` `withtls` to `T` as we have enabled tls on workspaces
+Set the `%workspaces_config` `withtls` to `T` as we have enabled tls on AI Unlimited
 
 ![jupyter_setup_select_host](images/033_jupyter_setup_select_host.png?raw=true)
 
@@ -268,9 +268,9 @@ TODO: Pending updates for use with Deployment Manager
 
 
 ## Using a Persistent Volume
-The default behavior is to use the root volume of the instace for storage. This will persist any Jupyter notebook data saved under the userdata folder and the Workspaces database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or Workspaces database will be lost. 
+The default behavior is to use the root volume of the instace for storage. This will persist any Jupyter notebook data saved under the userdata folder and the AI Unlimited database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or AI Unlimited database will be lost. 
 This can be especially problematic if running on spot instances which may be terminated without warning. If greater persistency is desired,
-You can enable the UsePersistentVolume parameter to move the Jupyter notebook data and/or Workspaces database to a seperate volume.
+You can enable the UsePersistentVolume parameter to move the Jupyter notebook data and/or AI Unlimited database to a seperate volume.
 
 ### Suggested Persistent Volume Flow
 1. Create a new deployment with UsePersistentVolume=New
@@ -280,12 +280,12 @@ You can enable the UsePersistentVolume parameter to move the Jupyter notebook da
 This will remount the volume and the instance will have the previous data available. This template can be relaunced with the same config whenever you need to recreate the instance with the previous data.
 
 ## Example Role Policies 
-If the account deploying Workspaces does not have sufficient IAM permissions to create the roles,
-The roles and can be defined prior to deployment and passed into the Workspaces template.
+If the account deploying AI Unlimited does not have sufficient IAM permissions to create the roles,
+The roles and can be defined prior to deployment and passed into the AI Unlimited template.
 
-For Workspaces, a Role would need the following policies:
-### [workspaces.json](policies/workspaces.json)
-which includes the permissions needed to create ai-unlimited instances and grants Workspaces the
+For AI Unlimited, a Role would need the following policies:
+### [ai-unlimited.json](policies/ai-unlimited.json)
+which includes the permissions needed to create ai-unlimited instances and grants AI Unlimited the
 permissions to create cluster specific IAM roles and policies for the AI Unlimited Engines it 
 will deploy.
 ```

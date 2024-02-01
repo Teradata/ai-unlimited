@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: 'AWS CloudFormation Template Workspaces with Jupyter: Workspaces is a instance based service for deploying and suspending ai-unlimited clusters, and managing project lifecycles. This template also includes a Jupyter Lab service running on the same host, suitable for demonstration environments.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
+Description: 'AWS CloudFormation Template with AI Unlimited with Jupyter: AI Unlimited is a instance based service for deploying and suspending ai-unlimited clusters, and managing project lifecycles. This template also includes a Jupyter Lab service running on the same host, suitable for demonstration environments.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
   License: TODO
@@ -8,9 +8,9 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: Workspaces
+          default: AI Unlimited
         Parameters:
-          - WorkspacesName
+          - AiUnlimitedName
           - InstanceType
           - RootVolumeSize
           - TerminationProtection
@@ -18,24 +18,25 @@ Metadata:
           - IamRoleName
           - IamPermissionsBoundary
       - Label:
-          default: Workspaces connection
+          default: AI Unlimited connection
         Parameters:
           - AvailabilityZone
-          - LoadBalancing
           - LoadBalancerScheme
+          - LoadBalancerSubnetOne
+          - LoadBalancerSubnetTwo
+          - HostedZoneId
+          - DnsName
           - Private
           - Session
           - Vpc
           - Subnet
-
-          # - ApplicationLoadBalancerSubnets
           - KeyName
           - AccessCIDR
           - PrefixList
           - SecurityGroup
-          - WorkspacesHttpPort
-          - WorkspacesGrpcPort
-          - WorkspacesVersion
+          - AiUnlimitedHttpPort
+          - AiUnlimitedGrpcPort
+          - AiUnlimitedVersion
       - Label:
           default: Persistent volume
         Parameters:
@@ -53,12 +54,12 @@ Metadata:
 Parameters:
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
 
-  WorkspacesName:
-    Description: The Workspaces service instance name
+  AiUnlimitedName:
+    Description: The AI Unlimited instance name
     Type: String
-    Default: workspaces
+    Default: ai-unlimited
     AllowedPattern: ^[a-zA-Z][a-zA-Z0-9-]*
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
     MaxLength: "20"
@@ -73,22 +74,12 @@ Parameters:
     MaxLength: "64"
 
   Private:
-    Description: Will Workspaces be deployed in a private network without public IPs?
+    Description: Will AI Unlimited be deployed in a private network without public IPs?
     Type: String
     AllowedValues:
       - true
       - false
     Default: false
-
-  LoadBalancing:
-    Description: "Will Workspaces be accessed via a ALB or NLB? \nThis Load balancer in intended to provide TLS termination and access to private networks,\nnot to add multiple workspaces instance for workload distribution.\n"
-    Type: String
-    AllowedValues:
-      - None
-      - NetworkLoadBalancer
-
-      # - ApplicationLoadBalancer
-    Default: NetworkLoadBalancer
 
   LoadBalancerScheme:
     Description: "If using a LoadBalancer, will it be internal or internet-facing? \nThe DNS name of an Internet-facing load balancer is publicly resolvable to the public IP addresses of the nodes.\nTherefore, Internet-facing load balancers can route requests from clients over the internet. The nodes of an \ninternal load balancer have only private IP addresses. The DNS name of an internal load balancer is publicly\nresolvable to the private IP addresses of the nodes. Therefore, internal load balancers can route requests only\nfrom clients with access to the VPC for the load balancer.\n"
@@ -99,7 +90,7 @@ Parameters:
     Default: internet-facing
 
   Session:
-    Description: Should Workspaces be accessible via AWS Session Manager?
+    Description: Should AI Unlimited be accessible via AWS Session Manager?
     Type: String
     AllowedValues:
       - true
@@ -107,65 +98,74 @@ Parameters:
     Default: false
 
   Vpc:
-    Description: Network to deploy the Workspaces service to.
+    Description: Network to deploy the AI Unlimited to.
     Type: AWS::EC2::VPC::Id
     ConstraintDescription: must be the name of an existing vpc.
 
   Subnet:
-    Description: |
-      Subnetwork to deploy the Workspaces service to.
-      If using an ApplicationLoadBalancer for Access, Please select at least two subnets.
+    Description: Subnetwork to deploy the AI Unlimited to.
     Type: AWS::EC2::Subnet::Id
     ConstraintDescription: must be the name of a existing subnet.
 
   AvailabilityZone:
-    Description: "Availability zone to deploy the Workspaces service to.\nThis must match the subnet, the zone of any pre existing volumes if used, \nand the instance type must be available in the selected zone.\n"
+    Description: "Availability zone to deploy the AI Unlimited to.\nThis must match the subnet, the zone of any pre existing volumes if used, \nand the instance type must be available in the selected zone.\n"
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of a existing subnet.
 
-  # ApplicationLoadBalancerSubnets:
-  #   ConstraintDescription: optional subnets if using Application Load Balancers, must be the names of existing subnets.
-  #   Description: |
-  #     Subnetwork(s) to deploy the Application Load Balancer to.
-  #     If using an ApplicationLoadBalancer for Access, Please select at least two subnets.
-  #   Type: List<AWS::EC2::Subnet::Id>
-  #   Default: []
-  WorkspacesHttpPort:
-    Description: port to access the workspaces service ui.
+  LoadBalancerSubnetOne:
+    Description: First subnetwork to deploy the Application Load Balancer to.
+    Type: AWS::EC2::Subnet::Id
+
+  LoadBalancerSubnetTwo:
+    Description: Second subnetwork to deploy the Application Load Balancer to.
+    Type: AWS::EC2::Subnet::Id
+
+  HostedZoneId:
+    Description: Zone ID of an existing Route 53 zone to add an entry for the Application Load Balancer to.
+    Type: AWS::Route53::HostedZone::Id
+
+  DnsName:
+    Description: |
+      Name for Load Balancer DNS Entry, must fit as subdomain in the provides Route 53 Hosted Zone ID.
+      Example: unlimited.yourhostedzonedomainname.com
+    Type: String
+
+  AiUnlimitedHttpPort:
+    Description: port to access the AI Unlimited UI.
     Type: Number
     Default: 3000
     ConstraintDescription: must be a valid ununsed port between 0 and 65535.
     MinValue: 0
     MaxValue: 65535
 
-  WorkspacesGrpcPort:
-    Description: port to access the workspaces service api.
+  AiUnlimitedGrpcPort:
+    Description: port to access the AI Unlimited API.
     Type: Number
     Default: 3282
     ConstraintDescription: must be a valid ununsed port between 0 and 65535.
     MinValue: 0
     MaxValue: 65535
 
+  AiUnlimitedVersion:
+    Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
+    Type: String
+    Default: latest
+
   JupyterHttpPort:
-    Description: port to access the workspaces service ui.
+    Description: port to access the Jupyter UI.
     Type: Number
     Default: 8888
     ConstraintDescription: must be a valid ununsed port between 0 and 65535.
     MinValue: 0
     MaxValue: 65535
 
-  WorkspacesVersion:
-    Description: Which version of workspaces to deploy, uses container version tags, defaults to "latest"
-    Type: String
-    Default: latest
-
   JupyterVersion:
-    Description: Which version of jupyter to deploy, uses container version tags, defaults to "latest"
+    Description: Which version of Jupyter to deploy, uses container version tags, defaults to "latest"
     Type: String
     Default: latest
 
   RootVolumeSize:
-    Description: size of the root disk to the workspaces server.
+    Description: size of the root disk to the AI Unlimited server.
     Type: Number
     Default: 20
     ConstraintDescription: Size in GB, between 10 and 1000.
@@ -173,7 +173,7 @@ Parameters:
     MaxValue: 1000
 
   UsePersistentVolume:
-    Description: Should we use a new or existing volume for persistent data on the workspaces/jupyter server.
+    Description: Should we use a new or existing volume for persistent data on the AI Unlimited server.
     Type: String
     AllowedValues:
       - None
@@ -183,7 +183,7 @@ Parameters:
     ConstraintDescription: Specify if you are using a a new persistent volume, an existing one, or none.
 
   PersistentVolumeSize:
-    Description: size of the optional persistent disk to the workspaces server.
+    Description: size of the optional persistent disk to the AI Unlimited server.
     Type: Number
     Default: 20
     ConstraintDescription: Size in GB, between 10 and 1000.
@@ -191,7 +191,7 @@ Parameters:
     MaxValue: 1000
 
   ExistingPersistentVolumeId:
-    Description: Id of the existing persistent volume to attach. Must be in the same availability zone as the workspaces instance.
+    Description: Id of the existing persistent volume to attach. Must be in the same availability zone as the AI Unlimited instance.
     Type: String
     Default: None
 
@@ -214,7 +214,7 @@ Parameters:
     Default: false
 
   InstanceType:
-    Description: Workspaces EC2 instance type
+    Description: AI Unlimited EC2 instance type
     Type: String
     AllowedValues:
       - t3.small
@@ -243,12 +243,12 @@ Parameters:
     ConstraintDescription: must be a valid EC2 instance type.
 
   KeyName:
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances, leave empty if no ssh keys should be included
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the AI Unlimited instance, leave empty if no ssh keys should be included
     Type: String
 
   IamRole:
     Description: |
-      Create a new IAM role for workspaces or use an exiting one.
+      Create a new IAM role for AI Unlimited or use an exiting one.
       Requires CAPABILITY_IAM if creating a new IAM Role
     Type: String
     AllowedValues:
@@ -258,31 +258,30 @@ Parameters:
 
   IamRoleName:
     Description: |
-      Name of an existing IAM Role to assign to Workspaces,
+      Name of an existing IAM Role to assign to AI Unlimited,
       or the name to give to the newly created role.
       Leave blank to use an autogenerated name.
       Requires CAPABILITY_NAMED_IAM if naming a new IAM Role.
     Type: String
-    Default: workspaces-iam-role
 
   IamPermissionsBoundary:
     Description: |
-      Optional: Arn of a permissions boundary to pass to the IAM Role assigned to Workspaces.
+      Optional: Arn of a permissions boundary to pass to the IAM Role assigned to AI Unlimited.
     Type: String
 
   AccessCIDR:
-    Description: The IP address range that can be used to communicate with the workspaces instance.
+    Description: The IP address range that can be used to communicate with the AI Unlimited instance.
     Type: String
     AllowedPattern: ((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2}))|^$
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
   PrefixList:
-    Description: The PrefixList that can be used to communicate with the workspaces instance.
+    Description: The PrefixList that can be used to communicate with the AI Unlimited instance.
     Type: String
     ConstraintDescription: must be a valid prefixlist
 
   SecurityGroup:
-    Description: The SecurityGroup that can be used to communicate with the workspaces instance.
+    Description: The SecurityGroup that can be used to communicate with the AI Unlimited instance.
     Type: String
     ConstraintDescription: must be a valid securityGroup ID
 
@@ -308,43 +307,11 @@ Rules:
         AssertDescription: The subnet you selected is not in the VPC
 
 Conditions:
-  HASALB: !Equals [!Ref LoadBalancing, ApplicationLoadBalancer]
-
-  HASNLB: !Equals [!Ref LoadBalancing, NetworkLoadBalancer]
-
-  HASLB: !Or
-    - !Condition HASALB
-    - !Condition HASNLB
-
   NEEDSROLE: !Equals [!Ref IamRole, New]
 
   HASPUBLICIP: !Not [!Equals [!Ref Private, "true"]]
 
   HASKEY: !Not [!Equals [!Ref KeyName, ""]]
-
-  HASCIDRANDLB: !And
-    - !Condition HASLB
-    - !Condition HASCIDR
-
-  HASPREFIXLISTANDLB: !And
-    - !Condition HASLB
-    - !Condition HASPREFIXLIST
-
-  HASSECGROUPANDLB: !And
-    - !Condition HASLB
-    - !Condition HASSECURITYGROUP
-
-  HASLBORNOCIDR: !Or
-    - !Condition HASLB
-    - !Equals [!Ref AccessCIDR, ""]
-
-  HASLBORNOPREFIX: !Or
-    - !Condition HASLB
-    - !Equals [!Ref PrefixList, ""]
-
-  HASLBORNOSECURITYGROUP: !Or
-    - !Condition HASLB
-    - !Equals [!Ref SecurityGroup, ""]
 
   HASCIDR: !Not [!Equals [!Ref AccessCIDR, ""]]
 
@@ -357,24 +324,19 @@ Conditions:
     - !Condition HASPREFIXLIST
     - !Condition HASSECURITYGROUP
 
-  HASCIDRORPREFIXLISTORSECGROUPANDLB: !Or
-    - !Condition HASCIDRANDLB
-    - !Condition HASPREFIXLISTANDLB
-    - !Condition HASSECGROUPANDLB
-
   USESESSIONMANAGER: !Equals [!Ref Session, "true"]
 
   NEEDSROLEANDSESSIONMANAGER: !And
     - !Condition NEEDSROLE
     - !Condition USESESSIONMANAGER
 
-  HASKEYANDCIDR: !And
-    - !Condition HASKEY
-    - !Condition HASCIDR
-
   HASKEYANDPUBLIC: !And
     - !Condition HASKEY
     - !Condition HASPUBLICIP
+
+  HASKEYANDCIDRORPREFIXLISTORSECGROUP: !And
+    - !Condition HASKEY
+    - !Condition HASCIDRORPREFIXLISTORSECGROUP
 
   USENEWPERSISTENTVOLUME: !Equals [!Ref UsePersistentVolume, New]
 
@@ -389,7 +351,7 @@ Conditions:
   HASIAMROLENAME: !Not [!Equals [!Ref IamRoleName, ""]]
 
 Resources:
-  WorkspacesVolume:
+  AiUnlimitedVolume:
     DeletionPolicy: !Ref PersistentVolumeDeletionPolicy
     Type: AWS::EC2::Volume
     Properties:
@@ -398,12 +360,12 @@ Resources:
       Encrypted: true
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref WorkspacesName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+          Value: !Join ['-', [!Ref AiUnlimitedName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
         - Key: Usage
           Value: persistent storage
     Condition: USENEWPERSISTENTVOLUME
 
-  WorkspacesServer:
+  AiUnlimitedServer:
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
@@ -411,7 +373,7 @@ Resources:
     Metadata:
       AWS::CloudFormation::Init:
         configSets:
-          workspaces_install:
+          ai_unlimited_install:
             - prepare_directory
             - !If
               - USENEWPERSISTENTVOLUME
@@ -426,9 +388,9 @@ Resources:
               - mount_storage
               - !Ref AWS::NoValue
             - install_docker
-            - configure_workspaces_service
+            - configure_ai_unlimited_service
             - configure_jupyter_service
-            - start_workspaces_service
+            - start_ai_unlimited_service
             - start_jupyter_service
         prepare_directory:
           commands:
@@ -459,19 +421,19 @@ Resources:
             install_docker:
               command: !Sub |
                 #!/bin/bash -xe
-                amazon-linux-extras install docker -y
-                amazon-linux-extras enable docker
+                dnf update
+                dnf install -y docker
           services:
             systemd:
               docker:
                 enabled: "true"
                 ensureRunning: "true"
-        configure_workspaces_service:
+        configure_ai_unlimited_service:
           files:
-            /usr/lib/systemd/system/workspaces.service:
+            /usr/lib/systemd/system/ai-unlimited.service:
               content: !Sub |
                 [Unit]
-                Description=workspaces
+                Description=AI Unlimited
                 After=docker.service
                 Requires=docker.service
                 StartLimitInterval=200
@@ -482,28 +444,28 @@ Resources:
                 Restart=always
                 RestartSec=2
                 ExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited
-                ExecStartPre=-/usr/bin/mkdir -p /etc/td/workspace
+                ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited/workspaces
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ WorkspacesVersion }
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
                 ExecStart=/usr/bin/docker run \
                     -e accept_license=Y \
                     -e PLATFORM=aws \
                     -v /etc/td/workspace:/etc/td \
-                    -p ${ WorkspacesHttpPort }:3000 \
-                    -p ${ WorkspacesGrpcPort }:3282 \
+                    -p ${ AiUnlimitedHttpPort }:3000 \
+                    -p ${ AiUnlimitedGrpcPort }:3282 \
                     --network ai_unlimited \
-                    --rm --name %n teradata/ai-unlimited-workspaces:${ WorkspacesVersion } workspaces serve -v
-
+                    --net-alias ${ DnsName } \
+                    --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
                 [Install]
                 WantedBy=multi-user.target
               group: root
               mode: "000400"
               owner: root
-        start_workspaces_service:
+        start_ai_unlimited_service:
           services:
             systemd:
-              workspaces:
+              ai-unlimited:
                 enabled: "true"
                 ensureRunning: "true"
         configure_jupyter_service:
@@ -561,37 +523,37 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      SecurityGroupIds: [!GetAtt WorkspacesSecurityGroup.GroupId]
-      IamInstanceProfile: !Ref WorkspacesInstanceProfile
+      SecurityGroupIds: [!GetAtt AiUnlimitedSecurityGroup.GroupId]
+      IamInstanceProfile: !Ref AiUnlimitedInstanceProfile
       Volumes:
         - !If
           - USEPERSISTENTVOLUME
           - Device: /dev/xvdb
             VolumeId: !If
               - USENEWPERSISTENTVOLUME
-              - !Ref WorkspacesVolume
+              - !Ref AiUnlimitedVolume
               - !Ref ExistingPersistentVolumeId
           - !Ref AWS::NoValue
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref WorkspacesName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+          Value: !Join ['-', [!Ref AiUnlimitedName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
       UserData: !Base64
         Fn::Sub: |
           #!/bin/bash -xe
           yum update -y
           yum update -y aws-cfn-bootstrap
-          /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource WorkspacesServer --configsets workspaces_install --region ${AWS::Region}
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource WorkspacesServer --region ${AWS::Region}
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource AiUnlimitedServer --configsets ai_unlimited_install --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource AiUnlimitedServer --region ${AWS::Region}
 
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref Vpc
-      GroupDescription: Enable access to workspaces server from LoadBalancer over http, grpc, and ssh
+      GroupDescription: Enable access to AI Unlimited server from LoadBalancer over http, grpc, and ssh
       SecurityGroupIngress:
-        - FromPort: !Ref WorkspacesHttpPort
+        - FromPort: !Ref AiUnlimitedHttpPort
           IpProtocol: tcp
-          ToPort: !Ref WorkspacesHttpPort
+          ToPort: !Ref AiUnlimitedHttpPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -604,9 +566,9 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: !Ref WorkspacesGrpcPort
+        - FromPort: !Ref AiUnlimitedGrpcPort
           IpProtocol: tcp
-          ToPort: !Ref WorkspacesGrpcPort
+          ToPort: !Ref AiUnlimitedGrpcPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -634,73 +596,56 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-    Condition: HASCIDRORPREFIXLISTORSECGROUPANDLB
+    Condition: HASCIDRORPREFIXLISTORSECGROUP
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Scheme: internet-facing
-      Subnets: [!Ref Subnet]
+      Scheme: !Ref LoadBalancerScheme
+      Subnets:
+        - !Ref LoadBalancerSubnetOne
+        - !Ref LoadBalancerSubnetTwo
       SecurityGroups:
         - !GetAtt LoadBalancerSecurityGroup.GroupId
-      Type: !If
-        - HASALB
-        - application
-        - network
-    Condition: HASLB
+      Type: application
 
-  WorkspacesHTTPListener:
+  AiUnlimitedHTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !If
-            - HASALB
-            - !Ref WorkspacesALBHTTPTargetGroup
-            - !Ref WorkspacesNLBHTTPTargetGroup
+          TargetGroupArn: !Ref AiUnlimitedHTTPTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: !Ref WorkspacesHttpPort
-      Protocol: !If
-        - HASALB
-        - HTTP
-        - TCP
-    Condition: HASLB
+      Port: !Ref AiUnlimitedHttpPort
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACMCertificate
 
   JupyterHTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !If
-            - HASALB
-            - !Ref JupyterALBHTTPTargetGroup
-            - !Ref JupyterNLBHTTPTargetGroup
+          TargetGroupArn: !Ref JupyterHTTPTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
       Port: !Ref JupyterHttpPort
-      Protocol: !If
-        - HASALB
-        - HTTP
-        - TCP
-    Condition: HASLB
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACMCertificate
 
-  GRPCListener:
+  AiUnlimitedGRPCListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !If
-            - HASALB
-            - !Ref WorkspacesALBGRPCTargetGroup
-            - !Ref WorkspacesNLBGRPCTargetGroup
+          TargetGroupArn: !Ref AiUnlimitedGRPCTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: !Ref WorkspacesGrpcPort
-      Protocol: !If
-        - HASALB
-        - HTTPS
-        - TCP
-    Condition: HASLB
+      Port: !Ref AiUnlimitedGrpcPort
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACMCertificate
 
-  WorkspacesALBHTTPTargetGroup:
+  AiUnlimitedHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
@@ -708,8 +653,8 @@ Resources:
       HealthCheckTimeoutSeconds: 15
       Matcher:
         HttpCode: "200"
-      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], workspaces, ui, http]]
-      Port: !Ref WorkspacesHttpPort
+      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], td-aiu, ui, http]]
+      Port: !Ref AiUnlimitedHttpPort
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: stickiness.enabled
@@ -717,16 +662,15 @@ Resources:
         - Key: stickiness.type
           Value: app_cookie
         - Key: stickiness.app_cookie.cookie_name
-          Value: TDWORKSPACESHTTPSSESSION
+          Value: TDWUNLIMITEDHTTPSSESSION
         - Key: deregistration_delay.timeout_seconds
           Value: "20"
       Targets:
-        - Id: !Ref WorkspacesServer
-          Port: !Ref WorkspacesHttpPort
+        - Id: !Ref AiUnlimitedServer
+          Port: !Ref AiUnlimitedHttpPort
       VpcId: !Ref Vpc
-    Condition: HASALB
 
-  JupyterALBHTTPTargetGroup:
+  JupyterHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
@@ -747,56 +691,11 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: "20"
       Targets:
-        - Id: !Ref WorkspacesServer
+        - Id: !Ref AiUnlimitedServer
           Port: !Ref JupyterHttpPort
       VpcId: !Ref Vpc
-    Condition: HASALB
 
-  WorkspacesNLBHTTPTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 15
-      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], workspaces, ui, http]]
-      Port: !Ref WorkspacesHttpPort
-      Protocol: TCP
-      TargetGroupAttributes:
-        - Key: stickiness.enabled
-          Value: true
-        - Key: stickiness.type
-          Value: source_ip
-        - Key: deregistration_delay.timeout_seconds
-          Value: "20"
-      Targets:
-        - Id: !Ref WorkspacesServer
-          Port: !Ref WorkspacesHttpPort
-      VpcId: !Ref Vpc
-    Condition: HASNLB
-
-  JupyterNLBHTTPTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 15
-      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], jupyter, ui, http]]
-      Port: !Ref JupyterHttpPort
-      Protocol: TCP
-      TargetGroupAttributes:
-        - Key: stickiness.enabled
-          Value: true
-        - Key: stickiness.type
-          Value: source_ip
-        - Key: deregistration_delay.timeout_seconds
-          Value: "20"
-      Targets:
-        - Id: !Ref WorkspacesServer
-          Port: !Ref JupyterHttpPort
-      VpcId: !Ref Vpc
-    Condition: HASNLB
-
-  WorkspacesALBGRPCTargetGroup:
+  AiUnlimitedGRPCTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
@@ -805,9 +704,9 @@ Resources:
       HealthyThresholdCount: 5
       Matcher:
         GrpcCode: "0"
-      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], workspaces, api, grpc]]
-      Port: !Ref WorkspacesGrpcPort
-      Protocol: HTTPS
+      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], td-aiu, api, grpc]]
+      Port: !Ref AiUnlimitedGrpcPort
+      Protocol: HTTP
       ProtocolVersion: GRPC
       TargetGroupAttributes:
         - Key: stickiness.enabled
@@ -815,123 +714,55 @@ Resources:
         - Key: stickiness.type
           Value: app_cookie
         - Key: stickiness.app_cookie.cookie_name
-          Value: TDWORKSPACESGRPCSESSION
+          Value: TDUNLIMITEDSGRPCSESSION
         - Key: deregistration_delay.timeout_seconds
           Value: "20"
       Targets:
-        - Id: !Ref WorkspacesServer
-          Port: !Ref WorkspacesGrpcPort
+        - Id: !Ref AiUnlimitedServer
+          Port: !Ref AiUnlimitedGrpcPort
       VpcId: !Ref Vpc
-    Condition: HASALB
 
-  WorkspacesNLBGRPCTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: TCP
-      HealthCheckTimeoutSeconds: 15
-      HealthyThresholdCount: 5
-      Name: !Join ['-', [!Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]], workspaces, api, grpc]]
-      Port: !Ref WorkspacesGrpcPort
-      Protocol: TCP
-      TargetGroupAttributes:
-        - Key: stickiness.enabled
-          Value: true
-        - Key: stickiness.type
-          Value: source_ip
-        - Key: deregistration_delay.timeout_seconds
-          Value: "20"
-      Targets:
-        - Id: !Ref WorkspacesServer
-          Port: !Ref WorkspacesGrpcPort
-      VpcId: !Ref Vpc
-    Condition: HASNLB
-
-  WorkspacesSecurityGroup:
+  AiUnlimitedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref Vpc
-      GroupDescription: Enable access to workspaces server over http and grpc
+      GroupDescription: Enable access to AI Unlimited server over http and grpc
       SecurityGroupIngress:
-        - !If
-          - HASSECURITYGROUP
-          - IpProtocol: tcp
-            FromPort: !Ref WorkspacesHttpPort
-            ToPort: !Ref WorkspacesHttpPort
-            SourceSecurityGroupId: !Ref SecurityGroup
-          - !Ref AWS::NoValue
-        - !If
-          - HASSECURITYGROUP
-          - IpProtocol: tcp
-            FromPort: !Ref WorkspacesGrpcPort
-            ToPort: !Ref WorkspacesGrpcPort
-            SourceSecurityGroupId: !Ref SecurityGroup
-          - !Ref AWS::NoValue
-        - !If
-          - HASSECURITYGROUP
-          - IpProtocol: tcp
-            FromPort: !Ref JupyterHttpPort
-            ToPort: !Ref JupyterHttpPort
-            SourceSecurityGroupId: !Ref SecurityGroup
-          - !Ref AWS::NoValue
         - IpProtocol: tcp
-          FromPort: !Ref WorkspacesHttpPort
-          ToPort: !Ref WorkspacesHttpPort
-          SourceSecurityGroupId: !If
-            - HASLB
-            - !GetAtt LoadBalancerSecurityGroup.GroupId
-            - !Ref AWS::NoValue
-          CidrIp: !If
-            - HASLBORNOCIDR
-            - !Ref AWS::NoValue
-            - !Ref AccessCIDR
-          SourcePrefixListId: !If
-            - HASLBORNOPREFIX
-            - !Ref AWS::NoValue
-            - !Ref PrefixList
+          FromPort: !Ref AiUnlimitedHttpPort
+          ToPort: !Ref AiUnlimitedHttpPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: !Ref AiUnlimitedGrpcPort
+          ToPort: !Ref AiUnlimitedGrpcPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
         - IpProtocol: tcp
           FromPort: !Ref JupyterHttpPort
           ToPort: !Ref JupyterHttpPort
-          SourceSecurityGroupId: !If
-            - HASLB
-            - !GetAtt LoadBalancerSecurityGroup.GroupId
-            - !Ref AWS::NoValue
-          CidrIp: !If
-            - HASLBORNOCIDR
-            - !Ref AWS::NoValue
-            - !Ref AccessCIDR
-          SourcePrefixListId: !If
-            - HASLBORNOPREFIX
-            - !Ref AWS::NoValue
-            - !Ref PrefixList
-        - IpProtocol: tcp
-          FromPort: !Ref WorkspacesGrpcPort
-          ToPort: !Ref WorkspacesGrpcPort
-          SourceSecurityGroupId: !If
-            - HASLB
-            - !GetAtt LoadBalancerSecurityGroup.GroupId
-            - !Ref AWS::NoValue
-          CidrIp: !If
-            - HASLBORNOCIDR
-            - !Ref AWS::NoValue
-            - !Ref AccessCIDR
-          SourcePrefixListId: !If
-            - HASLBORNOPREFIX
-            - !Ref AWS::NoValue
-            - !Ref PrefixList
-    Condition: HASCIDRORPREFIXLISTORSECGROUP
+          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
 
   SecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt WorkspacesSecurityGroup.GroupId
-      CidrIp: !Ref AccessCIDR
+      GroupId: !GetAtt AiUnlimitedSecurityGroup.GroupId
       FromPort: 22
       IpProtocol: tcp
       ToPort: 22
-    Condition: HASKEYANDCIDR
+      CidrIp: !If
+        - HASCIDR
+        - !Ref AccessCIDR
+        - !Ref AWS::NoValue
+      SourcePrefixListId: !If
+        - HASPREFIXLIST
+        - !Ref PrefixList
+        - !Ref AWS::NoValue
+      SourceSecurityGroupId: !If
+        - HASSECURITYGROUP
+        - !Ref SecurityGroup
+        - !Ref AWS::NoValue
+    Condition: HASKEYANDCIDRORPREFIXLISTORSECGROUP
 
-  WorkspacesRole:
+  AiUnlimitedRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -957,7 +788,7 @@ Resources:
   SessionManagerPolicies:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Join ['-', [workspaces, session, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+      PolicyName: !Join ['-', [ai-unlimited, session, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -994,13 +825,13 @@ Resources:
               - ec2messages:SendReply
             Resource: '*'
       Roles:
-        - !Ref WorkspacesRole
+        - !Ref AiUnlimitedRole
     Condition: NEEDSROLEANDSESSIONMANAGER
 
-  WorkspacesRolePolicies:
+  AiUnlimitedRolePolicies:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Join ['-', [workspaces, deploy, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+      PolicyName: !Join ['-', [ai-unlimited, deploy, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -1064,80 +895,79 @@ Resources:
               - secretsmanager:TagResource
             Resource: '*'
       Roles:
-        - !Ref WorkspacesRole
+        - !Ref AiUnlimitedRole
     Condition: NEEDSROLE
 
-  WorkspacesInstanceProfile:
+  AiUnlimitedInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: /
       Roles: !If
         - NEEDSROLE
-        - [!Ref WorkspacesRole]
+        - [!Ref AiUnlimitedRole]
         - [!Ref IamRoleName]
+
+  ACMCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DnsName
+      DomainValidationOptions:
+        - DomainName: !Ref DnsName
+          HostedZoneId: !Ref HostedZoneId
+      ValidationMethod: DNS
+
+  LoadBalancerDNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        - Name: !Ref DnsName
+          Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+            DNSName: !GetAtt LoadBalancer.DNSName
 
 Outputs:
   PublicIP:
     Description: EC2 public IP
-    Value: !GetAtt WorkspacesServer.PublicIp
+    Value: !GetAtt AiUnlimitedServer.PublicIp
     Condition: HASPUBLICIP
 
   PrivateIP:
     Description: EC2 private IP
-    Value: !GetAtt WorkspacesServer.PrivateIp
+    Value: !GetAtt AiUnlimitedServer.PrivateIp
 
-  LoadBalancerWorkspacesUIAccess:
-    Description: Loadbalancer access endpoint for UI Access
-    Value: !Sub "${ LoadBalancer.DNSName }:${ WorkspacesHttpPort }"
-    Condition: HASLB
+  AiUnlimitedUiAccess:
+    Description: Loadbalancer access endpoint for AI Unlimited UI Access
+    Value: !Sub "https://${ DnsName }:${ AiUnlimitedHttpPort }"
 
-  LoadBalancerWorkspacesAPIAccess:
-    Description: Loadbalancer access endpoint for API Access
-    Value: !Sub "${ LoadBalancer.DNSName }:${ WorkspacesGrpcPort }"
-    Condition: HASLB
-
-  LoadBalancerJupyterUIAccess:
-    Description: Loadbalancer access endpoint for API Access
-    Value: !Sub "${ LoadBalancer.DNSName }:${ JupyterHttpPort }?token=${ JupyterToken }"
-    Condition: HASLB
-
-  WorkspacesPublicHttpAccess:
-    Description: Teradata Workspaces Server
-    Value: !Sub "http://${WorkspacesServer.PublicDnsName}:${ WorkspacesHttpPort }"
-    Condition: HASPUBLICIP
-
-  WorkspacesPrivateHttpAccess:
-    Description: Teradata Workspaces Server
-    Value: !Sub "http://${WorkspacesServer.PrivateDnsName}:${ WorkspacesHttpPort }"
-
-  JupyterPublicHttpAccess:
-    Description: Teradata Workspaces Server
-    Value: !Sub "http://${WorkspacesServer.PublicDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }"
-    Condition: HASPUBLICIP
-
-  JupyterPrivateHttpAccess:
-    Description: Teradata jupyter Server
-    Value: !Sub "http://${WorkspacesServer.PrivateDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }"
-
-  JupyterInternalAccessToWorkspaces:
-    Description: Workspaces endpoint for local Jupyter access
-    Value: !Sub "localhost:${ WorkspacesGrpcPort }"
+  AiUnlimitedApiAccess:
+    Description: Loadbalancer access endpoint for AI Unlimited API Access
+    Value: !Sub "${ DnsName }:${ AiUnlimitedGrpcPort }"
 
   SecurityGroup:
-    Description: Workspaces Security Group
-    Value: !GetAtt WorkspacesSecurityGroup.GroupId
+    Description: AI Unlimited Security Group
+    Value: !GetAtt AiUnlimitedSecurityGroup.GroupId
 
-  PublicSSHConeection:
-    Description: Workspaces ssh connnection string
-    Value: !Sub "ssh ec2-user@${ WorkspacesServer.PublicIp }"
+  PublicSshConeection:
+    Description: AI Unlimited ssh connnection string
+    Value: !Sub "ssh ec2-user@${ AiUnlimitedServer.PublicIp }"
     Condition: HASKEYANDPUBLIC
 
-  PrivateSSHConeection:
-    Description: Workspaces ssh connnection string
-    Value: !Sub "ssh ec2-user@${ WorkspacesServer.PrivateIp }"
+  PrivateSshConeection:
+    Description: AI Unlimited ssh connnection string
+    Value: !Sub "ssh ec2-user@${ AiUnlimitedServer.PrivateIp }"
     Condition: HASKEY
 
   PersistentVolumeId:
-    Description: Id of the new persistent volume created for Workspaces
-    Value: !Ref WorkspacesVolume
+    Description: Id of the new persistent volume created for AI Unlimited
+    Value: !Ref AiUnlimitedVolume
     Condition: USENEWPERSISTENTVOLUME
+
+  JupyterUIAccess:
+    Description: Loadbalancer access endpoint for API Access
+    Value: !Sub "https://${ DnsName }:${ JupyterHttpPort }?token=${ JupyterToken }"
+
+  JupyterInternalAccessToAiUnlimited:
+    Description: AI Unlimited endpoint for local Jupyter access
+    Value: !Sub "ai-unlimited.service:${ AiUnlimitedGrpcPort }"

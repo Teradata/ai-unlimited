@@ -5,13 +5,13 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "2340957522267203160"
+      "templateHash": "3903327434574683960"
     }
   },
   "parameters": {
     "name": {
       "type": "string",
-      "defaultValue": "workspaces",
+      "defaultValue": "ai-unlimited",
       "metadata": {
         "description": "name for the resource group, role and derived network and subnet names."
       }
@@ -63,8 +63,8 @@
       "apiVersion": "2022-04-01",
       "name": "[guid(subscription().id, subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('name')))]",
       "properties": {
-        "roleName": "[format('Custom Role - Workspaces {0} Regulus Deployment Permissions', parameters('name'))]",
-        "description": "Subscription level permissions for workspaces to create ai-unlimited deployments in there own resource groups",
+        "roleName": "[format('Custom Role - AI Unlimited {0} Deployment Permissions', parameters('name'))]",
+        "description": "Subscription level permissions for AI Unlimited to create ai-unlimited deployments in there own resource groups",
         "type": "customRole",
         "permissions": [
           {

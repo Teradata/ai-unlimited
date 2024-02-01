@@ -1,13 +1,13 @@
 targetScope = 'subscription'
 
-@description('name for the role to create for use with the workspaces instance.')
-param name string = 'workspaces-deployment-role'
+@description('name for the role to create for use with the AI Unlimited instance.')
+param name string = 'ai-unlimited-deployment-role'
 
 resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: guid(name, subscription().id)
   properties: {
-    roleName: 'Custom Role - Workspaces ${name} Regulus Deployment Permissions'
-    description: 'Subscription level permissions for workspaces to create ai-unlimited deployments in there own resource groups'
+    roleName: 'Custom Role - AI Unlimited ${name} Deployment Permissions'
+    description: 'Subscription level permissions for AI Unlimited to create ai-unlimited deployments in there own resource groups'
     type: 'customRole'
     permissions: [
       {

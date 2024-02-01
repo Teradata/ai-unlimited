@@ -4,8 +4,8 @@ param accessCidrs array = []
 param sourceAppSecGroups array = []
 param detinationAppSecGroups array = []
 param sshAccess bool = false
-param workspacesHttpPort string = 'None'
-param workspacesGrpcPort string = 'None'
+param aiUnlimitedHttpPort string = 'None'
+param aiUnlimitedGrpcPort string = 'None'
 param jupyterHttpPort string = 'None'
 param tags object = {}
 
@@ -59,7 +59,7 @@ resource sshDeny 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-
   }
 }
 
-resource WorkspacesHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (workspacesHttpPort != 'None') {
+resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedHttpPort != 'None') {
   name: '${name}-workspace-http-allow'
   parent: networkSecurityGroup
 
@@ -72,7 +72,7 @@ resource WorkspacesHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2
       location: location
     }
     ]
-    destinationPortRange: workspacesHttpPort // destinationPortRanges: []
+    destinationPortRange: aiUnlimitedHttpPort // destinationPortRanges: []
     direction: 'Inbound'
     priority: 701
     protocol: 'Tcp'
@@ -86,7 +86,7 @@ resource WorkspacesHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2
   }
 }
 
-resource WorkspacesGRPC 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (workspacesGrpcPort != 'None') {
+resource AiUnlimitedGRPC 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedGrpcPort != 'None') {
   name: '${name}-workspace-grpc-allow'
   parent: networkSecurityGroup
 
@@ -99,7 +99,7 @@ resource WorkspacesGRPC 'Microsoft.Network/networkSecurityGroups/securityRules@2
       location: location
     }
     ]
-    destinationPortRange: workspacesGrpcPort // destinationPortRanges: []
+    destinationPortRange: aiUnlimitedGrpcPort // destinationPortRanges: []
     direction: 'Inbound'
     priority: 702
     protocol: 'Tcp'

@@ -44,4 +44,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Check Formatting
-        run: ./rain fmt --verify ./deployments/aws/*.yaml
+        run: ./rain fmt --verify ./deployments/aws/templates/*/*.yaml

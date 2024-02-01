@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "15418479916005263131"
+      "templateHash": "17506977904002741395"
     }
   },
   "parameters": {
@@ -16,7 +16,7 @@
         "description": "name for the resource group."
       }
     },
-    "WorkspacesName": {
+    "AiUnlimitedName": {
       "type": "string",
       "metadata": {
         "description": "Name for the Workspace service's virtual machine."
@@ -61,7 +61,7 @@
     },
     "SecurityGroup": {
       "type": "string",
-      "defaultValue": "WorkspacesSecurityGroup",
+      "defaultValue": "AiUnlimitedSecurityGroup",
       "metadata": {
         "description": "Name of the network security group"
       }
@@ -82,45 +82,45 @@
         "description": "port to access the Jupyter Labs UI."
       }
     },
-    "WorkspacesHttpPort": {
+    "AiUnlimitedHttpPort": {
       "type": "string",
       "defaultValue": "3000",
       "metadata": {
-        "description": "port to access the workspaces service UI."
+        "description": "port to access the AI Unlimited service UI."
       }
     },
-    "WorkspacesGrpcPort": {
+    "AiUnlimitedGrpcPort": {
       "type": "string",
       "defaultValue": "3282",
       "metadata": {
-        "description": "port to access the workspaces service api."
+        "description": "port to access the AI Unlimited service api."
       }
     },
     "SourceAppSecGroups": {
       "type": "array",
       "defaultValue": [],
       "metadata": {
-        "description": "Source Application Security Groups to access the workspaces service api."
+        "description": "Source Application Security Groups to access the AI Unlimited service api."
       }
     },
     "detinationAppSecGroups": {
       "type": "array",
       "defaultValue": [],
       "metadata": {
-        "description": "Destination Application Security Groups to give access to workspaces service instance."
+        "description": "Destination Application Security Groups to give access to AI Unlimited service instance."
       }
     },
     "RoleDefinitionId": {
       "type": "string",
       "metadata": {
-        "description": "GUID of the Workspaces Role"
+        "description": "GUID of the AI Unlimited Role"
       }
     },
     "AllowPublicSSH": {
       "type": "bool",
       "defaultValue": true,
       "metadata": {
-        "description": "allow access the workspaces ssh port from the access cidr."
+        "description": "allow access the AI Unlimited ssh port from the access cidr."
       }
     },
     "UseKeyVault": {
@@ -157,10 +157,10 @@
       "type": "string",
       "defaultValue": "NONE",
       "metadata": {
-        "description": "Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the workspaces server."
+        "description": "Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the AI Unlimited server."
       }
     },
-    "WorkspacesVersion": {
+    "AiUnlimitedVersion": {
       "type": "string",
       "defaultValue": "latest",
       "metadata": {
@@ -197,15 +197,14 @@
     }
   },
   "variables": {
-    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/workspaces.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{1}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable workspaces.service\n- systemctl start workspaces.service\n- systemctl enable jupyter.service\n- systemctl start jupyter.service\n",
-    "$fxv#1": "[Unit]\nDescription=workspaces\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/workspace\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -v /etc/td/workspace:/etc/td \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
+    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{1}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable ai-unliited.service\n- systemctl start ai-unlimited.service\n- systemctl enable jupyter.service\n- systemctl start jupyter.service\n",
+    "$fxv#1": "[Unit]\nDescription=AI Unlimited\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/workspace\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -v /etc/td/workspace:/etc/td \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    --network ai_unlimited {7} \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
     "$fxv#2": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
-    "roleAssignmentName": "[guid(subscription().id, parameters('WorkspacesName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
+    "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
     "registry": "teradata",
     "workspaceRepository": "ai-unlimited-workspaces",
     "jupyterRepository": "ai-unlimited-jupyter",
-    "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('WorkspacesName')))]",
-    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('WorkspacesVersion'), parameters('WorkspacesHttpPort'), parameters('WorkspacesGrpcPort'), subscription().subscriptionId, subscription().tenantId)), base64(format(variables('$fxv#2'), variables('registry'), variables('jupyterRepository'), parameters('JupyterVersion'), parameters('JupyterHttpPort'), parameters('JupyterToken')))))]"
+    "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName')))]"
   },
   "resources": [
     {
@@ -214,10 +213,10 @@
       "name": "[variables('roleAssignmentName')]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('RoleDefinitionId'))]",
-        "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrincipleId.value]"
+        "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrincipleId.value]"
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]"
       ]
     },
     {
@@ -236,13 +235,13 @@
             "value": true
           },
           "keyVaultName": {
-            "value": "[parameters('WorkspacesName')]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "location": {
             "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
           },
           "userClientId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrincipleId.value]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrincipleId.value]"
           },
           "tags": {
             "value": "[parameters('Tags')]"
@@ -328,7 +327,7 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]"
       ]
     },
     {
@@ -354,11 +353,11 @@
           "sshAccess": {
             "value": "[parameters('AllowPublicSSH')]"
           },
-          "workspacesHttpPort": {
-            "value": "[parameters('WorkspacesHttpPort')]"
+          "aiUnlimitedHttpPort": {
+            "value": "[parameters('AiUnlimitedHttpPort')]"
           },
-          "workspacesGrpcPort": {
-            "value": "[parameters('WorkspacesGrpcPort')]"
+          "aiUnlimitedGrpcPort": {
+            "value": "[parameters('AiUnlimitedGrpcPort')]"
           },
           "jupyterHttpPort": {
             "value": "[parameters('JupyterHttpPort')]"
@@ -380,7 +379,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.24.24.22086",
-              "templateHash": "3088606472882204851"
+              "templateHash": "11467857221095272966"
             }
           },
           "parameters": {
@@ -406,11 +405,11 @@
               "type": "bool",
               "defaultValue": false
             },
-            "workspacesHttpPort": {
+            "aiUnlimitedHttpPort": {
               "type": "string",
               "defaultValue": "None"
             },
-            "workspacesGrpcPort": {
+            "aiUnlimitedGrpcPort": {
               "type": "string",
               "defaultValue": "None"
             },
@@ -490,7 +489,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('workspacesHttpPort'), 'None'))]",
+              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 'None'))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-http-allow', parameters('name')))]",
@@ -516,7 +515,7 @@
                 "access": "Allow",
                 "description": "allow http to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('workspacesHttpPort')]",
+                "destinationPortRange": "[parameters('aiUnlimitedHttpPort')]",
                 "direction": "Inbound",
                 "priority": 701,
                 "protocol": "Tcp",
@@ -528,7 +527,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('workspacesGrpcPort'), 'None'))]",
+              "condition": "[not(equals(parameters('aiUnlimitedGrpcPort'), 'None'))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-grpc-allow', parameters('name')))]",
@@ -554,7 +553,7 @@
                 "access": "Allow",
                 "description": "allow grpc to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('workspacesGrpcPort')]",
+                "destinationPortRange": "[parameters('aiUnlimitedGrpcPort')]",
                 "direction": "Inbound",
                 "priority": 702,
                 "protocol": "Tcp",
@@ -626,16 +625,19 @@
         "mode": "Incremental",
         "parameters": {
           "name": {
-            "value": "[parameters('WorkspacesName')]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "location": {
             "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
           },
-          "workspacesHttpPort": {
-            "value": "[int(parameters('WorkspacesHttpPort'))]"
+          "dnsPrefix": {
+            "value": "[variables('dnsLabelPrefix')]"
           },
-          "workspacesGrpcPort": {
-            "value": "[int(parameters('WorkspacesGrpcPort'))]"
+          "aiUnlimitedHttpPort": {
+            "value": "[int(parameters('AiUnlimitedHttpPort'))]"
+          },
+          "aiUnlimitedGrpcPort": {
+            "value": "[int(parameters('AiUnlimitedGrpcPort'))]"
           },
           "jupyterHttpPort": {
             "value": "[int(parameters('JupyterHttpPort'))]"
@@ -651,7 +653,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.24.24.22086",
-              "templateHash": "3385554541683646128"
+              "templateHash": "9004197277945115849"
             }
           },
           "parameters": {
@@ -661,11 +663,14 @@
             "location": {
               "type": "string"
             },
-            "workspacesHttpPort": {
+            "dnsPrefix": {
+              "type": "string"
+            },
+            "aiUnlimitedHttpPort": {
               "type": "int",
               "defaultValue": 0
             },
-            "workspacesGrpcPort": {
+            "aiUnlimitedGrpcPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -688,6 +693,9 @@
                 "name": "Standard"
               },
               "properties": {
+                "dnsSettings": {
+                  "domainNameLabel": "[parameters('dnsPrefix')]"
+                },
                 "publicIPAddressVersion": "IPv4",
                 "publicIPAllocationMethod": "Static"
               },
@@ -742,8 +750,8 @@
                     "name": "[format('{0}OutboundBackendPool', parameters('name'))]"
                   }
                 ],
-                "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('workspacesHttpPort'), 0)), createArray(createObject('name', 'WorkspacesUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('workspacesHttpPort'), 'backendPort', parameters('workspacesHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('workspacesGrpcPort'), 0)), createArray(createObject('name', 'WorkspacesAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('workspacesGrpcPort'), 'backendPort', parameters('workspacesGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray())))]",
-                "probes": "[flatten(createArray(if(not(equals(parameters('workspacesHttpPort'), 0)), createArray(createObject('name', format('{0}UILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('workspacesHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('workspacesGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('workspacesGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
+                "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedHttpPort'), 'backendPort', parameters('aiUnlimitedHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', 'AiUnlimitedAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedGrpcPort'), 'backendPort', parameters('aiUnlimitedGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray())))]",
+                "probes": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', format('{0}UILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
                 "outboundRules": [
                   {
                     "name": "myOutboundRule",
@@ -782,6 +790,10 @@
             "PublicIp": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name'))), '2021-08-01').ipAddress]"
+            },
+            "PublicDns": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-inbound', parameters('name'))), '2021-08-01').dnsSettings.fqdn]"
             }
           }
         }
@@ -790,7 +802,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "workspaces",
+      "name": "ai-unlimited",
       "resourceGroup": "[parameters('ResourceGroupName')]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -802,7 +814,7 @@
             "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
           },
           "name": {
-            "value": "[parameters('WorkspacesName')]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "adminUsername": {
             "value": "azureuser"
@@ -826,7 +838,7 @@
             "value": "[parameters('OSVersion')]"
           },
           "cloudInitData": {
-            "value": "[variables('cloudInitData')]"
+            "value": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, format('--network-alias {0}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value, 'ai-unlimited')))), base64(format(variables('$fxv#2'), variables('registry'), variables('jupyterRepository'), parameters('JupyterVersion'), parameters('JupyterHttpPort'), parameters('JupyterToken')))))]"
           },
           "usePersistentVolume": {
             "value": "[parameters('UsePersistentVolume')]"
@@ -837,7 +849,7 @@
           "existingPersistentVolume": {
             "value": "[parameters('ExistingPersistentVolume')]"
           },
-          "nlbName": "[if(parameters('UseNLB'), createObject('value', parameters('WorkspacesName')), createObject('value', ''))]",
+          "nlbName": "[if(parameters('UseNLB'), createObject('value', parameters('AiUnlimitedName')), createObject('value', ''))]",
           "nlbPoolNames": "[if(parameters('UseNLB'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.nlbPools.value), createObject('value', createArray()))]",
           "usePublicIp": {
             "value": "[not(parameters('UseNLB'))]"
@@ -1135,39 +1147,39 @@
   "outputs": {
     "PublicIP": {
       "type": "string",
-      "value": "[if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value)]"
+      "value": "[if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value)]"
     },
     "PrivateIP": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value]"
     },
-    "WorkspacesPublicHttpAccess": {
+    "AiUnlimitedPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value), parameters('WorkspacesHttpPort'))]"
+      "value": "[format('http://{0}:{1}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value), parameters('AiUnlimitedHttpPort'))]"
     },
-    "WorkspacesPrivateHttpAccess": {
+    "AiUnlimitedPrivateHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value, parameters('WorkspacesHttpPort'))]"
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value, parameters('AiUnlimitedHttpPort'))]"
     },
-    "WorkspacesPublicGrpcAccess": {
+    "AiUnlimitedPublicGrpcAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value), parameters('WorkspacesGrpcPort'))]"
+      "value": "[format('http://{0}:{1}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value), parameters('AiUnlimitedGrpcPort'))]"
     },
-    "WorkspacesPrivateGrpcAccess": {
+    "AiUnlimitedPrivateGrpcAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value, parameters('WorkspacesGrpcPort'))]"
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value, parameters('AiUnlimitedGrpcPort'))]"
     },
     "JupyterLabPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}?token={2}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicIp.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value), parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+      "value": "[format('http://{0}:{1}?token={2}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value), parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
     },
     "JupyterLabPrivateHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PrivateIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
     },
     "sshCommand": {
       "type": "string",
-      "value": "[format('ssh azureuser@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'workspaces'), '2022-09-01').outputs.PublicIP.value)]"
+      "value": "[format('ssh azureuser@{0}', if(parameters('UseNLB'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value))]"
     },
     "SecurityGroup": {
       "type": "string",

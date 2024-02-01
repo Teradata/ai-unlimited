@@ -5,15 +5,15 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "15069971641571422826"
+      "templateHash": "9209728461774905883"
     }
   },
   "parameters": {
     "name": {
       "type": "string",
-      "defaultValue": "workspaces-deployment-role",
+      "defaultValue": "ai-unlimited-deployment-role",
       "metadata": {
-        "description": "name for the role to create for use with the workspaces instance."
+        "description": "name for the role to create for use with the AI Unlimited instance."
       }
     }
   },
@@ -23,8 +23,8 @@
       "apiVersion": "2022-04-01",
       "name": "[guid(parameters('name'), subscription().id)]",
       "properties": {
-        "roleName": "[format('Custom Role - Workspaces {0} Regulus Deployment Permissions', parameters('name'))]",
-        "description": "Subscription level permissions for workspaces to create ai-unlimited deployments in there own resource groups",
+        "roleName": "[format('Custom Role - AI Unlimited {0} Deployment Permissions', parameters('name'))]",
+        "description": "Subscription level permissions for AI Unlimited to create ai-unlimited deployments in there own resource groups",
         "type": "customRole",
         "permissions": [
           {

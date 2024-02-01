@@ -1,4 +1,3 @@
 using './role-policy.bicep'
 
-param name = 'workspaces-deployment-role'
-
+param name = 'ai-unlimited-deployment-role'

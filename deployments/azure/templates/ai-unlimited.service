@@ -1,5 +1,5 @@
 [Unit]
-Description=workspaces
+Description=AI Unlimited
 After=docker.service
 Requires=docker.service
 StartLimitInterval=200
@@ -24,7 +24,7 @@ ExecStart=/usr/bin/docker run \
     -v /etc/td/workspace:/etc/td \
     -p {3}:3000 \
     -p {4}:3282 \
-    --network ai_unlimited \
+    --network ai_unlimited {7} \
     --rm --name %n {0}/{1}:{2} workspaces serve -v
 
 [Install]
