@@ -3,7 +3,7 @@ write_files:
 - encoding: b64
   content: "{0}"
   owner: root:root
-  path: /usr/lib/systemd/system/workspaces.service
+  path: /usr/lib/systemd/system/ai-unlimited.service
   permissions: '0640'
 - encoding: b64
   content: "{1}"
@@ -20,7 +20,7 @@ runcmd:
     /usr/bin/mount -a
 - while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
 - sleep 60
-- systemctl enable workspaces.service
-- systemctl start workspaces.service
+- systemctl enable ai-unliited.service
+- systemctl start ai-unlimited.service
 - systemctl enable jupyter.service
 - systemctl start jupyter.service

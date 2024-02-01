@@ -4,7 +4,7 @@ targetScope = 'subscription'
 param ResourceGroupName string = 'ai-unlimited-workspace'
 
 @description('Name for the Workspace service\'s virtual machine.')
-param WorkspacesName string
+param AiUnlimitedName string
 
 @description('SSH public key value')
 @secure()
@@ -28,7 +28,7 @@ param Network string
 param Subnet string
 
 @description('Name of the network security group')
-param SecurityGroup string = 'WorkspacesSecurityGroup'
+param SecurityGroup string = 'AiUnlimitedSecurityGroup'
 
 @description('The CIDR ranges that can be used to communicate with the Workspace service instance.')
 param AccessCIDRs array = [ '0.0.0.0/0' ]
@@ -36,22 +36,22 @@ param AccessCIDRs array = [ '0.0.0.0/0' ]
 @description('port to access the Jupyter Labs UI.')
 param JupyterHttpPort string = '8888'
 
-@description('port to access the workspaces service UI.')
-param WorkspacesHttpPort string = '3000'
+@description('port to access the AI Unlimited service UI.')
+param AiUnlimitedHttpPort string = '3000'
 
-@description('port to access the workspaces service api.')
-param WorkspacesGrpcPort string = '3282'
+@description('port to access the AI Unlimited service api.')
+param AiUnlimitedGrpcPort string = '3282'
 
-@description('Source Application Security Groups to access the workspaces service api.')
+@description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
 
-@description('Destination Application Security Groups to give access to workspaces service instance.')
+@description('Destination Application Security Groups to give access to AI Unlimited service instance.')
 param detinationAppSecGroups array = []
 
-@description('GUID of the Workspaces Role')
+@description('GUID of the AI Unlimited Role')
 param RoleDefinitionId string
 
-@description('allow access the workspaces ssh port from the access cidr.')
+@description('allow access the AI Unlimited ssh port from the access cidr.')
 param AllowPublicSSH bool = true
 
 @description('should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes.')
@@ -65,11 +65,11 @@ param UsePersistentVolume string = 'New'
 @description('size of the optional persistent disk to the workspace server.')
 param PersistentVolumeSize int = 100
 
-@description('Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the workspaces server.')
+@description('Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the AI Unlimited server.')
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the Workspace service')
-param WorkspacesVersion string = 'latest'
+param AiUnlimitedVersion string = 'latest'
 
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
@@ -83,27 +83,28 @@ param UseNLB bool = false
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
 
-var roleAssignmentName = guid(subscription().id, WorkspacesName, rg.id, RoleDefinitionId)
+var roleAssignmentName = guid(subscription().id, AiUnlimitedName, rg.id, RoleDefinitionId)
 
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
-var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, WorkspacesName)}'
+var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, AiUnlimitedName)}'
 
 var cloudInitData = base64(
   format(
     loadTextContent('../templates/all-in-one.cloudinit.yaml'),
     base64(
       format(
-        loadTextContent('../templates/workspaces.service'),
+        loadTextContent('../templates/ai-unlimited.service'),
         registry,
         workspaceRepository,
-        WorkspacesVersion,
-        WorkspacesHttpPort,
-        WorkspacesGrpcPort,
+        AiUnlimitedVersion,
+        AiUnlimitedHttpPort,
+        AiUnlimitedGrpcPort,
         subscription().subscriptionId,
-        subscription().tenantId
+        subscription().tenantId,
+        '--network-alias ${UseNLB ? nlb.outputs.PublicDns : 'ai-unlimited'}'
       )
     ),
     base64(
@@ -138,9 +139,9 @@ module vault '../modules/vault.bicep' = if (UseKeyVault == 'New') {
   name: 'vault'
   params: {
     encryptVolumes: true
-    keyVaultName: WorkspacesName
+    keyVaultName: AiUnlimitedName
     location: rg.location
-    userClientId: workspaces.outputs.PrincipleId
+    userClientId: aiUnlimited.outputs.PrincipleId
     tags: Tags
   }
 }
@@ -153,8 +154,8 @@ module firewall '../modules/firewall.bicep' = {
     name: SecurityGroup
     accessCidrs: AccessCIDRs
     sshAccess: AllowPublicSSH
-    workspacesHttpPort: WorkspacesHttpPort
-    workspacesGrpcPort: WorkspacesGrpcPort
+    aiUnlimitedHttpPort: AiUnlimitedHttpPort
+    aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
@@ -166,21 +167,22 @@ module nlb '../modules/nlb.bicep' = if (UseNLB) {
   scope: rg
   name: 'loadbalancer'
   params: {
-    name: WorkspacesName
+    name: AiUnlimitedName
     location: rg.location
-    workspacesHttpPort: int(WorkspacesHttpPort)
-    workspacesGrpcPort: int(WorkspacesGrpcPort)
+    dnsPrefix: dnsLabelPrefix
+    aiUnlimitedHttpPort: int(AiUnlimitedHttpPort)
+    aiUnlimitedGrpcPort: int(AiUnlimitedGrpcPort)
     jupyterHttpPort: int(JupyterHttpPort)
     tags: Tags
   }
 }
 
-module workspaces '../modules/instance.bicep' = {
+module aiUnlimited '../modules/instance.bicep' = {
   scope: rg
-  name: 'workspaces'
+  name: 'ai-unlimited'
   params: {
     location: rg.location
-    name: WorkspacesName
+    name: AiUnlimitedName
     adminUsername: 'azureuser'
     sshPublicKey: PublicKey
     dnsLabelPrefix: dnsLabelPrefix
@@ -192,7 +194,7 @@ module workspaces '../modules/instance.bicep' = {
     usePersistentVolume: UsePersistentVolume
     persistentVolumeSize: PersistentVolumeSize
     existingPersistentVolume: ExistingPersistentVolume
-    nlbName: UseNLB ? WorkspacesName : ''
+    nlbName: UseNLB ? AiUnlimitedName : ''
     nlbPoolNames: UseNLB ? nlb.outputs.nlbPools : []
     usePublicIp: !UseNLB
     tags: Tags
@@ -204,17 +206,17 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: roleAssignmentName
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', RoleDefinitionId)
-    principalId: workspaces.outputs.PrincipleId
+    principalId: aiUnlimited.outputs.PrincipleId
   }
 }
 
-output PublicIP string = UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP
-output PrivateIP string = workspaces.outputs.PrivateIP
-output WorkspacesPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP}:${WorkspacesHttpPort}'
-output WorkspacesPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesHttpPort}'
-output WorkspacesPublicGrpcAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP}:${WorkspacesGrpcPort}'
-output WorkspacesPrivateGrpcAccess string = 'http://${workspaces.outputs.PrivateIP}:${WorkspacesGrpcPort}'
-output JupyterLabPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicIp : workspaces.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output JupyterLabPrivateHttpAccess string = 'http://${workspaces.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output sshCommand string = 'ssh azureuser@${workspaces.outputs.PublicIP}'
+output PublicIP string = UseNLB ? nlb.outputs.PublicIp : aiUnlimited.outputs.PublicIP
+output PrivateIP string = aiUnlimited.outputs.PrivateIP
+output AiUnlimitedPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicDns : aiUnlimited.outputs.PublicIP}:${AiUnlimitedHttpPort}'
+output AiUnlimitedPrivateHttpAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedHttpPort}'
+output AiUnlimitedPublicGrpcAccess string = 'http://${UseNLB ? nlb.outputs.PublicDns : aiUnlimited.outputs.PublicIP}:${AiUnlimitedGrpcPort}'
+output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
+output JupyterLabPublicHttpAccess string = 'http://${UseNLB ? nlb.outputs.PublicDns : aiUnlimited.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output JupyterLabPrivateHttpAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
+output sshCommand string = 'ssh azureuser@${UseNLB ? aiUnlimited.outputs.PrivateIP : aiUnlimited.outputs.PublicIP}'
 output SecurityGroup string = firewall.outputs.Id

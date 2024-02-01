@@ -1,7 +1,8 @@
 param name string
 param location string
-param workspacesHttpPort int = 0
-param workspacesGrpcPort int = 0
+param dnsPrefix string
+param aiUnlimitedHttpPort int = 0
+param aiUnlimitedGrpcPort int = 0
 param jupyterHttpPort int = 0
 param tags object = {}
 
@@ -12,6 +13,9 @@ resource lbPublicIPAddress 'Microsoft.Network/publicIPAddresses@2021-08-01' = {
     name: 'Standard'
   }
   properties: {
+    dnsSettings: {
+      domainNameLabel: dnsPrefix
+    }
     publicIPAddressVersion: 'IPv4'
     publicIPAllocationMethod: 'Static'
   }
@@ -65,8 +69,8 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
       }
     ]
     loadBalancingRules: flatten([
-      workspacesHttpPort != 0 ? [ {
-          name: 'WorkspacesUI'
+      aiUnlimitedHttpPort != 0 ? [ {
+          name: 'AiUnlimitedUI'
           properties: {
             frontendIPConfiguration: {
               id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', name, '${name}Inbound')
@@ -74,8 +78,8 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             backendAddressPool: {
               id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', name, '${name}OutboundBackendPool')
             }
-            frontendPort: workspacesHttpPort
-            backendPort: workspacesHttpPort
+            frontendPort: aiUnlimitedHttpPort
+            backendPort: aiUnlimitedHttpPort
             enableFloatingIP: false
             idleTimeoutInMinutes: 15
             protocol: 'Tcp'
@@ -86,8 +90,8 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
               id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}UILbProbe')
             }
           }
-        } ] : [], workspacesGrpcPort != 0 ? [ {
-          name: 'WorkspacesAPI'
+        } ] : [], aiUnlimitedGrpcPort != 0 ? [ {
+          name: 'AiUnlimitedAPI'
           properties: {
             frontendIPConfiguration: {
               id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', name, '${name}Inbound')
@@ -95,8 +99,8 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             backendAddressPool: {
               id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', name, '${name}OutboundBackendPool')
             }
-            frontendPort: workspacesGrpcPort
-            backendPort: workspacesGrpcPort
+            frontendPort: aiUnlimitedGrpcPort
+            backendPort: aiUnlimitedGrpcPort
             enableFloatingIP: false
             idleTimeoutInMinutes: 15
             protocol: 'Tcp'
@@ -131,21 +135,21 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
         } ] : []
     ])
     probes: flatten([
-      workspacesHttpPort != 0 ? [
+      aiUnlimitedHttpPort != 0 ? [
         {
           name: '${name}UILbProbe'
           properties: {
             protocol: 'Tcp'
-            port: workspacesHttpPort
+            port: aiUnlimitedHttpPort
             intervalInSeconds: 5
             numberOfProbes: 2
           }
-        } ] : [], workspacesGrpcPort != 0 ? [
+        } ] : [], aiUnlimitedGrpcPort != 0 ? [
         {
           name: '${name}APILbProbe'
           properties: {
             protocol: 'Tcp'
-            port: workspacesGrpcPort
+            port: aiUnlimitedGrpcPort
             intervalInSeconds: 5
             numberOfProbes: 2
           }
@@ -185,3 +189,4 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
 
 output nlbPools array = [ '${name}InboundBackendPool', '${name}OutboundBackendPool' ]
 output PublicIp string = lbPublicIPAddress.properties.ipAddress
+output PublicDns string = lbPublicIPAddress.properties.dnsSettings.fqdn

@@ -1,7 +1,7 @@
 targetScope = 'subscription'
 
 @description('name for the resource group, role and derived network and subnet names.')
-param name string = 'workspaces'
+param name string = 'ai-unlimited'
 
 @description('...')
 @allowed([ 'West US' ])
@@ -37,8 +37,8 @@ module network '../modules/network.bicep' = {
 resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: guid(subscription().id, rg.id)
   properties: {
-    roleName: 'Custom Role - Workspaces ${name} Regulus Deployment Permissions'
-    description: 'Subscription level permissions for workspaces to create ai-unlimited deployments in there own resource groups'
+    roleName: 'Custom Role - AI Unlimited ${name} Deployment Permissions'
+    description: 'Subscription level permissions for AI Unlimited to create ai-unlimited deployments in there own resource groups'
     type: 'customRole'
     permissions: [
       {

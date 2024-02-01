@@ -5,7 +5,7 @@
     "ResourceGroupName": {
       "value": "ai-unlimited-workspace"
     },
-    "WorkspacesName": {
+    "AiUnlimitedName": {
       "value": ""
     },
     "PublicKey": {
@@ -24,17 +24,17 @@
       "value": ""
     },
     "SecurityGroup": {
-      "value": "WorkspacesSecurityGroup"
+      "value": "AiUnlimitedSecurityGroup"
     },
     "AccessCIDRs": {
       "value": [
         "0.0.0.0/0"
       ]
     },
-    "WorkspacesHttpPort": {
+    "AiUnlimitedHttpPort": {
       "value": "3000"
     },
-    "WorkspacesGrpcPort": {
+    "AiUnlimitedGrpcPort": {
       "value": "3282"
     },
     "SourceAppSecGroups": {
@@ -61,7 +61,7 @@
     "ExistingPersistentVolume": {
       "value": "NONE"
     },
-    "WorkspacesVersion": {
+    "AiUnlimitedVersion": {
       "value": "latest"
     },
     "UseNLB": {

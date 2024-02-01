@@ -1,0 +1,102 @@
+[
+  {
+    "ParameterKey": "AiUnlimitedName",
+    "ParameterValue": "test-unlimited"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "t3.small"
+  },
+  {
+    "ParameterKey": "RootVolumeSize",
+    "ParameterValue": "20"
+  },
+  {
+    "ParameterKey": "TerminationProtection",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "IamRole",
+    "ParameterValue": "New"
+  },
+  {
+    "ParameterKey": "IamRoleName",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "IamPermissionsBoundary",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "AvailabilityZone",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "LoadBalancerScheme",
+    "ParameterValue": "internet-facing"
+  },
+  {
+    "ParameterKey": "LoadBalancerSubnet",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Private",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "Session",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "Vpc",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "Subnet",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "AccessCIDR",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "PrefixList",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "SecurityGroup",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "AiUnlimitedHttpPort",
+    "ParameterValue": "3000"
+  },
+  {
+    "ParameterKey": "AiUnlimitedGrpcPort",
+    "ParameterValue": "3282"
+  },
+  {
+    "ParameterKey": "AiUnlimitedVersion",
+    "ParameterValue": "latest"
+  },
+  {
+    "ParameterKey": "UsePersistentVolume",
+    "ParameterValue": "New"
+  },
+  {
+    "ParameterKey": "PersistentVolumeSize",
+    "ParameterValue": "20"
+  },
+  {
+    "ParameterKey": "ExistingPersistentVolumeId",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "PersistentVolumeDeletionPolicy",
+    "ParameterValue": "Delete"
+  }
+]

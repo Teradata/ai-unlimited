@@ -4,25 +4,37 @@ This directory contains sample CloudFormation templates to deploy Workspaces and
 
 ## Cloud Formations Templates
 
-### Workspaces Template
-The all in one template deploys a single instance with Workspaces running in a container controlled by systemd.
-- [workspaces.yaml](workspaces.yaml) cloudformation template 
-- [parameters/workspaces.json](workspaces.json) parameter file
+### AI Unlimited Templates
+The ai-unlimited directory contains templates to deploys AI Unlimited in your AWS account.
+It provides seperate template options for deploying with or without load balancers.
+- [ai-unlimited/ai-unlimited-with-alb.yaml](ai-unlimited-with-alb.yaml) cloudformation template.
+- [ai-unlimited/ai-unlimited-with-nlb.yaml](ai-unlimited-with-nlb.yaml) cloudformation template.
+- [ai-unlimited/ai-unlimited-without-lb.yaml](ai-unlimited-without-lb.yaml) cloudformation template.
+- [parameters/ai-unlimited-with-alb.json](parameters/ai-unlimited-with-alb.json) parameter file.
+- [parameters/ai-unlimited-with-nlb.json](parameters/ai-unlimited-with-nlb.json) parameter file.
+- [parameters/ai-unlimited-without-lb.json](parameters/ai-unlimited-without-lb.json) parameter file.
 
 ### Jupyter Template
-The all in one template deploys a single instance with Jupyter Lab running in a container controlled by systemd.
-- [jupyter.yaml](jupyter.yaml) cloudformation template 
-- [parameters/jupyter.json](jupyter.json) parameter file
+The jupyter directory contains templates to deploys a Jupyter Labs instance with the AI Unlimited Kernel in your AWS account.
+It provides seperate template options for deploying with or without load balancers.
+- [jupyter/jupyter-with-alb.yaml](jupyter-with-alb.yaml) cloudformation template.
+- [jupyter/jupyter-with-nlb.yaml](jupyter-with-nlb.yaml) cloudformation template.
+- [jupyter/jupyter-without-lb.yaml](jupyter-without-lb.yaml) cloudformation template.
+- [parameters/jupyter-with-alb.json](parameters/jupyter-with-alb.json) parameter file.
+- [parameters/jupyter-with-nlb.json](parameters/jupyter-with-nlb.json) parameter file.
+- [parameters/jupyter-without-lb.json](parameters/jupyter-without-lb.json) parameter file.
 
 ### All-In-One Template
-The all in one template deploys a single instance with both Workspaces and Jupyter running on the same instance.
-It uses all the common parameters, as well as the addiitonal parameters from Workspaces and Jupyter.
+The all-in-one directory contains templates to deploys a AI Unlimited and Jupyter Labs on an single instance in your AWS account.
+It provides seperate template options for deploying with or without load balancers.
+- [all-in-one/all-in-one-with-alb.yaml](all-in-one-with-alb.yaml) cloudformation template.
+- [all-in-one/all-in-one-with-nlb.yaml](all-in-one-with-nlb.yaml) cloudformation template.
+- [all-in-one/all-in-one-without-lb.yaml](all-in-one-without-lb.yaml) cloudformation template.
+- [parameters/all-in-one-with-alb.json](parameters/all-in-one-with-alb.json) parameter file.
+- [parameters/all-in-one-with-nlb.json](parameters/all-in-one-with-nlb.json) parameter file.
+- [parameters/all-in-one-without-lb.json](parameters/all-in-one-without-lb.json) parameter file.
 
 If deploying the all in one, it is possible to use the embedded Jupyter Lab service, or connect external Jupyter labs as well.
-You must set the appropriate connection address in the Jupyter notebook, 127.0.0.1 if connecting from the embedded Jupyter service,
-or appropriate public,private ip or dns name when connecting from external clients.
-- [all-in-one.yaml](all-in-one.yaml) cloudformation template 
-- [parameters/all-in-one.json](all-in-one.json) parameter file
 
 ## Deployment via AWS Console
 Create New CloudFormation Template Deployment
@@ -46,9 +58,9 @@ Examples given here are for create-stack. Please reference aws cloudformation de
 ##### Creating a new stack
 With AWS credentials for an appropriatley permissioned user or service account, and an prepared parameters.json file. 
 ```
-aws cloudformation create-stack --stack-name all-in-one \
-  --template-body file://all-in-one.yaml \
-  --parameters file://test_parameters/all-in-one.json \
+aws cloudformation create-stack --stack-name ai-unlimited-all-in-one \
+  --template-body file://templates/all-in-one/all-in-one-with-alb.yaml \
+  --parameters file://parameters/all-in-one-with-alb.json \
   --tags Key=ThisIsAKey,Value=AndThisIsAValue \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 ```
@@ -120,13 +132,13 @@ This will remount the volume and the instance will have the previous data availa
 | **PersistentVolumeDeletionPolicy** | Behavior for the Persistent Volume when deleting the cloudformations deployment | *required with default* | Delete | Allowed Values are Delete, Retain, RetainExceptOnCreate, and Snapshot |
 | **LatestAmiId** | The image is to use for the SSM lookup | *required with defaults* |  | This deployment uses the latest ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2 image available, Changing this value will likely break the stack. |
 
-### Workspaces specific Parameters
+### AI Unlimited specific Parameters
 
 | Parameter | Description | Required | Default | Notes |
 | --------- | ----------- | -------- | ------- | ----- |
-| **WorkspacesHttpPort** | The port to access the Workspaces service UI | *required with default* | 3000 |  |
-| **WorkspacesGrpcPort** | The port to access the Workspaces service API | *required with default* | 3282 |  |
-| **WorkspacesVersion** | Which version of Workspaces to deploy, uses container version tags | *required with default* | latest |  |
+| **AiUnlimitedHttpPort** | The port to access the AI Unlimited service UI | *required with default* | 3000 |  |
+| **AiUnlimitedGrpcPort** | The port to access the AI Unlimited service API | *required with default* | 3282 |  |
+| **AiUnlimitedVersion** | Which version of AI Unlimited to deploy, uses container version tags | *required with default* | latest |  |
 
 ### Jupyter specific Parameters
 
@@ -137,12 +149,12 @@ This will remount the volume and the instance will have the previous data availa
 | **JupyterVersion** | Which version of Jupyter to deploy, uses container version tags | *required with default* | latest |  |
 
 ## Example IAM Policies 
-If the account deploying Workspaces does not have sufficient IAM permissions to create IAM roles or IAM policies,
-roles and policies can be defined prior to deployment and passed into the Workspaces template.
+If the account deploying AI Unlimited does not have sufficient IAM permissions to create IAM roles or IAM policies,
+roles and policies can be defined prior to deployment and passed into the AI Unlimited template.
 
-For Workspaces, a IAM role would need the following policies:
-### [workspaces-with-iam-role-permissions.json](policies/workspaces.json)
-which includes the permissions needed to create ai-unlimited instances and grants Workspaces the
+For AI Unlimited, a IAM role would need the following policies:
+### [ai-unlimited-with-iam-role-permissions.json](policies/ai-unlimited.json)
+which includes the permissions needed to create ai-unlimited instances and grants AI Unlimited the
 permissions to create cluster specific IAM roles and policies for the Regulus systems it 
 will deploy.
 ```
@@ -214,12 +226,12 @@ will deploy.
   ]
 }
 ```
-If account restrictions do will not allow Workspaces to create IAM Roles and IAM policies,
-Then Workspaces should also be provided a IAM role with a Policy to pass to the Regulus clusters.
-In this case, a modifed Workspaces policy can be used which does not include permissions to
+If account restrictions do will not allow AiUnlimited to create IAM Roles and IAM policies,
+Then AiUnlimited should also be provided a IAM role with a Policy to pass to the Regulus clusters.
+In this case, a modifed AiUnlimited policy can be used which does not include permissions to
 create IAM Roles or IAM Policies.
 
-### [workspaces-without-iam-role-permissions.json](policies/workspaces-without-iam-role-permissions.json)
+### [ai-unlimited-without-iam-role-permissions.json](policies/ai-unlimited-without-iam-role-permissions.json)
 which includes the permissions needed to create ai-unlimited instances
 ```
 {
@@ -342,7 +354,7 @@ which includes the permissions needed to interact with Session Manager
 }
 ```
 
-If passing the Regulus Role to new ai-unlimited clusters instead of allowing Workspaces to create the cluster specific role,
+If passing the Regulus Role to new ai-unlimited clusters instead of allowing AiUnlimited to create the cluster specific role,
 the following policy can be used as a starting point to template your desired policy.
 ### [ai-unlimited-engine.json](policies/ai-unlimited-engine.json)
 
@@ -362,7 +374,7 @@ the following policy can be used as a starting point to template your desired po
 
 ```
 
-**Note:** When Workspaces creates policies for ai-unlimited, they are restricted to the form of
+**Note:** When AiUnlimited creates policies for ai-unlimited, they are restricted to the form of
 ```
 "Resource": [ "arn:aws:secretsmanager:<AI-UNLIMITED_REGION>:<AI-UNLIMITED_ACCOUNT_ID>:secret:compute-engine/<AI-UNLIMITED_CLUSTER_NAME>/<SECRET_NAME>"]
 ```
