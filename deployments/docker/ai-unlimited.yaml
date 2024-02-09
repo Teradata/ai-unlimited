@@ -15,7 +15,7 @@ services:
       - "3282:3282/tcp"
     environment:
       accept_license: "Y"
-      TZ: ${WS_TZ:-UTC}
+      TZ: ${AI_UNLIMITED_TZ:-UTC}
     volumes:
       - ${AI_UNLIMITED_HOME:-./volumes/ai-unlimited-workspaces}:/etc/td
     networks:
