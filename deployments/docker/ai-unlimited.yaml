@@ -1,12 +1,12 @@
 version: "3.9"
 
 services:
-  workspaces:
+  ai-unlimited:
     deploy:
       replicas: 1
     platform: linux/amd64
-    container_name: workspaces
-    image: ${WORKSPACES_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${WORKSPACES_IMAGE_TAG:-latest}
+    container_name: ai-unlimited-workspaces
+    image: ${AI_UNLIMITED_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${AI_UNLIMITED_IMAGE_TAG:-latest}
     command: workspaces serve -v
     restart: unless-stopped
     ports:
@@ -17,7 +17,7 @@ services:
       accept_license: "Y"
       TZ: ${WS_TZ:-UTC}
     volumes:
-      - ${WORKSPACES_HOME:-./volumes/workspaces}:/etc/td
+      - ${AI_UNLIMITED_HOME:-./volumes/ai-unlimited-workspaces}:/etc/td
     networks:
       - ai-unlimited
 
