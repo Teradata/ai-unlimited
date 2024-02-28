@@ -45,11 +45,11 @@ param detinationAppSecGroups array = []
 @description('allow access the Jupyter Labs ssh port from the access cidr.')
 param AllowPublicSSH bool = true
 
-@description('should we use a new or existing volume for persistent data on the workspace server.')
+@description('should we use a new or existing volume for persistent data on the Jupyter server.')
 @allowed([ 'New', 'None', 'Existing' ])
 param UsePersistentVolume string = 'New'
 
-@description('size of the optional persistent disk to the workspace server.')
+@description('size of the optional persistent disk to the Jpuyter server.')
 param PersistentVolumeSize int = 100
 
 @description('Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the Jupyter Labs server.')

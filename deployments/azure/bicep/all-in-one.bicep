@@ -18,19 +18,19 @@ param PublicKey string
 ])
 param OSVersion string = 'Ubuntu-2004'
 
-@description('The Workspace VM type')
+@description('The AI Unlimited VM type')
 param InstanceType string = 'Standard_D2s_v3'
 
-@description('Name of the network to run the Workspace service in')
+@description('Name of the network to run the AI Unlimited service in')
 param Network string
 
-@description('Name of the subnet to run the Workspace service in')
+@description('Name of the subnet to run the AI Unlimited service in')
 param Subnet string
 
 @description('Name of the network security group')
 param SecurityGroup string = 'AiUnlimitedSecurityGroup'
 
-@description('The CIDR ranges that can be used to communicate with the Workspace service instance.')
+@description('The CIDR ranges that can be used to communicate with the AI Unlimited service instance.')
 param AccessCIDRs array = [ '0.0.0.0/0' ]
 
 @description('port to access the Jupyter Labs UI.')
@@ -58,17 +58,17 @@ param AllowPublicSSH bool = true
 @allowed([ 'New', 'None' ])
 param UseKeyVault string = 'New'
 
-@description('should we use a new or existing volume for persistent data on the workspace server.')
+@description('should we use a new or existing volume for persistent data on the AI Unlimited server.')
 @allowed([ 'New', 'None', 'Existing' ])
 param UsePersistentVolume string = 'New'
 
-@description('size of the optional persistent disk to the workspace server.')
+@description('size of the optional persistent disk to the AI Unlimited server.')
 param PersistentVolumeSize int = 100
 
 @description('Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the AI Unlimited server.')
 param ExistingPersistentVolume string = 'NONE'
 
-@description('Container Version of the Workspace service')
+@description('Container Version of the AI Unlimited service')
 param AiUnlimitedVersion string = 'latest'
 
 @description('Container Version of the Jupyter Labs service')
@@ -77,7 +77,7 @@ param JupyterVersion string = 'latest'
 @description('Join token for the Jupyter Labs service')
 param JupyterToken string = uniqueString(subscription().id, utcNow())
 
-@description('Use a Network Load Balancer to connect to the Workspace server')
+@description('Use a Network Load Balancer to connect to the AI Unlimited server')
 param UseNLB bool = false
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
