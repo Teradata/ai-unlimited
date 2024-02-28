@@ -36,12 +36,19 @@ jobs:
   cloudformation-fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - name: Setup Cloud Formation Formatter
         run: |
           gh release download --repo aws-cloudformation/rain --pattern "*_linux-amd64.zip" --output "rain.zip"
           unzip -j "rain.zip" "*/rain"
         env:
           GH_TOKEN: ${{ github.token }}
+
       - name: Check Formatting
-        run: ./rain fmt --verify ./deployments/aws/templates/*/*.yaml
+        run: ./rain fmt ./deployments/aws/templates/*/*.yaml && ./rain fmt --verify ./deployments/aws/templates/*/*.yaml
+

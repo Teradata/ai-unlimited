@@ -264,31 +264,51 @@ Rules:
         AssertDescription: The subnet you selected is not in the VPC
 
 Conditions:
-  NEEDSROLE: !Equals [!Ref IamRole, New]
+  NEEDSROLE: !Equals
+    - !Ref IamRole
+    - New
 
-  HASPUBLICIP: !Not [!Equals [!Ref Private, "true"]]
+  HASPUBLICIP: !Not
+    - !Equals
+      - !Ref Private
+      - "true"
 
-  HASKEY: !Not [!Equals [!Ref KeyName, ""]]
+  HASKEY: !Not
+    - !Equals
+      - !Ref KeyName
+      - ""
 
-  HASCIDR: !Not [!Equals [!Ref AccessCIDR, ""]]
+  HASCIDR: !Not
+    - !Equals
+      - !Ref AccessCIDR
+      - ""
 
-  HASPREFIXLIST: !Not [!Equals [!Ref PrefixList, ""]]
+  HASPREFIXLIST: !Not
+    - !Equals
+      - !Ref PrefixList
+      - ""
 
-  HASSECURITYGROUP: !Not [!Equals [!Ref SecurityGroup, ""]]
+  HASSECURITYGROUP: !Not
+    - !Equals
+      - !Ref SecurityGroup
+      - ""
 
   HASCIDRORPREFIXLISTORSECGROUP: !Or
     - !Condition HASCIDR
     - !Condition HASPREFIXLIST
     - !Condition HASSECURITYGROUP
 
-  USESESSIONMANAGER: !Equals [!Ref Session, "true"]
+  USESESSIONMANAGER: !Equals
+    - !Ref Session
+    - "true"
 
   NEEDSROLEANDSESSIONMANAGER: !And
     - !Condition NEEDSROLE
     - !Condition USESESSIONMANAGER
 
   NEEDINSTANCEPROFILE: !Or
-    - !Not [!Condition NEEDSROLE]
+    - !Not
+      - !Condition NEEDSROLE
     - !Condition NEEDSROLEANDSESSIONMANAGER
 
   HASKEYANDPUBLIC: !And
@@ -299,17 +319,27 @@ Conditions:
     - !Condition HASKEY
     - !Condition HASCIDRORPREFIXLISTORSECGROUP
 
-  USENEWPERSISTENTVOLUME: !Equals [!Ref UsePersistentVolume, New]
+  USENEWPERSISTENTVOLUME: !Equals
+    - !Ref UsePersistentVolume
+    - New
 
-  USEEXISTINGPERSISTENTVOLUME: !Equals [!Ref UsePersistentVolume, Existing]
+  USEEXISTINGPERSISTENTVOLUME: !Equals
+    - !Ref UsePersistentVolume
+    - Existing
 
   USEPERSISTENTVOLUME: !Or
     - !Condition USENEWPERSISTENTVOLUME
     - !Condition USEEXISTINGPERSISTENTVOLUME
 
-  HASIAMPERMISSIONSBOUNDARY: !Not [!Equals [!Ref IamPermissionsBoundary, ""]]
+  HASIAMPERMISSIONSBOUNDARY: !Not
+    - !Equals
+      - !Ref IamPermissionsBoundary
+      - ""
 
-  HASIAMROLENAME: !Not [!Equals [!Ref IamRoleName, ""]]
+  HASIAMROLENAME: !Not
+    - !Equals
+      - !Ref IamRoleName
+      - ""
 
 Resources:
   JupyterVolume:
@@ -321,7 +351,18 @@ Resources:
       Encrypted: true
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref JupyterName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+          Value: !Join
+            - '-'
+            - - !Ref JupyterName
+              - !Select
+                - 4
+                - !Split
+                  - '-'
+                  - !Select
+                    - 2
+                    - !Split
+                      - /
+                      - !Ref AWS::StackId
         - Key: Usage
           Value: persistent storage
     Condition: USENEWPERSISTENTVOLUME
@@ -376,12 +417,26 @@ Resources:
                 #!/bin/bash -xe
                 /usr/bin/mount -a
         install_docker:
+          files:
+            /usr/lib/systemd/system/docker-install.service:
+              content: !Sub |
+                [Unit]
+                Description=Install docker
+
+                [Service]
+                Type=oneshot
+                ExecStart=/bin/bash -c "while ! dnf update; do sleep 2; done && while ! dnf install -y docker; do sleep 2; done"
+                RemainAfterExit=yes
+
+                [Install]
+                WantedBy=multi-user.target
           commands:
-            install_docker:
+            verify_docker:
               command: !Sub |
                 #!/bin/bash -xe
-                dnf update
-                dnf install -y docker
+                systemctl start docker-install
+                systemctl start docker
+                systemctl enable docker
           services:
             systemd:
               docker:
@@ -442,7 +497,8 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      SecurityGroupIds: [!GetAtt JupyterSecurityGroup.GroupId]
+      SecurityGroupIds:
+        - !GetAtt JupyterSecurityGroup.GroupId
       IamInstanceProfile: !If
         - NEEDINSTANCEPROFILE
         - !Ref JupyterInstanceProfile
@@ -458,7 +514,18 @@ Resources:
           - !Ref AWS::NoValue
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref JupyterName, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+          Value: !Join
+            - '-'
+            - - !Ref JupyterName
+              - !Select
+                - 4
+                - !Split
+                  - '-'
+                  - !Select
+                    - 2
+                    - !Split
+                      - /
+                      - !Ref AWS::StackId
       UserData: !Base64
         Fn::Sub: |
           #!/bin/bash -xe
@@ -529,7 +596,19 @@ Resources:
   SessionManagerPolicies:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Join ['-', [jupyter, session, !Select [4, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+      PolicyName: !Join
+        - '-'
+        - - jupyter
+          - session
+          - !Select
+            - 4
+            - !Split
+              - '-'
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -575,8 +654,8 @@ Resources:
       Path: /
       Roles: !If
         - NEEDSROLEANDSESSIONMANAGER
-        - [!Ref JupyterRole]
-        - [!Ref IamRoleName]
+        - - !Ref JupyterRole
+        - - !Ref IamRoleName
     Condition: NEEDINSTANCEPROFILE
 
 Outputs:
@@ -591,12 +670,12 @@ Outputs:
 
   JupyterPublicHttpAccess:
     Description: Teradata Jupyter Server
-    Value: !Sub "http://${JupyterServer.PublicDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }"
+    Value: !Sub http://${JupyterServer.PublicDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }
     Condition: HASPUBLICIP
 
   JupyterPrivateHttpAccess:
     Description: Teradata jupyter Server
-    Value: !Sub "http://${JupyterServer.PrivateDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }"
+    Value: !Sub http://${JupyterServer.PrivateDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }
 
   SecurityGroup:
     Description: Jupyter Security Group
@@ -604,12 +683,12 @@ Outputs:
 
   PublicSSHConeection:
     Description: Jupyter ssh connnection string
-    Value: !Sub "ssh ec2-user@${ JupyterServer.PublicIp }"
+    Value: !Sub ssh ec2-user@${ JupyterServer.PublicIp }
     Condition: HASKEYANDPUBLIC
 
   PrivateSSHConeection:
     Description: jupyter ssh connnection string
-    Value: !Sub "ssh ec2-user@${ JupyterServer.PrivateIp }"
+    Value: !Sub ssh ec2-user@${ JupyterServer.PrivateIp }
     Condition: HASKEY
 
   PersistentVolumeId:
