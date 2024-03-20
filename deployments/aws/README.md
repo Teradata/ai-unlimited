@@ -7,9 +7,9 @@ This directory contains sample CloudFormation templates to deploy Workspaces and
 ### AI Unlimited Templates
 The ai-unlimited directory contains templates to deploys AI Unlimited in your AWS account.
 It provides seperate template options for deploying with or without load balancers.
-- [ai-unlimited/ai-unlimited-with-alb.yaml](ai-unlimited-with-alb.yaml) cloudformation template.
-- [ai-unlimited/ai-unlimited-with-nlb.yaml](ai-unlimited-with-nlb.yaml) cloudformation template.
-- [ai-unlimited/ai-unlimited-without-lb.yaml](ai-unlimited-without-lb.yaml) cloudformation template.
+- [ai-unlimited/ai-unlimited-with-alb.yaml](templates/ai-unlimited/ai-unlimited-with-alb.yaml) cloudformation template.
+- [ai-unlimited/ai-unlimited-with-nlb.yaml](templates/ai-unlimited/ai-unlimited-with-nlb.yaml) cloudformation template.
+- [ai-unlimited/ai-unlimited-without-lb.yaml](templates/ai-unlimited/ai-unlimited-without-lb.yaml) cloudformation template.
 - [parameters/ai-unlimited-with-alb.json](parameters/ai-unlimited-with-alb.json) parameter file.
 - [parameters/ai-unlimited-with-nlb.json](parameters/ai-unlimited-with-nlb.json) parameter file.
 - [parameters/ai-unlimited-without-lb.json](parameters/ai-unlimited-without-lb.json) parameter file.
@@ -17,9 +17,9 @@ It provides seperate template options for deploying with or without load balance
 ### Jupyter Template
 The jupyter directory contains templates to deploys a Jupyter Labs instance with the AI Unlimited Kernel in your AWS account.
 It provides seperate template options for deploying with or without load balancers.
-- [jupyter/jupyter-with-alb.yaml](jupyter-with-alb.yaml) cloudformation template.
-- [jupyter/jupyter-with-nlb.yaml](jupyter-with-nlb.yaml) cloudformation template.
-- [jupyter/jupyter-without-lb.yaml](jupyter-without-lb.yaml) cloudformation template.
+- [jupyter/jupyter-with-alb.yaml](templates/jupyter/jupyter-with-alb.yaml) cloudformation template.
+- [jupyter/jupyter-with-nlb.yaml](templates/jupyter/jupyter-with-nlb.yaml) cloudformation template.
+- [jupyter/jupyter-without-lb.yaml](templates/jupyter/jupyter-without-lb.yaml) cloudformation template.
 - [parameters/jupyter-with-alb.json](parameters/jupyter-with-alb.json) parameter file.
 - [parameters/jupyter-with-nlb.json](parameters/jupyter-with-nlb.json) parameter file.
 - [parameters/jupyter-without-lb.json](parameters/jupyter-without-lb.json) parameter file.
@@ -27,9 +27,9 @@ It provides seperate template options for deploying with or without load balance
 ### All-In-One Template
 The all-in-one directory contains templates to deploys a AI Unlimited and Jupyter Labs on an single instance in your AWS account.
 It provides seperate template options for deploying with or without load balancers.
-- [all-in-one/all-in-one-with-alb.yaml](all-in-one-with-alb.yaml) cloudformation template.
-- [all-in-one/all-in-one-with-nlb.yaml](all-in-one-with-nlb.yaml) cloudformation template.
-- [all-in-one/all-in-one-without-lb.yaml](all-in-one-without-lb.yaml) cloudformation template.
+- [all-in-one/all-in-one-with-alb.yaml](templates/all-in-one/all-in-one-with-alb.yaml) cloudformation template.
+- [all-in-one/all-in-one-with-nlb.yaml](templates/all-in-one/all-in-one-with-nlb.yaml) cloudformation template.
+- [all-in-one/all-in-one-without-lb.yaml](templates/all-in-one/all-in-one-without-lb.yaml) cloudformation template.
 - [parameters/all-in-one-with-alb.json](parameters/all-in-one-with-alb.json) parameter file.
 - [parameters/all-in-one-with-nlb.json](parameters/all-in-one-with-nlb.json) parameter file.
 - [parameters/all-in-one-without-lb.json](parameters/all-in-one-without-lb.json) parameter file.
