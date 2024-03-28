@@ -2,6 +2,47 @@
 
 This directory contains sample Azure Resource Manager templates to deploy AI Unlimited and Jupyter.
 
+## Prerequisites
+
+### Private Preview Access
+AI Unlimited is currently only available as a private prview for select customers. 
+Before deploying any AI Unlimited compute engines, Teradata must enable your azure subscription for access to the compute engine image.
+
+To request access see [AI Unlimited](https://www.teradata.com/platform/ai-unlimited).
+
+### Private Preview Marketplace Agreement
+Once your subscription has been enabled, you will be able to verify the marketplace offering is available with the Azure command line client.
+
+- Ensure that your az cli is configured for the subscription, and that your user has adequate permissions to view and accept marketplace offers.
+- Verify the offer is present via the az cli
+```
+az vm image list --publisher teradata --offer teradata-ai-unlimited --all -o table
+```
+- this should return a value including the latest image
+```
+Architecture    Offer                  Publisher    Sku              Urn                                                    Version
+--------------  ---------------------  -----------  ---------------  -----------------------------------------------------  ---------
+x64             teradata-ai-unlimited  teradata     td-ai-unlimited  teradata:teradata-ai-unlimited:td-ai-unlimited:0.12.3  0.12.3
+```
+
+- To review the terms and conditions run the following command
+```
+az vm image terms show --publisher teradata --offer teradata-ai-unlimited --plan td-ai-unlimited -o table
+```
+- Which will return links to the current terms and conditions
+```
+Accepted    LicenseTextLink                                                                                                                                                                                                                                                           MarketplaceTermsLink                                                                                                                                                                                              Name             Plan             PrivacyPolicyLink                  Product                Publisher    RetrieveDatetime              Signature
+----------  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  ---------------  ---------------  ---------------------------------  ---------------------  -----------  ----------------------------  -------------------------------------------------------------------------------------------------------
+False        https://mpcprodsa.blob.core.windows.net/legalterms/3E5ED_legalterms_TERADATA%253a24TERADATA%253a2DAI%253a2DUNLIMITED%253a24TD%253a2DAI%253a2DUNLIMITED%253a24IDLJU3KC7LWWPGNVHPQGIXJBRGXCG752HYIQCDUUPHYXJIC2Y52MBL24DTXMKZ5U7RYBLW75MZPJSYH4VG45NI6VPOHCCOZ5IO65KRY.txt  https://mpcprodsa.blob.core.windows.net/marketplaceterms/3EDEF_marketplaceterms_VIRTUALMACHINE%253a24AAK2OAIZEAWW5H4MSP5KSTVB6NDKKRTUBAU23BRFTWN4YC2MQLJUB5ZEYUOUJBVF3YK34CIVPZL2HWYASPGDUY5O2FWEGRBYOXWZE5Y.txt  td-ai-unlimited  td-ai-unlimited  https://www.teradata.com/privacy/  teradata-ai-unlimited  teradata     2024-03-28T20:00:44.4225873Z  DEKD3R5XGCXSRJYB7JWKNAOKXW55ZPVTDTIH333PMHILU4P3CJVZLUZBCHDZVYCFB6D7EJVKY3MP2J7BSKZU4K2W35YHMID4HN762CA
+```
+- when you are ready to acceptt the terms, run the following command via the azure cli
+
+```
+az vm image terms accept --publisher teradata --offer teradata-ai-unlimited --plan td-ai-unlimited
+```
+
+- Once the Marketplace offering has been accepted, you may proceed to deploying the AI Unlimited service.
+
 ## Azure Resource Manager (ARM) Templates
 
 ### AI Unlimited Template
