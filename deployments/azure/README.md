@@ -47,15 +47,15 @@ az vm image terms accept --publisher teradata --offer teradata-ai-unlimited --pl
 
 ### AI Unlimited Template
 The all in one template deploys a single instance with AI Unlimited running in a container controlled by systemd.
-- [ai-unlimited.json](ai-unlimited.json) cloudformation template 
-- [parameters/ai-unlimited.json](ai-unlimited.json) parameter file
+- [ai-unlimited.json](templates/arm/ai-unlimited/ai-unlimited-without-lb.json) ARM template 
+- [ai-unlimited.json](parameters/ai-unlimited.parameters.json) parameter file
 
 ![arm_visualization](images/900_ai_unlimited_arm_visualization.png?raw=true)
 
 ### Jupyter Template
 The all in one template deploys a single instance with Jupyter Lab running in a container controlled by systemd.
-- [jupyter.json](jupyter.json) cloudformation template 
-- [parameters/jupyter.json](jupyter.json) parameter file
+- [jupyter.json](templates/arm/jupyter/jupyter-without-lb.json) ARM template 
+- [jupyter.json](parameters/jupyter.parameters.json) parameter file
 
 ![arm_visualization](images/901_jupyter_arm_visualization.png?raw=true)
 
@@ -67,24 +67,24 @@ It uses all the common parameters, as well as the addiitonal parameters from AI 
 If deploying the all in one, it is possible to use the embedded Jupyter Lab service, or connect external Jupyter labs as well.
 You must set the appropriate connection address in the Jupyter notebook, 127.0.0.1 if connecting from the embedded Jupyter service,
 or appropriate public,private ip or dns name when connecting from external clients.
-- [all-in-one.json](all-in-one.yaml) cloudformation template 
-- [parameters/all-in-one.json](all-in-one.json) parameter file
+- [all-in-one.json](templates/arm/all-in-one/all-in-one-without-lb.json) ARM template 
+- [all-in-one.json](parameters/all-in-one.parameters.json) parameter file
 
 ![arm_visualization](images/900_ai_unlimited_arm_visualization.png?raw=true)
 
 
 ### Resources Template
 The resources template deploys a simple resource group, a role with permissions policy, a network and subnet. This is intended only for quick demonstration purposes and production deployments should use existing well defined and secure network best practices.
-- [resources.json](jupyter.json) cloudformation template 
-- [parameters/resources.json](jupyter.json) parameter file
+- [resources.json](templates/arm/init/resources.json) ARM template 
+- [resources.json](parameters/resources.parameters.json) parameter file
 
 ![arm_visualization](images/902_resources_arm_visualization.png?raw=true)
 
 
 ### Role-Policy Template
 The role-policy template creates the role with the required permissions for ai unlimited workspace.
-- [resources.json](jupyter.json) cloudformation template 
-- [parameters/resources.json](jupyter.json) parameter file
+- [role-policy.json](templates/arm/init/role-policy.json) ARM template 
+- [role-policy.json](parameters/role-policy.parameters.json) parameter file
 
 ## Deployment via Azure Console
 
