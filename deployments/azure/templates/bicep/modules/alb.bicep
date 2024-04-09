@@ -9,14 +9,14 @@ param jupyterHttpPort int = 0
 
 param gtwPublicSubnet string
 param gtwPublicIP string
-param gtwMSI string = ''
-
 param serviceIP string
 
-param gtwSSLCertSecretUri string = ''
+param gtwMSI string
 
+param gtwSSLCertSecretUri string
 @secure()
 param gtwSSLCert string
+
 @secure()
 param gtwSSLCertPwd string
 

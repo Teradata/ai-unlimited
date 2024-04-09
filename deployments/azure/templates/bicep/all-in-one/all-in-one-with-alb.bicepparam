@@ -12,9 +12,9 @@ param SecurityGroup = 'ai-unlimited-security-group'
 param AccessCIDRs = [
   '0.0.0.0/0'
 ]
-param JupyterHttpPort = '8888'
-param AiUnlimitedHttpPort = '3000'
-param AiUnlimitedGrpcPort = '3282'
+param JupyterHttpPort = 8888
+param AiUnlimitedHttpPort = 3000
+param AiUnlimitedGrpcPort = 3282
 param SourceAppSecGroups = []
 param detinationAppSecGroups = []
 param RoleDefinitionId = ''
@@ -27,4 +27,5 @@ param ExistingPersistentVolume = 'NONE'
 param AiUnlimitedVersion = 'latest'
 param JupyterVersion = 'latest'
 param JupyterToken = 'USE_A_SECURE_TOKEN'
+param dnsLabelPrefix = 'foo.com'
 param Tags = {}

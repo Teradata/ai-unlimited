@@ -34,13 +34,16 @@ param SecurityGroup string = 'JupyterSecurityGroup'
 param AccessCIDRs array = [ '0.0.0.0/0' ]
 
 @description('port to access the Jupyter Labs UI.')
-param JupyterHttpPort string = '8888'
+param JupyterHttpPort int = 8888
 
 @description('Source Application Security Groups to access the Jupyter Labs service api.')
 param SourceAppSecGroups array = []
 
 @description('Destination Application Security Groups to give access to Jupyter Labs service instance.')
 param detinationAppSecGroups array = []
+
+@description('allow access the AI Unlimited ssh port from the access cidr.')
+param AllowPublicSSH bool = false
 
 @description('should we use a new or existing volume for persistent data on the Jupyter server.')
 @allowed([ 'New', 'None', 'Existing' ])
@@ -61,10 +64,12 @@ param JupyterToken string = uniqueString(subscription().id, utcNow())
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
 
+var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, JupyterName)}'
+
+// below are static and are not expected to be changed
 var registry = 'teradata'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
-var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, JupyterName)}'
 
 var cloudInitData = base64(
   format(
@@ -106,6 +111,7 @@ module firewall '../modules/firewall.bicep' = {
     jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
+    sshAccess: AllowPublicSSH
     tags: Tags
   }
 }
@@ -117,7 +123,7 @@ module nlb '../modules/nlb.bicep' = {
     name: JupyterName
     location: rg.location
     dnsPrefix: dnsLabelPrefix
-    jupyterHttpPort: int(JupyterHttpPort)
+    jupyterHttpPort: JupyterHttpPort
     tags: Tags
   }
 }
@@ -141,7 +147,7 @@ module jupyter '../modules/instance.bicep' = {
     existingPersistentVolume: ExistingPersistentVolume
     nlbName: JupyterName
     nlbPoolNames: nlb.outputs.nlbPools
-    usePublicIp: false
+    usePublicIp: AllowPublicSSH
     tags: Tags
   }
 }
@@ -150,5 +156,5 @@ output PublicIP string = nlb.outputs.PublicIp
 output PrivateIP string = jupyter.outputs.PrivateIP
 output JupyterLabPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output sshCommand string = 'ssh azureuser@${jupyter.outputs.PrivateIP}'
+output sshCommand string = 'ssh azureuser@${AllowPublicSSH ? jupyter.outputs.PublicIP : jupyter.outputs.PrivateIP}'
 output SecurityGroup string = firewall.outputs.Id

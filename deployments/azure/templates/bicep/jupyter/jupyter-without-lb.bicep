@@ -34,7 +34,7 @@ param SecurityGroup string = 'JupyterSecurityGroup'
 param AccessCIDRs array = [ '0.0.0.0/0' ]
 
 @description('port to access the Jupyter Labs UI.')
-param JupyterHttpPort string = '8888'
+param JupyterHttpPort int = 8888
 
 @description('Source Application Security Groups to access the Jupyter Labs service api.')
 param SourceAppSecGroups array = []
@@ -64,10 +64,12 @@ param JupyterToken string = uniqueString(subscription().id, utcNow())
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
 
+var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, JupyterName)}'
+
+// below are static and are not expected to be changed
 var registry = 'teradata'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
-var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, JupyterName)}'
 
 var cloudInitData = base64(
   format(

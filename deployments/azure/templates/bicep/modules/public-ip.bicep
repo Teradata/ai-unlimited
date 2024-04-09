@@ -12,7 +12,7 @@ resource ip 'Microsoft.Network/publicIPAddresses@2021-05-01' = {
   properties: {
     dnsSettings: dnsPrefix != '' ? {
       domainNameLabel: dnsPrefix
-    } : {}
+    } : null
     publicIPAddressVersion: 'IPv4'
     publicIPAllocationMethod: 'Static'
     idleTimeoutInMinutes: 5
@@ -22,4 +22,4 @@ resource ip 'Microsoft.Network/publicIPAddresses@2021-05-01' = {
 
 output Id string = ip.id
 output Ip string = ip.properties.ipAddress
-output Dns string = ip.properties.dnsSettings.fqdn
+output Dns string = dnsPrefix != '' ? ip.properties.dnsSettings.fqdn : ''

@@ -34,13 +34,13 @@ param SecurityGroup string = 'AiUnlimitedSecurityGroup'
 param AccessCIDRs array = [ '0.0.0.0/0' ]
 
 @description('port to access the Jupyter Labs UI.')
-param JupyterHttpPort string = '8888'
+param JupyterHttpPort int = 8888
 
 @description('port to access the AI Unlimited service UI.')
-param AiUnlimitedHttpPort string = '3000'
+param AiUnlimitedHttpPort int = 3000
 
 @description('port to access the AI Unlimited service api.')
-param AiUnlimitedGrpcPort string = '3282'
+param AiUnlimitedGrpcPort int = 3282
 
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
@@ -81,12 +81,12 @@ param JupyterToken string = uniqueString(subscription().id, utcNow())
 param Tags object = {}
 
 var roleAssignmentName = guid(subscription().id, AiUnlimitedName, rg.id, RoleDefinitionId)
+var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, AiUnlimitedName)}'
 
+// below are static and are not expected to be changed
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var jupyterRepository = 'ai-unlimited-jupyter'
-
-var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, AiUnlimitedName)}'
 
 var cloudInitData = base64(
   format(

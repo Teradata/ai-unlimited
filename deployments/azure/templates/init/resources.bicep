@@ -4,7 +4,6 @@ targetScope = 'subscription'
 param name string = 'ai-unlimited'
 
 @description('deploy region')
-@allowed([ 'West US' ])
 param location string = 'West US'
 
 @description('New network CIDR.')

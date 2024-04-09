@@ -12,7 +12,7 @@ param SecurityGroup = 'ai-unlimited-jupyter-security-group'
 param AccessCIDRs = [
   '0.0.0.0/0'
 ]
-param JupyterHttpPort = '8888'
+param JupyterHttpPort = 8888
 param SourceAppSecGroups = []
 param detinationAppSecGroups = []
 param UsePersistentVolume = 'New'
@@ -22,4 +22,5 @@ param JupyterVersion = 'latest'
 param JupyterToken = 'USE_A_SECURE_TOKEN'
 param ApplicationgateWayCertificate = ''
 param ApplicationgateWayCertificatePassword = ''
+param dnsLabelPrefix = 'foo.com'
 param Tags = {}

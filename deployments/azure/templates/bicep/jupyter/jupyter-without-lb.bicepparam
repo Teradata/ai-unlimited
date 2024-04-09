@@ -11,7 +11,7 @@ param SecurityGroup = 'JupyterSecurityGroup'
 param AccessCIDRs = [
   '0.0.0.0/0'
 ]
-param JupyterHttpPort = '8888'
+param JupyterHttpPort = 8888
 param SourceAppSecGroups = []
 param detinationAppSecGroups = []
 param AllowPublicSSH = true

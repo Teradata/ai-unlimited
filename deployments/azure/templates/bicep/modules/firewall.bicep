@@ -5,9 +5,9 @@ param accessCidrs array = []
 param sourceAppSecGroups array = []
 param detinationAppSecGroups array = []
 param sshAccess bool = false
-param aiUnlimitedHttpPort string = 'None'
-param aiUnlimitedGrpcPort string = 'None'
-param jupyterHttpPort string = 'None'
+param aiUnlimitedHttpPort int = 0
+param aiUnlimitedGrpcPort int = 0
+param jupyterHttpPort int = 0
 param tags object = {}
 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2022-11-01' = {
@@ -60,7 +60,7 @@ resource sshAllow 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04
 //   }
 // }
 
-resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedHttpPort != 'None') {
+resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedHttpPort != 0) {
   name: '${name}-workspace-http-allow'
   parent: networkSecurityGroup
 
@@ -73,7 +73,7 @@ resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@
       location: location
     }
     ]
-    destinationPortRange: aiUnlimitedHttpPort // destinationPortRanges: []
+    destinationPortRange: string(aiUnlimitedHttpPort) // destinationPortRanges: []
     direction: 'Inbound'
     priority: 701
     protocol: 'Tcp'
@@ -87,7 +87,7 @@ resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@
   }
 }
 
-resource AiUnlimitedGRPC 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedGrpcPort != 'None') {
+resource AiUnlimitedGRPC 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedGrpcPort != 0) {
   name: '${name}-workspace-grpc-allow'
   parent: networkSecurityGroup
 
@@ -100,7 +100,7 @@ resource AiUnlimitedGRPC 'Microsoft.Network/networkSecurityGroups/securityRules@
       location: location
     }
     ]
-    destinationPortRange: aiUnlimitedGrpcPort // destinationPortRanges: []
+    destinationPortRange: string(aiUnlimitedGrpcPort) // destinationPortRanges: []
     direction: 'Inbound'
     priority: 702
     protocol: 'Tcp'
@@ -114,7 +114,7 @@ resource AiUnlimitedGRPC 'Microsoft.Network/networkSecurityGroups/securityRules@
   }
 }
 
-resource JupyterHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (jupyterHttpPort != 'None') {
+resource JupyterHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (jupyterHttpPort != 0) {
   name: '${name}-juptyer-http-allow'
   parent: networkSecurityGroup
 
@@ -127,7 +127,7 @@ resource JupyterHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023
       location: location
     }
     ]
-    destinationPortRange: jupyterHttpPort // destinationPortRanges: []
+    destinationPortRange: string(jupyterHttpPort) // destinationPortRanges: []
     direction: 'Inbound'
     priority: 703
     protocol: 'Tcp'

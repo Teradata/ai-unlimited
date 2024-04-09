@@ -11,9 +11,9 @@ param SecurityGroup = 'AiUnlimitedSecurityGroup'
 param AccessCIDRs = [
   '0.0.0.0/0'
 ]
-param JupyterHttpPort = '8888'
-param AiUnlimitedHttpPort = '3000'
-param AiUnlimitedGrpcPort = '3282'
+param JupyterHttpPort = 8888
+param AiUnlimitedHttpPort = 3000
+param AiUnlimitedGrpcPort = 3282
 param SourceAppSecGroups = []
 param detinationAppSecGroups = []
 param RoleDefinitionId = ''
