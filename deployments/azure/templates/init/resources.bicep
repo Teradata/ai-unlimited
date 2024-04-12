@@ -99,6 +99,13 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.Resources/subscriptions/resourcegroups/read'
           'Microsoft.Resources/subscriptions/resourcegroups/write'
           'Microsoft.Resources/subscriptions/resourcegroups/delete'
+          'Microsoft.Resources/deployments/read'
+          'Microsoft.Resources/deployments/write'
+          'Microsoft.Resources/deployments/delete'
+          'Microsoft.Resources/deployments/operationStatuses/read'
+          'Microsoft.Resources/deploymentStacks/read'
+          'Microsoft.Resources/deploymentStacks/write'
+          'Microsoft.Resources/deploymentStacks/delete'
         ]
       }
     ]
