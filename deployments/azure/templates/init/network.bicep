@@ -16,19 +16,18 @@ resource network 'Microsoft.Network/virtualNetworks@2022-11-01' = {
     addressSpace: {
       addressPrefixes: networkCidr
     }
+    subnets: [
+      {
+        name: networkName
+        properties: {
+          addressPrefix: subnetCidr
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+        }
+      }
+    ]
   }
   tags: tags
-}
-
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' = {
-  parent: network
-  name: networkName
-
-  properties: {
-    addressPrefix: subnetCidr
-    privateEndpointNetworkPolicies: 'Enabled'
-    privateLinkServiceNetworkPolicies: 'Enabled'
-  }
 }
 
 resource gwSubnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' = if (deployAlbSubnet) { 
@@ -43,5 +42,5 @@ resource gwSubnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' = if (d
 }
 
 output networkName string = network.name
-output subnetName string = subnet.name
+output subnetName string = network.properties.subnets[0].name
 output albSubnetName string = deployAlbSubnet ? gwSubnet.name : ''
