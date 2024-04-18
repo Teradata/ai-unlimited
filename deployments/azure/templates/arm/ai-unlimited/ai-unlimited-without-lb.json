@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.54.24096",
-      "templateHash": "14702902887165650140"
+      "version": "0.26.170.59819",
+      "templateHash": "4244846861047207124"
     }
   },
   "parameters": {
@@ -76,15 +76,15 @@
       }
     },
     "AiUnlimitedHttpPort": {
-      "type": "string",
-      "defaultValue": "3000",
+      "type": "int",
+      "defaultValue": 3000,
       "metadata": {
         "description": "port to access the AI Unlimited service UI."
       }
     },
     "AiUnlimitedGrpcPort": {
-      "type": "string",
-      "defaultValue": "3282",
+      "type": "int",
+      "defaultValue": 3282,
       "metadata": {
         "description": "port to access the AI Unlimited service api."
       }
@@ -172,9 +172,9 @@
     "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable ai-unlimited.service\n- systemctl start ai-unlimited.service\n",
     "$fxv#1": "[Unit]\nDescription=AI Unlimited\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    --network ai_unlimited {7} \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
     "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
+    "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName')))]",
     "registry": "teradata",
     "workspaceRepository": "ai-unlimited-workspaces",
-    "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName')))]",
     "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, '--network-alias ai-unlimited'))))]"
   },
   "resources": [
@@ -221,8 +221,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "11932871909631655869"
+              "version": "0.26.170.59819",
+              "templateHash": "1666532473399121342"
             }
           },
           "parameters": {
@@ -331,8 +331,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "11717014541966173733"
+              "version": "0.26.170.59819",
+              "templateHash": "1992814880431663076"
             }
           },
           "parameters": {
@@ -406,8 +406,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "1364436832534675263"
+              "version": "0.26.170.59819",
+              "templateHash": "14464587274009009526"
             }
           },
           "parameters": {
@@ -434,16 +434,16 @@
               "defaultValue": false
             },
             "aiUnlimitedHttpPort": {
-              "type": "string",
-              "defaultValue": "None"
+              "type": "int",
+              "defaultValue": 0
             },
             "aiUnlimitedGrpcPort": {
-              "type": "string",
-              "defaultValue": "None"
+              "type": "int",
+              "defaultValue": 0
             },
             "jupyterHttpPort": {
-              "type": "string",
-              "defaultValue": "None"
+              "type": "int",
+              "defaultValue": 0
             },
             "tags": {
               "type": "object",
@@ -497,7 +497,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 'None'))]",
+              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-http-allow', parameters('name')))]",
@@ -523,7 +523,7 @@
                 "access": "Allow",
                 "description": "allow http to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('aiUnlimitedHttpPort')]",
+                "destinationPortRange": "[string(parameters('aiUnlimitedHttpPort'))]",
                 "direction": "Inbound",
                 "priority": 701,
                 "protocol": "Tcp",
@@ -535,7 +535,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('aiUnlimitedGrpcPort'), 'None'))]",
+              "condition": "[not(equals(parameters('aiUnlimitedGrpcPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-grpc-allow', parameters('name')))]",
@@ -561,7 +561,7 @@
                 "access": "Allow",
                 "description": "allow grpc to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('aiUnlimitedGrpcPort')]",
+                "destinationPortRange": "[string(parameters('aiUnlimitedGrpcPort'))]",
                 "direction": "Inbound",
                 "priority": 702,
                 "protocol": "Tcp",
@@ -573,7 +573,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('jupyterHttpPort'), 'None'))]",
+              "condition": "[not(equals(parameters('jupyterHttpPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-juptyer-http-allow', parameters('name')))]",
@@ -599,7 +599,7 @@
                 "access": "Allow",
                 "description": "allow http to the jupyter instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('jupyterHttpPort')]",
+                "destinationPortRange": "[string(parameters('jupyterHttpPort'))]",
                 "direction": "Inbound",
                 "priority": 703,
                 "protocol": "Tcp",
@@ -683,8 +683,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "13109606610848831230"
+              "version": "0.26.170.59819",
+              "templateHash": "11841907909645302583"
             }
           },
           "parameters": {
@@ -956,8 +956,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.26.54.24096",
-                      "templateHash": "2535970508175762894"
+                      "version": "0.26.170.59819",
+                      "templateHash": "7767394013870435864"
                     }
                   },
                   "parameters": {
@@ -984,7 +984,7 @@
                         "name": "Standard"
                       },
                       "properties": {
-                        "dnsSettings": "[if(not(equals(parameters('dnsPrefix'), '')), createObject('domainNameLabel', parameters('dnsPrefix')), createObject())]",
+                        "dnsSettings": "[if(not(equals(parameters('dnsPrefix'), '')), createObject('domainNameLabel', parameters('dnsPrefix')), null())]",
                         "publicIPAddressVersion": "IPv4",
                         "publicIPAllocationMethod": "Static",
                         "idleTimeoutInMinutes": 5
@@ -1003,7 +1003,7 @@
                     },
                     "Dns": {
                       "type": "string",
-                      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('name')), '2021-05-01').dnsSettings.fqdn]"
+                      "value": "[if(not(equals(parameters('dnsPrefix'), '')), reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('name')), '2021-05-01').dnsSettings.fqdn, '')]"
                     }
                   }
                 }
