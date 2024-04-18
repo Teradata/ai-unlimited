@@ -52,7 +52,7 @@ param ApplicationgateWayCertificatePassword string = ''
 param dnsLabelPrefix string
 
 @description('Join token for the Jupyter Labs service')
-param JupyterToken string
+param JupyterToken string = uniqueString(subscription().id, utcNow())
 
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
