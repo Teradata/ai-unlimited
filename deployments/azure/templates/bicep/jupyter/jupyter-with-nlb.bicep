@@ -64,7 +64,9 @@ param JupyterToken string = uniqueString(subscription().id, utcNow())
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
 
-var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, JupyterName)}'
+var dnsId = uniqueString(rg.id, deployment().name, JupyterName)
+var dnsLabelPrefix = 'td${dnsId}'
+var nlbDnsLabelPrefix = 'td${dnsId}-nlb'
 
 // below are static and are not expected to be changed
 var registry = 'teradata'
@@ -122,7 +124,7 @@ module nlb '../modules/nlb.bicep' = {
   params: {
     name: JupyterName
     location: rg.location
-    dnsPrefix: dnsLabelPrefix
+    dnsPrefix: nlbDnsLabelPrefix
     jupyterHttpPort: JupyterHttpPort
     tags: Tags
   }
@@ -147,7 +149,7 @@ module jupyter '../modules/instance.bicep' = {
     existingPersistentVolume: ExistingPersistentVolume
     nlbName: JupyterName
     nlbPoolNames: nlb.outputs.nlbPools
-    usePublicIp: AllowPublicSSH
+    usePublicIp: false
     tags: Tags
   }
 }
@@ -156,5 +158,5 @@ output PublicIP string = nlb.outputs.PublicIp
 output PrivateIP string = jupyter.outputs.PrivateIP
 output JupyterLabPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output sshCommand string = 'ssh azureuser@${AllowPublicSSH ? jupyter.outputs.PublicIP : jupyter.outputs.PrivateIP}'
+output sshCommand string = 'ssh azureuser@${jupyter.outputs.PrivateIP}'
 output SecurityGroup string = firewall.outputs.Id
