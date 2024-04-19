@@ -113,7 +113,7 @@ With the file content loaded into the edit template dialog, select "Save"
 in the Custom deployment Dialog, select your Subscription.
 Also set:
 - The region to deploy in.
-- The name to use for the created resources ( the resouce group, network, subnet and role will use this value as their name )
+- The name to use for the created resources ( the resource group, network, subnet and role will use this value as their name )
 - The CIDR to use for the Network
 - the CIDR to use for the Subnet in the new network
 - the CIDR to use for the ALB Subnet in the new network
@@ -238,8 +238,11 @@ In the Cloud Integrations section, select the Azure tab and provide values for t
 - `default security groups` are the security groups that will be allowed access to the compute engines.
 - `resource tag` are the tags to place on the new compute engines
 
-In this example we are only setting the default region to westus (or "West US") and allowing access from all address ranges.
-then click save changes before proceeding to the next section.
+In this example we are setting the default region to westus (or "West US") and allowing access from all address ranges.
+
+We are also passing in the network and key vault resources created from resources.json.
+
+Then click save changes before proceeding to the next section.
 
 ![ai_unlimited_setup_azure](images/025_ai_unlimited_setup_azure.png?raw=true)
 
