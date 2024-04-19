@@ -59,7 +59,8 @@ param ExistingPersistentVolume string = 'NONE'
 param JupyterVersion string = 'latest'
 
 @description('Join token for the Jupyter Labs service')
-param JupyterToken string = uniqueString(subscription().id, utcNow())
+@secure()
+param JupyterToken string
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
