@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.26.170.59819",
-      "templateHash": "6085526370921635300"
+      "templateHash": "5738759185337823122"
     }
   },
   "parameters": {
@@ -137,8 +137,7 @@
       }
     },
     "JupyterToken": {
-      "type": "string",
-      "defaultValue": "[uniqueString(subscription().id, utcNow())]",
+      "type": "securestring",
       "metadata": {
         "description": "Join token for the Jupyter Labs service"
       }
