@@ -75,13 +75,16 @@ param AiUnlimitedVersion string = 'latest'
 param JupyterVersion string = 'latest'
 
 @description('Join token for the Jupyter Labs service')
-param JupyterToken string = uniqueString(subscription().id, utcNow())
+@secure()
+param JupyterToken string
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
 
 var roleAssignmentName = guid(subscription().id, AiUnlimitedName, rg.id, RoleDefinitionId)
-var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, AiUnlimitedName)}'
+var dnsId = uniqueString(rg.id, deployment().name, AiUnlimitedName)
+var dnsLabelPrefix = 'td${dnsId}'
+var nlbDnsLabelPrefix = 'td${dnsId}-nlb'
 
 // below are static and are not expected to be changed
 var registry = 'teradata'
@@ -212,7 +215,7 @@ module aiUnlimited '../modules/instance.bicep' = {
     existingPersistentVolume: ExistingPersistentVolume
     nlbName: AiUnlimitedName
     nlbPoolNames: nlb.outputs.nlbPools
-    usePublicIp: AllowPublicSSH
+    usePublicIp: false
     tags: Tags
   }
 }
@@ -234,5 +237,5 @@ output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${A
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
 output JupyterLabPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output sshCommand string = 'ssh azureuser@${AllowPublicSSH ? aiUnlimited.outputs.PublicIP : aiUnlimited.outputs.PrivateIP}'
+output sshCommand string = 'ssh azureuser@${aiUnlimited.outputs.PrivateIP}'
 output SecurityGroup string = firewall.outputs.Id

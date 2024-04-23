@@ -4,48 +4,23 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.54.24096",
-      "templateHash": "8545167675151040070"
+      "version": "0.26.170.59819",
+      "templateHash": "2076006983550650182"
     }
   },
   "parameters": {
     "ResourceGroupName": {
       "type": "string",
-      "defaultValue": "ai-unlimited-workspace",
+      "defaultValue": "ai-unlimited",
       "metadata": {
         "description": "name for the resource group."
       }
     },
     "AiUnlimitedName": {
       "type": "string",
-      "defaultValue": "ai-unlimited",
+      "defaultValue": "ai-service",
       "metadata": {
         "description": "Name for the Workspace service's virtual machine."
-      }
-    },
-    "PublicKey": {
-      "type": "securestring",
-      "metadata": {
-        "description": "SSH public key value"
-      }
-    },
-    "OSVersion": {
-      "type": "string",
-      "defaultValue": "Ubuntu-2004",
-      "allowedValues": [
-        "Ubuntu-1804",
-        "Ubuntu-2004",
-        "Ubuntu-2204"
-      ],
-      "metadata": {
-        "description": "The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version."
-      }
-    },
-    "InstanceType": {
-      "type": "string",
-      "defaultValue": "Standard_D2s_v3",
-      "metadata": {
-        "description": "The AI Unlimited VM type"
       }
     },
     "VirtualNetworkName": {
@@ -76,6 +51,31 @@
         "description": "Name of the network security group"
       }
     },
+    "UseKeyVault": {
+      "type": "string",
+      "defaultValue": "New",
+      "allowedValues": [
+        "New",
+        "Existing",
+        "None"
+      ],
+      "metadata": {
+        "description": "should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes."
+      }
+    },
+    "KeyVaultName": {
+      "type": "string",
+      "defaultValue": "ai-unlimited-kv",
+      "metadata": {
+        "description": "should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes."
+      }
+    },
+    "PublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key value"
+      }
+    },
     "AccessCIDRs": {
       "type": "array",
       "defaultValue": [
@@ -85,23 +85,107 @@
         "description": "The CIDR ranges that can be used to communicate with the AI Unlimited service instance."
       }
     },
-    "JupyterHttpPort": {
+    "RoleDefinitionId": {
       "type": "string",
-      "defaultValue": "8888",
+      "metadata": {
+        "description": "GUID of the AI Unlimited Role"
+      }
+    },
+    "AllowPublicSSH": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "allow access the AI Unlimited ssh port from the access cidr."
+      }
+    },
+    "UseSelfSignedCertForALB": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "allow access the AI Unlimited ssh port from the access cidr."
+      }
+    },
+    "ApplicationgateWayCertificate": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "base64 content of SSL certificate file for ALB to use, ignored if UseSelfSignedCertForALB is enabled"
+      }
+    },
+    "ApplicationgateWayCertificatePassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "password (if present) for certificate, ignored if UseSelfSignedCertForALB is enabled"
+      }
+    },
+    "dnsLabelPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Dns label prefix for ALB"
+      }
+    },
+    "JupyterToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Join token for the Jupyter Labs service"
+      }
+    },
+    "AiUnlimitedVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container Version of the AI Unlimited service"
+      }
+    },
+    "JupyterVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container Version of the Jupyter Labs service"
+      }
+    },
+    "OSVersion": {
+      "type": "string",
+      "defaultValue": "Ubuntu-2004",
+      "allowedValues": [
+        "Ubuntu-1804",
+        "Ubuntu-2004",
+        "Ubuntu-2204"
+      ],
+      "metadata": {
+        "description": "The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version."
+      }
+    },
+    "InstanceType": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "allowedValues": [
+        "Standard_D2s_v3",
+        "Standard_D2s_v4",
+        "Standard_D2s_v5"
+      ],
+      "metadata": {
+        "description": "The AI Unlimited VM type"
+      }
+    },
+    "JupyterHttpPort": {
+      "type": "int",
+      "defaultValue": 8888,
       "metadata": {
         "description": "port to access the Jupyter Labs UI."
       }
     },
     "AiUnlimitedHttpPort": {
-      "type": "string",
-      "defaultValue": "3000",
+      "type": "int",
+      "defaultValue": 3000,
       "metadata": {
         "description": "port to access the AI Unlimited service UI."
       }
     },
     "AiUnlimitedGrpcPort": {
-      "type": "string",
-      "defaultValue": "3282",
+      "type": "int",
+      "defaultValue": 3282,
       "metadata": {
         "description": "port to access the AI Unlimited service api."
       }
@@ -118,36 +202,6 @@
       "defaultValue": [],
       "metadata": {
         "description": "Destination Application Security Groups to give access to AI Unlimited service instance."
-      }
-    },
-    "RoleDefinitionId": {
-      "type": "string",
-      "metadata": {
-        "description": "GUID of the AI Unlimited Role"
-      }
-    },
-    "ApplicationgateWayCertificate": {
-      "type": "securestring",
-      "metadata": {
-        "description": "base64 content of SSL certificate file for ALB to use"
-      }
-    },
-    "ApplicationgateWayCertificatePassword": {
-      "type": "securestring",
-      "defaultValue": "",
-      "metadata": {
-        "description": "password (if present) for certificate"
-      }
-    },
-    "UseKeyVault": {
-      "type": "string",
-      "defaultValue": "New",
-      "allowedValues": [
-        "New",
-        "None"
-      ],
-      "metadata": {
-        "description": "should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes."
       }
     },
     "UsePersistentVolume": {
@@ -176,27 +230,6 @@
         "description": "Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the AI Unlimited server."
       }
     },
-    "AiUnlimitedVersion": {
-      "type": "string",
-      "defaultValue": "latest",
-      "metadata": {
-        "description": "Container Version of the AI Unlimited service"
-      }
-    },
-    "JupyterVersion": {
-      "type": "string",
-      "defaultValue": "latest",
-      "metadata": {
-        "description": "Container Version of the Jupyter Labs service"
-      }
-    },
-    "JupyterToken": {
-      "type": "string",
-      "defaultValue": "[uniqueString(subscription().id, utcNow())]",
-      "metadata": {
-        "description": "Join token for the Jupyter Labs service"
-      }
-    },
     "Tags": {
       "type": "object",
       "defaultValue": {},
@@ -210,11 +243,12 @@
     "$fxv#1": "[Unit]\nDescription=AI Unlimited\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    --network ai_unlimited {7} \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
     "$fxv#2": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
     "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
+    "gtwPublicIP": "[format('{0}-gtw-inbound', parameters('AiUnlimitedName'))]",
+    "gtwListenerCert": "[format('{0}-gtw-cert', parameters('AiUnlimitedName'))]",
+    "gtwCertMSI": "[format('{0}-msi', parameters('AiUnlimitedName'))]",
     "registry": "teradata",
     "workspaceRepository": "ai-unlimited-workspaces",
-    "jupyterRepository": "ai-unlimited-jupyter",
-    "gtwPublicIP": "[format('{0}-gtw-inbound', parameters('AiUnlimitedName'))]",
-    "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName')))]"
+    "jupyterRepository": "ai-unlimited-jupyter"
   },
   "resources": [
     {
@@ -228,6 +262,71 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]"
       ]
+    },
+    {
+      "condition": "[not(equals(parameters('UseKeyVault'), 'None'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "ssl-cert-keyvault-identity",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('gtwCertMSI')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.26.170.59819",
+              "templateHash": "1934440793653079974"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('name'))]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('name')), '2023-01-31').principalId]"
+            }
+          }
+        }
+      }
     },
     {
       "condition": "[equals(parameters('UseKeyVault'), 'New')]",
@@ -245,7 +344,7 @@
             "value": true
           },
           "keyVaultName": {
-            "value": "[parameters('AiUnlimitedName')]"
+            "value": "[parameters('KeyVaultName')]"
           },
           "location": {
             "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
@@ -260,8 +359,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "11932871909631655869"
+              "version": "0.26.170.59819",
+              "templateHash": "1666532473399121342"
             }
           },
           "parameters": {
@@ -314,7 +413,7 @@
       }
     },
     {
-      "condition": "[equals(parameters('UseKeyVault'), 'New')]",
+      "condition": "[not(equals(parameters('UseKeyVault'), 'None'))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "vault-access-policy",
@@ -326,12 +425,12 @@
         "mode": "Incremental",
         "parameters": {
           "vaultName": {
-            "value": "[parameters('AiUnlimitedName')]"
+            "value": "[parameters('KeyVaultName')]"
           },
           "accessPolicy": {
             "value": {
               "tenantId": "[subscription().tenantId]",
-              "objectId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrincipleId.value]",
+              "objectId": "[if(not(equals(parameters('UseKeyVault'), 'None')), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrincipleId.value, '')]",
               "permissions": {
                 "keys": [
                   "Create",
@@ -370,8 +469,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "11717014541966173733"
+              "version": "0.26.170.59819",
+              "templateHash": "1992814880431663076"
             }
           },
           "parameters": {
@@ -398,6 +497,321 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('UseKeyVault'), 'None'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "alb-msi-vault-access-policy",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vaultName": {
+            "value": "[parameters('KeyVaultName')]"
+          },
+          "accessPolicy": {
+            "value": {
+              "tenantId": "[subscription().tenantId]",
+              "objectId": "[if(not(equals(parameters('UseKeyVault'), 'None')), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ssl-cert-keyvault-identity'), '2022-09-01').outputs.principalId.value, '')]",
+              "permissions": {
+                "secrets": [
+                  "Get",
+                  "Set",
+                  "List"
+                ],
+                "certificates": [
+                  "Get",
+                  "Set",
+                  "List"
+                ]
+              }
+            }
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.26.170.59819",
+              "templateHash": "1992814880431663076"
+            }
+          },
+          "parameters": {
+            "vaultName": {
+              "type": "string"
+            },
+            "accessPolicy": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults/accessPolicies",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/add', parameters('vaultName'))]",
+              "properties": {
+                "accessPolicies": [
+                  "[parameters('accessPolicy')]"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ssl-cert-keyvault-identity')]"
+      ]
+    },
+    {
+      "condition": "[parameters('UseSelfSignedCertForALB')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "alb-self-signed-cert",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "akvName": {
+            "value": "[parameters('KeyVaultName')]"
+          },
+          "managedIdentityName": {
+            "value": "[variables('gtwCertMSI')]"
+          },
+          "certificateName": {
+            "value": "[variables('gtwListenerCert')]"
+          },
+          "certificateCommonName": {
+            "value": "[parameters('dnsLabelPrefix')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.5.6.12127",
+              "templateHash": "9962724588709099443"
+            }
+          },
+          "parameters": {
+            "akvName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Azure Key Vault"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "The location to deploy the resources to"
+              }
+            },
+            "forceUpdateTag": {
+              "type": "string",
+              "defaultValue": "[utcNow()]",
+              "metadata": {
+                "description": "How the deployment script should be forced to execute"
+              }
+            },
+            "rbacRolesNeededOnKV": {
+              "type": "string",
+              "defaultValue": "a4417e6f-fecd-4de8-b567-7b0420556985",
+              "metadata": {
+                "description": "The RoleDefinitionId required for the DeploymentScript resource to interact with KeyVault"
+              }
+            },
+            "useExistingManagedIdentity": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Does the Managed Identity already exists, or should be created"
+              }
+            },
+            "managedIdentityName": {
+              "type": "string",
+              "defaultValue": "id-KeyVaultCertificateCreator",
+              "metadata": {
+                "description": "Name of the Managed Identity resource"
+              }
+            },
+            "existingManagedIdentitySubId": {
+              "type": "string",
+              "defaultValue": "[subscription().subscriptionId]",
+              "metadata": {
+                "description": "For an existing Managed Identity, the Subscription Id it is located in"
+              }
+            },
+            "existingManagedIdentityResourceGroupName": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().name]",
+              "metadata": {
+                "description": "For an existing Managed Identity, the Resource Group it is located in"
+              }
+            },
+            "certificateName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the certificate to create"
+              }
+            },
+            "certificateCommonName": {
+              "type": "string",
+              "defaultValue": "[parameters('certificateName')]",
+              "metadata": {
+                "description": "The common name of the certificate to create"
+              }
+            },
+            "initialScriptDelay": {
+              "type": "string",
+              "defaultValue": "0",
+              "metadata": {
+                "description": "A delay before the script import operation starts. Primarily to allow Azure AAD Role Assignments to propagate"
+              }
+            },
+            "cleanupPreference": {
+              "type": "string",
+              "defaultValue": "OnSuccess",
+              "metadata": {
+                "description": "When the script resource is cleaned up"
+              },
+              "allowedValues": [
+                "OnSuccess",
+                "OnExpiration",
+                "Always"
+              ]
+            }
+          },
+          "resources": [
+            {
+              "condition": "[not(parameters('useExistingManagedIdentity'))]",
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2018-11-30",
+              "name": "[parameters('managedIdentityName')]",
+              "location": "[parameters('location')]",
+              "metadata": {
+                "description": "A new managed identity that will be created in this Resource Group, this is the default option"
+              }
+            },
+            {
+              "condition": "[not(empty(parameters('rbacRolesNeededOnKV')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-08-01-preview",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('akvName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('akvName')), parameters('rbacRolesNeededOnKV'), if(parameters('useExistingManagedIdentity'), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingManagedIdentitySubId'), parameters('existingManagedIdentityResourceGroupName')), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))))]",
+              "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('rbacRolesNeededOnKV'))]",
+                "principalId": "[if(parameters('useExistingManagedIdentity'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingManagedIdentitySubId'), parameters('existingManagedIdentityResourceGroupName')), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2018-11-30').principalId, reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2018-11-30').principalId)]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2020-10-01",
+              "name": "[format('AKV-Cert-{0}-{1}', parameters('akvName'), replace(replace(parameters('certificateName'), ':', ''), '/', '-'))]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', if(parameters('useExistingManagedIdentity'), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingManagedIdentitySubId'), parameters('existingManagedIdentityResourceGroupName')), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))))]": {}
+                }
+              },
+              "kind": "AzureCLI",
+              "properties": {
+                "forceUpdateTag": "[parameters('forceUpdateTag')]",
+                "azCliVersion": "2.35.0",
+                "timeout": "PT10M",
+                "retentionInterval": "P1D",
+                "environmentVariables": [
+                  {
+                    "name": "akvName",
+                    "value": "[parameters('akvName')]"
+                  },
+                  {
+                    "name": "certName",
+                    "value": "[parameters('certificateName')]"
+                  },
+                  {
+                    "name": "certCommonName",
+                    "value": "[parameters('certificateCommonName')]"
+                  },
+                  {
+                    "name": "initialDelay",
+                    "value": "[parameters('initialScriptDelay')]"
+                  },
+                  {
+                    "name": "retryMax",
+                    "value": "10"
+                  },
+                  {
+                    "name": "retrySleep",
+                    "value": "5s"
+                  }
+                ],
+                "scriptContent": "      #!/bin/bash\n      set -e\n\n      echo \"Waiting on Identity RBAC replication ($initialDelay)\"\n      sleep $initialDelay\n\n      #Retry loop to catch errors (usually RBAC delays)\n      retryLoopCount=0\n      until [ $retryLoopCount -ge $retryMax ]\n      do\n        echo \"Creating AKV Cert $certName with CN $certCommonName (attempt $retryLoopCount)...\"\n        az keyvault certificate create --vault-name $akvName -n $certName -p \"$(az keyvault certificate get-default-policy | sed -e s/CN=CLIGetDefaultPolicy/CN=${certCommonName}/g )\" \\\n          && break\n\n        sleep $retrySleep\n        retryLoopCount=$((retryLoopCount+1))\n      done\n\n      echo \"Getting Certificate $certName\";\n      retryLoopCount=0\n      createdCert=$(az keyvault certificate show -n $certName --vault-name $akvName -o json)\n      while [ -z \"$(echo $createdCert | jq -r '.x509ThumbprintHex')\" ] && [ $retryLoopCount -lt $retryMax ]\n      do\n        echo \"Waiting for cert creation (attempt $retryLoopCount)...\"\n        sleep $retrySleep\n        createdCert=$(az keyvault certificate show -n $certName --vault-name $akvName -o json)\n        retryLoopCount=$((retryLoopCount+1))\n      done\n\n      unversionedSecretId=$(echo $createdCert | jq -r \".sid\" | cut -d'/' -f-5) # remove the version from the url;\n      jsonOutputString=$(echo $createdCert | jq --arg usid $unversionedSecretId '{name: .name ,certSecretId: {versioned: .sid, unversioned: $usid }, thumbprint: .x509Thumbprint, thumbprintHex: .x509ThumbprintHex}')\n      echo $jsonOutputString > $AZ_SCRIPTS_OUTPUT_PATH\n    ",
+                "cleanupPreference": "[parameters('cleanupPreference')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]",
+                "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', parameters('akvName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', parameters('akvName')), parameters('rbacRolesNeededOnKV'), if(parameters('useExistingManagedIdentity'), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingManagedIdentitySubId'), parameters('existingManagedIdentityResourceGroupName')), 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')))))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "certificateName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', format('AKV-Cert-{0}-{1}', parameters('akvName'), replace(replace(parameters('certificateName'), ':', ''), '/', '-')))).outputs.name]",
+              "metadata": {
+                "description": "Certificate name"
+              }
+            },
+            "certificateSecretId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', format('AKV-Cert-{0}-{1}', parameters('akvName'), replace(replace(parameters('certificateName'), ':', ''), '/', '-')))).outputs.certSecretId.versioned]",
+              "metadata": {
+                "description": "KeyVault secret id to the created version"
+              }
+            },
+            "certificateSecretIdUnversioned": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', format('AKV-Cert-{0}-{1}', parameters('akvName'), replace(replace(parameters('certificateName'), ':', ''), '/', '-')))).outputs.certSecretId.unversioned]",
+              "metadata": {
+                "description": "KeyVault secret id which uses the unversioned uri"
+              }
+            },
+            "certificateThumbprint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', format('AKV-Cert-{0}-{1}', parameters('akvName'), replace(replace(parameters('certificateName'), ':', ''), '/', '-')))).outputs.thumbprint]",
+              "metadata": {
+                "description": "Certificate Thumbprint"
+              }
+            },
+            "certificateThumbprintHex": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', format('AKV-Cert-{0}-{1}', parameters('akvName'), replace(replace(parameters('certificateName'), ':', ''), '/', '-')))).outputs.thumbprintHex]",
+              "metadata": {
+                "description": "Certificate Thumbprint (in hex)"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-msi-vault-access-policy')]"
       ]
     },
     {
@@ -435,6 +849,9 @@
           "detinationAppSecGroups": {
             "value": "[parameters('detinationAppSecGroups')]"
           },
+          "sshAccess": {
+            "value": "[parameters('AllowPublicSSH')]"
+          },
           "tags": {
             "value": "[parameters('Tags')]"
           }
@@ -445,8 +862,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "1364436832534675263"
+              "version": "0.26.170.59819",
+              "templateHash": "14464587274009009526"
             }
           },
           "parameters": {
@@ -473,16 +890,16 @@
               "defaultValue": false
             },
             "aiUnlimitedHttpPort": {
-              "type": "string",
-              "defaultValue": "None"
+              "type": "int",
+              "defaultValue": 0
             },
             "aiUnlimitedGrpcPort": {
-              "type": "string",
-              "defaultValue": "None"
+              "type": "int",
+              "defaultValue": 0
             },
             "jupyterHttpPort": {
-              "type": "string",
-              "defaultValue": "None"
+              "type": "int",
+              "defaultValue": 0
             },
             "tags": {
               "type": "object",
@@ -536,7 +953,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 'None'))]",
+              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-http-allow', parameters('name')))]",
@@ -562,7 +979,7 @@
                 "access": "Allow",
                 "description": "allow http to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('aiUnlimitedHttpPort')]",
+                "destinationPortRange": "[string(parameters('aiUnlimitedHttpPort'))]",
                 "direction": "Inbound",
                 "priority": 701,
                 "protocol": "Tcp",
@@ -574,7 +991,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('aiUnlimitedGrpcPort'), 'None'))]",
+              "condition": "[not(equals(parameters('aiUnlimitedGrpcPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-grpc-allow', parameters('name')))]",
@@ -600,7 +1017,7 @@
                 "access": "Allow",
                 "description": "allow grpc to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('aiUnlimitedGrpcPort')]",
+                "destinationPortRange": "[string(parameters('aiUnlimitedGrpcPort'))]",
                 "direction": "Inbound",
                 "priority": 702,
                 "protocol": "Tcp",
@@ -612,7 +1029,7 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('jupyterHttpPort'), 'None'))]",
+              "condition": "[not(equals(parameters('jupyterHttpPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
               "name": "[format('{0}/{1}', parameters('name'), format('{0}-juptyer-http-allow', parameters('name')))]",
@@ -638,7 +1055,7 @@
                 "access": "Allow",
                 "description": "allow http to the jupyter instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[parameters('jupyterHttpPort')]",
+                "destinationPortRange": "[string(parameters('jupyterHttpPort'))]",
                 "direction": "Inbound",
                 "priority": 703,
                 "protocol": "Tcp",
@@ -677,7 +1094,7 @@
             "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
           },
           "dnsPrefix": {
-            "value": "[variables('dnsLabelPrefix')]"
+            "value": "[parameters('dnsLabelPrefix')]"
           },
           "tags": {
             "value": "[parameters('Tags')]"
@@ -689,8 +1106,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "2535970508175762894"
+              "version": "0.26.170.59819",
+              "templateHash": "7767394013870435864"
             }
           },
           "parameters": {
@@ -717,7 +1134,7 @@
                 "name": "Standard"
               },
               "properties": {
-                "dnsSettings": "[if(not(equals(parameters('dnsPrefix'), '')), createObject('domainNameLabel', parameters('dnsPrefix')), createObject())]",
+                "dnsSettings": "[if(not(equals(parameters('dnsPrefix'), '')), createObject('domainNameLabel', parameters('dnsPrefix')), null())]",
                 "publicIPAddressVersion": "IPv4",
                 "publicIPAllocationMethod": "Static",
                 "idleTimeoutInMinutes": 5
@@ -736,7 +1153,7 @@
             },
             "Dns": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('name')), '2021-05-01').dnsSettings.fqdn]"
+              "value": "[if(not(equals(parameters('dnsPrefix'), '')), reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('name')), '2021-05-01').dnsSettings.fqdn, '')]"
             }
           }
         }
@@ -763,13 +1180,13 @@
             "value": "[parameters('VirtualNetworkName')]"
           },
           "aiUnlimitedHttpPort": {
-            "value": "[int(parameters('AiUnlimitedHttpPort'))]"
+            "value": "[parameters('AiUnlimitedHttpPort')]"
           },
           "aiUnlimitedGrpcPort": {
-            "value": "[int(parameters('AiUnlimitedGrpcPort'))]"
+            "value": "[parameters('AiUnlimitedGrpcPort')]"
           },
           "jupyterHttpPort": {
-            "value": "[int(parameters('JupyterHttpPort'))]"
+            "value": "[parameters('JupyterHttpPort')]"
           },
           "serviceIP": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value]"
@@ -780,12 +1197,12 @@
           "gtwPublicSubnet": {
             "value": "[parameters('AlbSubnetName')]"
           },
-          "gtwSSLCert": {
-            "value": "[parameters('ApplicationgateWayCertificate')]"
+          "gtwMSI": {
+            "value": "[variables('gtwCertMSI')]"
           },
-          "gtwSSLCertPwd": {
-            "value": "[parameters('ApplicationgateWayCertificatePassword')]"
-          },
+          "gtwSSLCert": "[if(parameters('UseSelfSignedCertForALB'), createObject('value', ''), createObject('value', parameters('ApplicationgateWayCertificate')))]",
+          "gtwSSLCertPwd": "[if(parameters('UseSelfSignedCertForALB'), createObject('value', ''), createObject('value', parameters('ApplicationgateWayCertificatePassword')))]",
+          "gtwSSLCertSecretUri": "[if(parameters('UseSelfSignedCertForALB'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-self-signed-cert'), '2022-09-01').outputs.certificateSecretIdUnversioned.value), createObject('value', ''))]",
           "tags": {
             "value": "[parameters('Tags')]"
           }
@@ -796,8 +1213,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "9123884848127519224"
+              "version": "0.26.170.59819",
+              "templateHash": "18223067811585337101"
             }
           },
           "parameters": {
@@ -831,16 +1248,14 @@
             "gtwPublicIP": {
               "type": "string"
             },
-            "gtwMSI": {
-              "type": "string",
-              "defaultValue": ""
-            },
             "serviceIP": {
               "type": "string"
             },
+            "gtwMSI": {
+              "type": "string"
+            },
             "gtwSSLCertSecretUri": {
-              "type": "string",
-              "defaultValue": ""
+              "type": "string"
             },
             "gtwSSLCert": {
               "type": "securestring"
@@ -921,7 +1336,8 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-self-signed-cert')]"
       ]
     },
     {
@@ -971,6 +1387,12 @@
           "existingPersistentVolume": {
             "value": "[parameters('ExistingPersistentVolume')]"
           },
+          "albName": {
+            "value": "[parameters('AiUnlimitedName')]"
+          },
+          "usePublicIp": {
+            "value": "[parameters('AllowPublicSSH')]"
+          },
           "tags": {
             "value": "[parameters('Tags')]"
           }
@@ -981,8 +1403,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "13109606610848831230"
+              "version": "0.26.170.59819",
+              "templateHash": "11841907909645302583"
             }
           },
           "parameters": {
@@ -1254,8 +1676,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.26.54.24096",
-                      "templateHash": "2535970508175762894"
+                      "version": "0.26.170.59819",
+                      "templateHash": "7767394013870435864"
                     }
                   },
                   "parameters": {
@@ -1282,7 +1704,7 @@
                         "name": "Standard"
                       },
                       "properties": {
-                        "dnsSettings": "[if(not(equals(parameters('dnsPrefix'), '')), createObject('domainNameLabel', parameters('dnsPrefix')), createObject())]",
+                        "dnsSettings": "[if(not(equals(parameters('dnsPrefix'), '')), createObject('domainNameLabel', parameters('dnsPrefix')), null())]",
                         "publicIPAddressVersion": "IPv4",
                         "publicIPAllocationMethod": "Static",
                         "idleTimeoutInMinutes": 5
@@ -1301,7 +1723,7 @@
                     },
                     "Dns": {
                       "type": "string",
-                      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('name')), '2021-05-01').dnsSettings.fqdn]"
+                      "value": "[if(not(equals(parameters('dnsPrefix'), '')), reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('name')), '2021-05-01').dnsSettings.fqdn, '')]"
                     }
                   }
                 }
@@ -1341,7 +1763,7 @@
     },
     "AiUnlimitedPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value, parameters('AiUnlimitedHttpPort'))]"
+      "value": "[format('https://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value, parameters('AiUnlimitedHttpPort'))]"
     },
     "AiUnlimitedPrivateHttpAccess": {
       "type": "string",
@@ -1349,7 +1771,7 @@
     },
     "AiUnlimitedPublicGrpcAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value, parameters('AiUnlimitedGrpcPort'))]"
+      "value": "[format('https://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value, parameters('AiUnlimitedGrpcPort'))]"
     },
     "AiUnlimitedPrivateGrpcAccess": {
       "type": "string",
@@ -1357,7 +1779,7 @@
     },
     "JupyterLabPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+      "value": "[format('https://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
     },
     "JupyterLabPrivateHttpAccess": {
       "type": "string",
@@ -1365,7 +1787,7 @@
     },
     "sshCommand": {
       "type": "string",
-      "value": "[format('ssh azureuser@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value)]"
+      "value": "[format('ssh azureuser@{0}', if(parameters('AllowPublicSSH'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value))]"
     },
     "SecurityGroup": {
       "type": "string",

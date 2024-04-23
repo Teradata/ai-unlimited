@@ -35,7 +35,7 @@ Accepted    LicenseTextLink                                                     
 ----------  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  ---------------  ---------------  ---------------------------------  ---------------------  -----------  ----------------------------  -------------------------------------------------------------------------------------------------------
 False        https://mpcprodsa.blob.core.windows.net/legalterms/3E5ED_legalterms_TERADATA%253a24TERADATA%253a2DAI%253a2DUNLIMITED%253a24TD%253a2DAI%253a2DUNLIMITED%253a24IDLJU3KC7LWWPGNVHPQGIXJBRGXCG752HYIQCDUUPHYXJIC2Y52MBL24DTXMKZ5U7RYBLW75MZPJSYH4VG45NI6VPOHCCOZ5IO65KRY.txt  https://mpcprodsa.blob.core.windows.net/marketplaceterms/3EDEF_marketplaceterms_VIRTUALMACHINE%253a24AAK2OAIZEAWW5H4MSP5KSTVB6NDKKRTUBAU23BRFTWN4YC2MQLJUB5ZEYUOUJBVF3YK34CIVPZL2HWYASPGDUY5O2FWEGRBYOXWZE5Y.txt  td-ai-unlimited  td-ai-unlimited  https://www.teradata.com/privacy/  teradata-ai-unlimited  teradata     2024-03-28T20:00:44.4225873Z  DEKD3R5XGCXSRJYB7JWKNAOKXW55ZPVTDTIH333PMHILU4P3CJVZLUZBCHDZVYCFB6D7EJVKY3MP2J7BSKZU4K2W35YHMID4HN762CA
 ```
-- when you are ready to acceptt the terms, run the following command via the azure cli
+- when you are ready to accept the terms, run the following command via the azure cli
 
 ```
 az vm image terms accept --publisher teradata --offer teradata-ai-unlimited --plan td-ai-unlimited
@@ -62,11 +62,11 @@ The all in one template deploys a single instance with Jupyter Lab running in a 
 
 ### All-In-One Template
 The all in one template deploys a single instance with both AI Unlimited and Jupyter running on the same instance.
-It uses all the common parameters, as well as the addiitonal parameters from AI Unlimited and Jupyter.
+It uses all the common parameters, as well as the additional parameters from AI Unlimited and Jupyter.
 
 If deploying the all in one, it is possible to use the embedded Jupyter Lab service, or connect external Jupyter labs as well.
 You must set the appropriate connection address in the Jupyter notebook, 127.0.0.1 if connecting from the embedded Jupyter service,
-or appropriate public,private ip or dns name when connecting from external clients.
+or appropriate public, private ip or dns name when connecting from external clients.
 - [all-in-one.json](templates/arm/all-in-one/all-in-one-without-lb.json) ARM template 
 - [all-in-one.json](parameters/all-in-one.parameters.json) parameter file
 
@@ -74,7 +74,7 @@ or appropriate public,private ip or dns name when connecting from external clien
 
 
 ### Resources Template
-The resources template deploys a simple resource group, a role with permissions policy, a network and subnet. This is intended only for quick demonstration purposes and production deployments should use existing well defined and secure network best practices.
+The resources template deploys a simple resource group, a role with permissions policy, a network, subnet, and optionally a subnet used for ALB. This is intended only for quick demonstration purposes and production deployments should use existing well defined and secure network best practices.
 - [resources.json](templates/arm/init/resources.json) ARM template 
 - [resources.json](parameters/resources.parameters.json) parameter file
 
@@ -110,19 +110,21 @@ With the file content loaded into the edit template dialog, select "Save"
 
 ![arm_create_new_resources_loaded_file](images/005_arm_create_new_resources_loaded_file.png?raw=true)
 
-in the Custom deployment Dialog, select your Subcription.
+in the Custom deployment Dialog, select your Subscription.
 Also set:
 - The region to deploy in.
-- The name to use for the created resources ( the resouce group, network, subnet and role will use this value as their name )
-- The location to deploy in.
+- The name to use for the created resources ( the resource group, network, subnet and role will use this value as their name )
 - The CIDR to use for the Network
 - the CIDR to use for the Subnet in the new network
+- the CIDR to use for the ALB Subnet in the new network
+- the flag to deploy the ALB Subnet in the new network
+- the tags to place on the network and subnet resources
 
 Then select review and create
 
 ![arm_create_new_resources_project_details](images/006_arm_create_new_resources_project_details.png?raw=true)
 
-review the information, confirm your settigns, and select the create button.
+review the information, confirm your settings, and select the create button.
 
 ![arm_create_new_resources_review_create](images/007_arm_create_new_resources_review_create.png?raw=true)
 
@@ -130,7 +132,7 @@ The template will proceed to deploy
 
 ![arm_create_new_resources_deployment_complete](images/008_arm_create_new_resources_deployment_complete.png?raw=true)
 
-After the template has completed, select the ouput tab and make note of the network names and the `RoleDefinitionId`. 
+After the template has completed, select the output tab and make note of the network names and the `RoleDefinitionId`.
 These value will be needed by the workspace deployment
 
 ![arm_create_new_resources_outputs](images/009_arm_create_new_resources_outputs.png?raw=true)
@@ -140,7 +142,7 @@ These value will be needed by the workspace deployment
 This template creates a single instance containing both AI Unlimited Workspace and Jupyter.
 Note: The process for deploying AI Unlimited Workspace or Jupyter separately using their respective templates is nearly the same. 
 
-In the Azure Console,Search for "Deploy a Custom Template" and select the service icon.
+In the Azure Console, Search for "Deploy a Custom Template" and select the service icon.
 
 ![arm_create_new_all_in_one](images/010_arm_create_new_all_in_one.png?raw=true)
 
@@ -160,31 +162,36 @@ With the file content loaded into the edit template dialog, select "Save"
 
 ![arm_create_new_all_in_one_loaded_file](images/014_arm_create_new_all_in_one_loaded_file.png?raw=true)
 
-in the Custom deployment Dialog, set values for 
+in the Custom Deployment Dialog, set values for
+- The Region
 - The Resource Group
 - The Name to use for the created resources
-- The ssh public key, ( this should start with "ssh-rsa" )
+- The ssh public key ( this should start with "ssh-rsa" )
+- The OS Version of the AI Unlimited instance
+- The instance type of the AI Unlimited instance
 - The name of the network to deploy into
 - The name of the subnet to deploy into
 - The name of the security group we will create for the AI Unlimited instance
 - The CIDRs that have permission to connect to the AI Unlimited instance
+- The Ports for AI Unlimited HTTP and GRPC Access, and the Port used for HTTP to Jupyter
 - The Source Application Security Groups that have permission to connect to the AI Unlimited instance
 - The Destination Application Security Groups that have permission to connect to the AI Unlimited instance
-- The Ports for AI Unlimited HTTP and GRPC Access, and the Port used fro HTTP to Jupyter
 - The RoleDefinitionId of the role to use with AI Unlimited
 - Will you Allow ssh from the firewall?
+- The options (New, None) to choose for using a key vault
 - Will you use a persistent volume for storing the AI Unlimited and Jupyter data?
-- If using a persistent volume, what size should it be.
-- if you are using an existing persistent volume, what is the volume Id.
-- the version of AI Unlimited
-- the version of Jupyter
-- the token to use for Jupyter authentication
+- If using a persistent volume, what size should it be?
+- If you are using an existing persistent volume, what is the volume Id?
+- The version of AI Unlimited
+- The version of Jupyter
+- The token to use for Jupyter authentication
+- The tags to place on the resources created from this deployment
 
 Then select review and create
 
 ![arm_create_new_all_in_one_project_details](images/015_arm_create_new_all_in_one_project_details.png?raw=true)
 
-review the information, confirm your settigns, and select the create button.
+review the information, confirm your settings, and select the create button.
 
 ![arm_create_new_all_in_one_review_create](images/016_arm_create_new_all_in_one_review_create.png?raw=true)
 
@@ -222,11 +229,20 @@ then click save changes before proceeding to the next section.
 In the Cloud Integrations section, select the Azure tab and provide values for the fields.
 
 - `default region` is the region where new compute engines will be created by default.
+- `default network resource group` is the resource group where the network is created from resources.json
+- `default network` is the name of the network created from resources.json
+- `default subnet` is the name of the subnet created from resources.json
+- `default key vault` is the resource group where the key vault created from resources.json
+- `default key vault resource group` is the name of the key vault is created from resources.json
 - `default CIDRs` are the network address ranges that will be allowed access to the compute engines.
 - `default security groups` are the security groups that will be allowed access to the compute engines.
+- `resource tag` are the tags to place on the new compute engines
 
-In this example we are only setting the default region to westus (or "West US") and allowing access from all address ranges.
-then click save changes before proceeding to the next section.
+In this example we are setting the default region to westus (or "West US") and allowing access from all address ranges.
+
+We are also passing in the network and key vault resources created from resources.json.
+
+Then click save changes before proceeding to the next section.
 
 ![ai_unlimited_setup_azure](images/025_ai_unlimited_setup_azure.png?raw=true)
 
@@ -311,14 +327,14 @@ TODO: Pending updates for use with Deployment Manager
 ## Using a Persistent Volume
 The default behavior is to use the root volume of the instace for storage. This will persist any Jupyter notebook data saved under the userdata folder and the AI Unlimited database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or AI Unlimited database will be lost. 
 This can be especially problematic if running on spot instances which may be terminated without warning. If greater persistency is desired,
-You can enable the UsePersistentVolume parameter to move the Jupyter notebook data and/or AI Unlimited database to a seperate volume.
+You can enable the UsePersistentVolume parameter to move the Jupyter notebook data and/or AI Unlimited database to a separate volume.
 
 ### Suggested Persistent Volume Flow
 1. Create a new deployment with UsePersistentVolume=New
 2. Configure and use the instance until the instance is terminated.
 3. On the next deployment, use UsePersistentVolume=New, ExistingPersistentVolumeId to the volume-id from the first deploy
 
-This will remount the volume and the instance will have the previous data available. This template can be relaunced with the same config whenever you need to recreate the instance with the previous data.
+This will remount the volume, and the instance will have the previous data available. This template can be relaunched with the same config whenever you need to recreate the instance with the previous data.
 
 ## Example Role Policies 
 If the account deploying AI Unlimited does not have sufficient IAM permissions to create the roles,
@@ -388,7 +404,14 @@ will deploy.
           "Microsoft.Network/publicIPAddresses/delete",
           "Microsoft.Resources/subscriptions/resourcegroups/read",
           "Microsoft.Resources/subscriptions/resourcegroups/write",
-          "Microsoft.Resources/subscriptions/resourcegroups/delete"
+          "Microsoft.Resources/subscriptions/resourcegroups/delete",
+          "Microsoft.Resources/deployments/read",
+          "Microsoft.Resources/deployments/write",
+          "Microsoft.Resources/deployments/delete",
+          "Microsoft.Resources/deployments/operationStatuses/read",
+          "Microsoft.Resources/deploymentStacks/read",
+          "Microsoft.Resources/deploymentStacks/write",
+          "Microsoft.Resources/deploymentStacks/delete"
         ],
         "notActions": [],
         "dataActions": [],

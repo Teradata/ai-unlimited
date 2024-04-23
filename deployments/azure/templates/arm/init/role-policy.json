@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.54.24096",
-      "templateHash": "4878308847235567914"
+      "version": "0.26.170.59819",
+      "templateHash": "14076160163954081866"
     }
   },
   "parameters": {
@@ -77,7 +77,14 @@
               "Microsoft.Network/publicIPAddresses/delete",
               "Microsoft.Resources/subscriptions/resourcegroups/read",
               "Microsoft.Resources/subscriptions/resourcegroups/write",
-              "Microsoft.Resources/subscriptions/resourcegroups/delete"
+              "Microsoft.Resources/subscriptions/resourcegroups/delete",
+              "Microsoft.Resources/deployments/read",
+              "Microsoft.Resources/deployments/write",
+              "Microsoft.Resources/deployments/delete",
+              "Microsoft.Resources/deployments/operationStatuses/read",
+              "Microsoft.Resources/deploymentStacks/read",
+              "Microsoft.Resources/deploymentStacks/write",
+              "Microsoft.Resources/deploymentStacks/delete"
             ]
           }
         ],

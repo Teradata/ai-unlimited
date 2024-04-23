@@ -72,7 +72,9 @@ param AiUnlimitedVersion string = 'latest'
 param Tags object = {}
 
 var roleAssignmentName = guid(subscription().id, AiUnlimitedName, rg.id, RoleDefinitionId)
-var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, AiUnlimitedName)}'
+var dnsId = uniqueString(rg.id, deployment().name, AiUnlimitedName)
+var dnsLabelPrefix = 'td${dnsId}'
+var nlbDnsLabelPrefix = 'td${dnsId}-nlb'
 
 // below are static and are not expected to be changed
 var registry = 'teradata'
@@ -164,7 +166,7 @@ module nlb '../modules/nlb.bicep' = {
   name: 'loadbalancer'
   params: {
     name: AiUnlimitedName
-    dnsPrefix: dnsLabelPrefix
+    dnsPrefix: nlbDnsLabelPrefix
     location: rg.location
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
@@ -191,7 +193,7 @@ module aiUnlimited '../modules/instance.bicep' = {
     existingPersistentVolume: ExistingPersistentVolume
     nlbName: AiUnlimitedName
     nlbPoolNames: nlb.outputs.nlbPools
-    usePublicIp: AllowPublicSSH
+    usePublicIp: false
     tags: Tags
   }
 }
@@ -211,5 +213,5 @@ output AiUnlimitedPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${A
 output AiUnlimitedPrivateHttpAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedHttpPort}'
 output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${AiUnlimitedGrpcPort}'
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
-output sshCommand string = 'ssh azureuser@${AllowPublicSSH ? aiUnlimited.outputs.PublicIP : aiUnlimited.outputs.PrivateIP}'
+output sshCommand string = 'ssh azureuser@${aiUnlimited.outputs.PrivateIP}'
 output SecurityGroup string = firewall.outputs.Id

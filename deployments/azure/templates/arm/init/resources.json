@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.54.24096",
-      "templateHash": "1153656465907966473"
+      "version": "0.26.170.59819",
+      "templateHash": "14461346276310693220"
     }
   },
   "parameters": {
@@ -19,9 +19,6 @@
     "location": {
       "type": "string",
       "defaultValue": "West US",
-      "allowedValues": [
-        "West US"
-      ],
       "metadata": {
         "description": "deploy region"
       }
@@ -131,7 +128,14 @@
               "Microsoft.Network/publicIPAddresses/delete",
               "Microsoft.Resources/subscriptions/resourcegroups/read",
               "Microsoft.Resources/subscriptions/resourcegroups/write",
-              "Microsoft.Resources/subscriptions/resourcegroups/delete"
+              "Microsoft.Resources/subscriptions/resourcegroups/delete",
+              "Microsoft.Resources/deployments/read",
+              "Microsoft.Resources/deployments/write",
+              "Microsoft.Resources/deployments/delete",
+              "Microsoft.Resources/deployments/operationStatuses/read",
+              "Microsoft.Resources/deploymentStacks/read",
+              "Microsoft.Resources/deploymentStacks/write",
+              "Microsoft.Resources/deploymentStacks/delete"
             ]
           }
         ],
@@ -182,8 +186,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.54.24096",
-              "templateHash": "13916383679649314841"
+              "version": "0.26.170.59819",
+              "templateHash": "15155096053124695514"
             }
           },
           "parameters": {
@@ -222,22 +226,19 @@
               "properties": {
                 "addressSpace": {
                   "addressPrefixes": "[parameters('networkCidr')]"
-                }
+                },
+                "subnets": [
+                  {
+                    "name": "[parameters('networkName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetCidr')]",
+                      "privateEndpointNetworkPolicies": "Enabled",
+                      "privateLinkServiceNetworkPolicies": "Enabled"
+                    }
+                  }
+                ]
               },
               "tags": "[parameters('tags')]"
-            },
-            {
-              "type": "Microsoft.Network/virtualNetworks/subnets",
-              "apiVersion": "2022-11-01",
-              "name": "[format('{0}/{1}', parameters('networkName'), parameters('networkName'))]",
-              "properties": {
-                "addressPrefix": "[parameters('subnetCidr')]",
-                "privateEndpointNetworkPolicies": "Enabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('networkName'))]"
-              ]
             },
             {
               "condition": "[parameters('deployAlbSubnet')]",
@@ -261,7 +262,7 @@
             },
             "subnetName": {
               "type": "string",
-              "value": "[parameters('networkName')]"
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('networkName')), '2022-11-01').subnets[0].name]"
             },
             "albSubnetName": {
               "type": "string",

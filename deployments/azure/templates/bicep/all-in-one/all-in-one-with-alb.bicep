@@ -55,6 +55,7 @@ param ApplicationgateWayCertificatePassword string = ''
 param dnsLabelPrefix string
 
 @description('Join token for the Jupyter Labs service')
+@secure()
 param JupyterToken string
 
 @description('Container Version of the AI Unlimited service')
