@@ -238,7 +238,7 @@ In the Cloud Integrations section, select the Azure tab and provide values for t
 - `default security groups` are the security groups that will be allowed access to the compute engines.
 - `resource tag` are the tags to place on the new compute engines
 
-In this example we are setting the default region to westus (or "West US") and allowing access from all address ranges.
+In this example we are setting the default region to westus (or "West US") and only allowing access (`10.0.0.0/24`) from within the network.
 
 We are also passing in the network and key vault resources created from resources.json.
 
