@@ -478,7 +478,12 @@ Resources:
           Ebs:
             VolumeSize: !Ref RootVolumeSize
             Encrypted: true
-      SubnetId: !Ref Subnet
+      NetworkInterfaces:
+      - DeviceIndex: 0
+        SubnetId: !Ref Subnet
+        GroupSet:
+          - !GetAtt AiUnlimitedSecurityGroup.GroupId
+        AssociatePublicIpAddress: !If [HASPUBLICIP, true, !Ref "AWS::NoValue"]
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       KeyName: !If
@@ -486,8 +491,8 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      SecurityGroupIds:
-        - !GetAtt AiUnlimitedSecurityGroup.GroupId
+      # SecurityGroupIds:
+      #   - !GetAtt AiUnlimitedSecurityGroup.GroupId
       IamInstanceProfile: !Ref AiUnlimitedInstanceProfile
       Volumes:
         - !If
