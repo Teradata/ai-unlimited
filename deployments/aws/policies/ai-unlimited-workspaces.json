@@ -42,6 +42,7 @@
                 "ec2:DescribeImages",
                 "ec2:DescribeAccountAttributes",
                 "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeManagedPrefixLists",
                 "ec2:DescribeVpcAttribute",
                 "ec2:DeleteSecurityGroup",
                 "ec2:DeletePlacementGroup",
