@@ -1,7 +1,7 @@
 [
   {
     "ParameterKey": "AiUnlimitedName",
-    "ParameterValue": "test-unlimited"
+    "ParameterValue": "test-unlimited2"
   },
   {
     "ParameterKey": "InstanceType",
@@ -29,7 +29,7 @@
   },
   {
     "ParameterKey": "AvailabilityZone",
-    "ParameterValue": ""
+    "ParameterValue": "us-west-2a"
   },
   {
     "ParameterKey": "Private",
@@ -41,19 +41,19 @@
   },
   {
     "ParameterKey": "Vpc",
-    "ParameterValue": ""
+    "ParameterValue": "vpc-0727eff21a8b49e0c"
   },
   {
     "ParameterKey": "Subnet",
-    "ParameterValue": ""
+    "ParameterValue": "subnet-06d2ed527894d8f17"
   },
   {
     "ParameterKey": "KeyName",
-    "ParameterValue": ""
+    "ParameterValue": "casworkspaces"
   },
   {
     "ParameterKey": "AccessCIDR",
-    "ParameterValue": ""
+    "ParameterValue": "47.149.75.247/32"
   },
   {
     "ParameterKey": "PrefixList",
@@ -72,7 +72,15 @@
     "ParameterValue": "3282"
   },
   {
+    "ParameterKey": "AiUnlimitedSchedulerPort",
+    "ParameterValue": "50051"
+  },
+  {
     "ParameterKey": "AiUnlimitedVersion",
+    "ParameterValue": "latest"
+  },
+  {
+    "ParameterKey": "AiUnlimitedSchedulerVersion",
     "ParameterValue": "latest"
   },
   {

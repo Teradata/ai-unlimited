@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
+Description: "AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template."
 
 Metadata:
   License: TODO
@@ -32,6 +32,8 @@ Metadata:
           - AiUnlimitedHttpPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
+          - AiUnlimitedSchedulerVersion
+          - AiUnlimitedSchedulerPort
       - Label:
           default: Persistent volume
         Parameters:
@@ -101,8 +103,21 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
+  AiUnlimitedSchedulerPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50051
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
+    Type: String
+    Default: latest
+
+  AiUnlimitedSchedulerVersion:
+    Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
     Type: String
     Default: latest
 
@@ -343,12 +358,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -383,6 +398,8 @@ Resources:
             - install_docker
             - configure_ai_unlimited_service
             - start_ai_unlimited_service
+            - configure_ai_unlimited_scheduler_service
+            - start_ai_unlimited_scheduler_service
         prepare_directory:
           commands:
             mkdir:
@@ -451,6 +468,7 @@ Resources:
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
                 ExecStart=/usr/bin/docker run \
                     -e accept_license=Y \
@@ -458,8 +476,8 @@ Resources:
                     -v /etc/td/ai-unlimited:/etc/td \
                     -p ${ AiUnlimitedHttpPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
+                    --network ai_unlimited \
                     --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
-
                 [Install]
                 WantedBy=multi-user.target
               group: root
@@ -471,6 +489,47 @@ Resources:
               ai-unlimited:
                 enabled: "true"
                 ensureRunning: "true"
+
+        configure_ai_unlimited_scheduler_service:
+          files:
+            /usr/lib/systemd/system/ai-unlimited-scheduler.service:
+              content: !Sub |
+                [Unit]
+                Description=AI Unlimited Scheduler
+                After=docker.service
+                Requires=docker.service
+                StartLimitInterval=200
+                StartLimitBurst=10
+
+                [Service]
+                TimeoutStartSec=0
+                Restart=always
+                RestartSec=2
+                ExecStartPre=-/usr/bin/docker exec %n stop || true
+                ExecStartPre=-/usr/bin/docker rm %n || true
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedVersion }
+                ExecStart=/usr/bin/docker run \
+                    --network ai_unlimited \
+                    -p ${ AiUnlimitedSchedulerPort }:50051 \
+                    -v /etc/td/ai-unlimited:/etc/td \
+                    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
+                    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
+                    -e TD_WSSCHED_POL_INTERVAL=2 \
+                    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
+                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
+
+                [Install]
+                WantedBy=multi-user.target
+              group: root
+              mode: "000400"
+              owner: root
+        start_ai_unlimited_scheduler_service:
+          services:
+            systemd:
+              ai-unlimited-scheduler:
+                enabled: "true"
+                ensureRunning: "true"
+
     Properties:
       PropagateTagsToVolumeOnCreation: true
       BlockDeviceMappings:
@@ -478,12 +537,7 @@ Resources:
           Ebs:
             VolumeSize: !Ref RootVolumeSize
             Encrypted: true
-      NetworkInterfaces:
-      - DeviceIndex: 0
-        SubnetId: !Ref Subnet
-        GroupSet:
-          - !GetAtt AiUnlimitedSecurityGroup.GroupId
-        AssociatePublicIpAddress: !If [HASPUBLICIP, true, !Ref "AWS::NoValue"]
+      SubnetId: !Ref Subnet
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       KeyName: !If
@@ -491,8 +545,8 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      # SecurityGroupIds:
-      #   - !GetAtt AiUnlimitedSecurityGroup.GroupId
+      SecurityGroupIds:
+        - !GetAtt AiUnlimitedSecurityGroup.GroupId
       IamInstanceProfile: !Ref AiUnlimitedInstanceProfile
       Volumes:
         - !If
@@ -506,12 +560,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -549,6 +603,13 @@ Resources:
         - FromPort: !Ref AiUnlimitedGrpcPort
           IpProtocol: tcp
           ToPort: !Ref AiUnlimitedGrpcPort
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+        - FromPort: !Ref AiUnlimitedSchedulerPort
+          IpProtocol: tcp
+          ToPort: !Ref AiUnlimitedSchedulerPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -611,13 +672,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - ai-unlimited
           - session
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -641,14 +702,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -657,7 +718,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -666,13 +727,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - ai-unlimited
           - deploy
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -722,13 +783,10 @@ Resources:
               - ec2:DescribeImages
               - ec2:DescribeAccountAttributes
               - ec2:DescribeAvailabilityZones
-              - ec2:DescribeManagedPrefixLists
               - ec2:DescribeVpcAttribute
-              - ec2:DeleteTags
               - ec2:DeleteSecurityGroup
               - ec2:DeletePlacementGroup
               - ec2:DeleteLaunchTemplate
-              - ec2:DeleteLaunchTemplateVersions
               - ec2:DeleteKeyPair
               - ec2:CreateTags
               - ec2:CreateSecurityGroup
@@ -744,7 +802,7 @@ Resources:
               - secretsmanager:GetSecretValue
               - secretsmanager:PutSecretValue
               - secretsmanager:TagResource
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLE
