@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.170.59819",
-      "templateHash": "14461346276310693220"
+      "version": "0.27.1.19265",
+      "templateHash": "18237593260730113827"
     }
   },
   "parameters": {
@@ -14,13 +14,6 @@
       "defaultValue": "ai-unlimited",
       "metadata": {
         "description": "name for the resource group, role and derived network and subnet names."
-      }
-    },
-    "location": {
-      "type": "string",
-      "defaultValue": "West US",
-      "metadata": {
-        "description": "deploy region"
       }
     },
     "networkCidr": {
@@ -61,12 +54,15 @@
       }
     }
   },
+  "variables": {
+    "location": "[deployment().location]"
+  },
   "resources": [
     {
       "type": "Microsoft.Resources/resourceGroups",
       "apiVersion": "2022-09-01",
       "name": "[parameters('name')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": "[parameters('Tags')]"
     },
     {
@@ -168,7 +164,7 @@
             "value": "[parameters('subnetCidr')]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('location')]"
           },
           "albSubnetCidr": {
             "value": "[parameters('albSubnetCidr')]"
@@ -186,8 +182,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "15155096053124695514"
+              "version": "0.27.1.19265",
+              "templateHash": "2707292976893196822"
             }
           },
           "parameters": {
