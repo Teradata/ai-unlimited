@@ -124,7 +124,7 @@ This will remount the volume and the instance will have the previous data availa
 | **AccessCIDR** | The IP address range that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
 | **PrefixList** | The PrefixList that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
 | **SecurityGroup** | The SecurityGroup that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
-| **UsePersistentVolume** | Specify if you are using a a new persistent volume, or an existing one |  *optional with default* | None |  |
+| **UsePersistentVolume** | Specify if you are using a a new persistent volume, or an existing one |  *optional with default* | New |  |
 | **PersistentVolumeSize** | The size of the persistent volume to attach to the instance, in GB | *required with default* | 8 | supports values between 8 and 1000 |
 | **ExistingPersistentVolumeId** | Id of the existing persistent volume to attach. Must be in the same availability zone as the workspaces instance | *required if UsePersistentVolume is set to Existing* |  |  |
 | **PersistentVolumeDeletionPolicy** | Behavior for the Persistent Volume when deleting the cloudformations deployment | *required with default* | Delete | Allowed Values are Delete, Retain, RetainExceptOnCreate, and Snapshot |
