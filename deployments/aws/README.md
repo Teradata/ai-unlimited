@@ -92,10 +92,8 @@ With AWS credentials for an appropriatley permissioned user or service account, 
 aws cloudformation describe-stacks --stack-name <stackname>  --query 'Stacks[0].Outputs' --output table
 ```
 
-## Using a Persistent Volume
-The default behavior is to use the root volume of the instace for storage. This will persist any Jupyter notebook data saved under the userdata folder and the Workspaces database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or Workspaces database will be lost. 
-This can be especially problematic if running on spot instances which may be terminated without warning. If greater persistency is desired,
-You can enable the UsePersistentVolume parameter to move the Jupyter notebook data and/or Workspaces database to a seperate volume.
+## Persistent Volume
+The deployments use a persistent volume to store any Jupyter notebook data saved under the userdata folder and/or the Workspaces database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or Workspaces database will remain on the persitent volume. The volume may be reattached to new deployment providing greater persistency, or can be snapshotted as a back, or as the enabling means for migration over new CFT deployments.
 
 ### Suggested Persistent Volume Flow
 1. Create a new deployment with UsePersistentVolume=New and PersistentVolumeDeletionPolicy=Retain.
@@ -126,7 +124,7 @@ This will remount the volume and the instance will have the previous data availa
 | **AccessCIDR** | The IP address range that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
 | **PrefixList** | The PrefixList that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
 | **SecurityGroup** | The SecurityGroup that can be used to communicate with the instance | *optional* |  | Unless you are creating your own security group ingress rules, you should have at least on of AccessCIDR, PrefixList, or SecurityGroup defined. |
-| **UsePersistentVolume** | Specify if you are using a a new persistent volume, an existing one, or none |  *optional with default* | None |  |
+| **UsePersistentVolume** | Specify if you are using a a new persistent volume, or an existing one |  *optional with default* | None |  |
 | **PersistentVolumeSize** | The size of the persistent volume to attach to the instance, in GB | *required with default* | 8 | supports values between 8 and 1000 |
 | **ExistingPersistentVolumeId** | Id of the existing persistent volume to attach. Must be in the same availability zone as the workspaces instance | *required if UsePersistentVolume is set to Existing* |  |  |
 | **PersistentVolumeDeletionPolicy** | Behavior for the Persistent Volume when deleting the cloudformations deployment | *required with default* | Delete | Allowed Values are Delete, Retain, RetainExceptOnCreate, and Snapshot |

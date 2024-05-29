@@ -31,7 +31,7 @@ param Subnet string
 param SecurityGroup string = 'JupyterSecurityGroup'
 
 @description('The CIDR ranges that can be used to communicate with the Jupyter Labs service instance.')
-param AccessCIDRs array = [ '0.0.0.0/0' ]
+param AccessCIDRs array = ['0.0.0.0/0']
 
 @description('port to access the Jupyter Labs UI.')
 param JupyterHttpPort int = 8888
@@ -46,7 +46,7 @@ param detinationAppSecGroups array = []
 param AllowPublicSSH bool = true
 
 @description('should we use a new or existing volume for persistent data on the Jupyter server.')
-@allowed([ 'New', 'None', 'Existing' ])
+@allowed(['New', 'Existing'])
 param UsePersistentVolume string = 'New'
 
 @description('size of the optional persistent disk to the Jpuyter server.')
@@ -71,22 +71,17 @@ var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, JupyterName)}'
 var registry = 'teradata'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
-
-var cloudInitData = base64(
-  format(
-    loadTextContent('../../../scripts/jupyter.cloudinit.yaml'),
-    base64(
-      format(
-        loadTextContent('../../../scripts/jupyter.service'),
-        registry,
-        jupyterRepository,
-        JupyterVersion,
-        JupyterHttpPort,
-        JupyterToken
-      )
-    )
-  )
-)
+var cloudInitData = base64(format(
+  loadTextContent('../../../scripts/jupyter.cloudinit.yaml'),
+  base64(format(
+    loadTextContent('../../../scripts/jupyter.service'),
+    registry,
+    jupyterRepository,
+    JupyterVersion,
+    JupyterHttpPort,
+    JupyterToken
+  ))
+))
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName

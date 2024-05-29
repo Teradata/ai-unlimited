@@ -118,7 +118,6 @@ Parameters:
     Description: Should we use a new or existing volume for persistent data on the AI Unlimited server.
     Type: String
     AllowedValues:
-      - None
       - New
       - Existing
     Default: None
@@ -314,14 +313,6 @@ Conditions:
     - !Ref UsePersistentVolume
     - New
 
-  USEEXISTINGPERSISTENTVOLUME: !Equals
-    - !Ref UsePersistentVolume
-    - Existing
-
-  USEPERSISTENTVOLUME: !Or
-    - !Condition USENEWPERSISTENTVOLUME
-    - !Condition USEEXISTINGPERSISTENTVOLUME
-
   HASIAMPERMISSIONSBOUNDARY: !Not
     - !Equals
       - !Ref IamPermissionsBoundary
@@ -372,14 +363,8 @@ Resources:
               - USENEWPERSISTENTVOLUME
               - prepare_new_storage
               - !Ref AWS::NoValue
-            - !If
-              - USEPERSISTENTVOLUME
-              - bind_storage
-              - !Ref AWS::NoValue
-            - !If
-              - USEPERSISTENTVOLUME
-              - mount_storage
-              - !Ref AWS::NoValue
+            - bind_storage
+            - mount_storage
             - install_docker
             - configure_ai_unlimited_service
             - start_ai_unlimited_service
@@ -495,14 +480,11 @@ Resources:
       #   - !GetAtt AiUnlimitedSecurityGroup.GroupId
       IamInstanceProfile: !Ref AiUnlimitedInstanceProfile
       Volumes:
-        - !If
-          - USEPERSISTENTVOLUME
-          - Device: /dev/xvdb
-            VolumeId: !If
-              - USENEWPERSISTENTVOLUME
-              - !Ref AiUnlimitedVolume
-              - !Ref ExistingPersistentVolumeId
-          - !Ref AWS::NoValue
+        - Device: /dev/xvdb
+          VolumeId: !If
+            - USENEWPERSISTENTVOLUME
+            - !Ref AiUnlimitedVolume
+            - !Ref ExistingPersistentVolumeId
       Tags:
         - Key: Name
           Value: !Join
