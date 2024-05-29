@@ -3,9 +3,6 @@ targetScope = 'subscription'
 @description('name for the resource group, role and derived network and subnet names.')
 param name string = 'ai-unlimited'
 
-@description('deploy region')
-param location string = 'West US'
-
 @description('New network CIDR.')
 param networkCidr array = [ '10.0.0.0/16' ]
 
@@ -20,6 +17,8 @@ param deployALBComponents bool = false
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
+
+var location = deployment().location
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: name
