@@ -32,7 +32,7 @@ param KeyVaultName string = 'ai-unlimited-kv'
 param PublicKey string
 
 @description('The CIDR ranges that can be used to communicate with the Jupyter Labs service instance.')
-param AccessCIDRs array = [ '0.0.0.0/0' ]
+param AccessCIDRs array = ['0.0.0.0/0']
 
 @description('allow access the AI Unlimited ssh port from the access cidr.')
 param AllowPublicSSH bool = false
@@ -69,7 +69,7 @@ param OSVersion string = 'Ubuntu-2004'
 
 // 2vCPUs + 8GiB RAM
 @description('The Jupyter Labs VM type')
-@allowed([ 'Standard_D2s_v3', 'Standard_D2s_v4', 'Standard_D2s_v5'])
+@allowed(['Standard_D2s_v3', 'Standard_D2s_v4', 'Standard_D2s_v5'])
 param InstanceType string = 'Standard_D2s_v3'
 
 @description('port to access the Jupyter Labs UI.')
@@ -82,7 +82,7 @@ param SourceAppSecGroups array = []
 param detinationAppSecGroups array = []
 
 @description('should we use a new or existing volume for persistent data on the Jupyter server.')
-@allowed([ 'New', 'None', 'Existing' ])
+@allowed(['New', 'Existing'])
 param UsePersistentVolume string = 'New'
 
 @description('size of the optional persistent disk to the Jpuyter server.')
@@ -102,21 +102,17 @@ var gtwCertMSI = '${JupyterName}-msi'
 var registry = 'teradata'
 var jupyterRepository = 'ai-unlimited-jupyter'
 
-var cloudInitData = base64(
-  format(
-    loadTextContent('../../../scripts/jupyter.cloudinit.yaml'),
-    base64(
-      format(
-        loadTextContent('../../../scripts/jupyter.service'),
-        registry,
-        jupyterRepository,
-        JupyterVersion,
-        JupyterHttpPort,
-        JupyterToken
-      )
-    )
-  )
-)
+var cloudInitData = base64(format(
+  loadTextContent('../../../scripts/jupyter.cloudinit.yaml'),
+  base64(format(
+    loadTextContent('../../../scripts/jupyter.service'),
+    registry,
+    jupyterRepository,
+    JupyterVersion,
+    JupyterHttpPort,
+    JupyterToken
+  ))
+))
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
@@ -132,16 +128,15 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' existing 
   name: SubnetName
 }
 
-module albKvMsi '../modules/identity.bicep' =
-  if (UseKeyVault != 'None') {
-    scope: rg
-    name: 'ssl-cert-keyvault-identity'
-    params: {
-      name: gtwCertMSI
-      location: rg.location
-      tags: Tags
-    }
+module albKvMsi '../modules/identity.bicep' = if (UseKeyVault != 'None') {
+  scope: rg
+  name: 'ssl-cert-keyvault-identity'
+  params: {
+    name: gtwCertMSI
+    location: rg.location
+    tags: Tags
   }
+}
 
 module vault '../modules/vault/vault.bicep' = if (UseKeyVault == 'New') {
   scope: rg
@@ -163,8 +158,8 @@ module albMsiVaultAccessPolicy '../modules/vault/access-policy.bicep' = if (UseK
       tenantId: subscription().tenantId
       objectId: UseKeyVault != 'None' ? albKvMsi.outputs.principalId : ''
       permissions: {
-        secrets: [ 'Get', 'Set', 'List' ]
-        certificates: [ 'Get', 'Set', 'List' ]
+        secrets: ['Get', 'Set', 'List']
+        certificates: ['Get', 'Set', 'List']
       }
     }
   }
@@ -179,7 +174,7 @@ module gtwSelfSignedCert 'br/public:deployment-scripts/create-kv-certificate:1.1
     certificateName: gtwListenerCert
     certificateCommonName: dnsLabelPrefix
   }
-  dependsOn:[albMsiVaultAccessPolicy]
+  dependsOn: [albMsiVaultAccessPolicy]
 }
 
 module firewall '../modules/firewall.bicep' = {
