@@ -491,8 +491,6 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      # SecurityGroupIds:
-      #   - !GetAtt AiUnlimitedSecurityGroup.GroupId
       IamInstanceProfile: !Ref AiUnlimitedInstanceProfile
       Volumes:
         - !If
