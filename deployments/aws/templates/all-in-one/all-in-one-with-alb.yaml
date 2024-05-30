@@ -178,7 +178,7 @@ Parameters:
     AllowedValues:
       - New
       - Existing
-    Default: None
+    Default: New
     ConstraintDescription: Specify if you are using a a new persistent volume, an existing one, or none.
 
   PersistentVolumeSize:
