@@ -3,7 +3,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
-  License: TODO
 
   AWS::CloudFormation::Interface:
     ParameterGroups:

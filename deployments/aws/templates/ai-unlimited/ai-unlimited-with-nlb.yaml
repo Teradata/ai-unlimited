@@ -3,7 +3,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
-  License: TODO
 
   AWS::CloudFormation::Interface:
     ParameterGroups:
