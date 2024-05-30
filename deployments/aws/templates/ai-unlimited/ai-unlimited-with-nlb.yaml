@@ -3,7 +3,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
-
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -477,7 +476,15 @@ Resources:
           Ebs:
             VolumeSize: !Ref RootVolumeSize
             Encrypted: true
-      SubnetId: !Ref Subnet
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref Subnet
+          GroupSet:
+            - !GetAtt AiUnlimitedSecurityGroup.GroupId
+          AssociatePublicIpAddress: !If
+            - HASPUBLICIP
+            - true
+            - !Ref AWS::NoValue
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       KeyName: !If
@@ -485,8 +492,6 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      SecurityGroupIds:
-        - !GetAtt AiUnlimitedSecurityGroup.GroupId
       IamInstanceProfile: !Ref AiUnlimitedInstanceProfile
       Volumes:
         - Device: /dev/xvdb
