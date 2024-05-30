@@ -3,7 +3,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
-
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -474,7 +473,15 @@ Resources:
           Ebs:
             VolumeSize: !Ref RootVolumeSize
             Encrypted: true
-      SubnetId: !Ref Subnet
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref Subnet
+          GroupSet:
+            - !GetAtt JupyterSecurityGroup.GroupId
+          AssociatePublicIpAddress: !If
+            - HASPUBLICIP
+            - true
+            - !Ref AWS::NoValue
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       KeyName: !If
@@ -482,8 +489,6 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      SecurityGroupIds:
-        - !GetAtt JupyterSecurityGroup.GroupId
       IamInstanceProfile: !If
         - NEEDINSTANCEPROFILE
         - !Ref JupyterInstanceProfile
