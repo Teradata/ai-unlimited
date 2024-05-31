@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.170.59819",
-      "templateHash": "5738759185337823122"
+      "version": "0.27.1.19265",
+      "templateHash": "17418549750365838633"
     }
   },
   "parameters": {
@@ -108,7 +108,6 @@
       "defaultValue": "New",
       "allowedValues": [
         "New",
-        "None",
         "Existing"
       ],
       "metadata": {
@@ -203,8 +202,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "14464587274009009526"
+              "version": "0.27.1.19265",
+              "templateHash": "8275252103706232855"
             }
           },
           "parameters": {
@@ -450,8 +449,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "9957786142709802018"
+              "version": "0.27.1.19265",
+              "templateHash": "1313008413011978885"
             }
           },
           "parameters": {
@@ -574,8 +573,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.26.170.59819",
-                      "templateHash": "7767394013870435864"
+                      "version": "0.27.1.19265",
+                      "templateHash": "13411721602606036822"
                     }
                   },
                   "parameters": {
@@ -656,8 +655,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.26.170.59819",
-                      "templateHash": "7767394013870435864"
+                      "version": "0.27.1.19265",
+                      "templateHash": "13411721602606036822"
                     }
                   },
                   "parameters": {
@@ -799,8 +798,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "11841907909645302583"
+              "version": "0.27.1.19265",
+              "templateHash": "7784277815830270611"
             }
           },
           "parameters": {
@@ -973,7 +972,15 @@
                       "storageAccountType": "[variables('osDiskType')]"
                     }
                   },
-                  "dataDisks": "[if(equals(parameters('usePersistentVolume'), 'None'), createArray(), createArray(createObject('lun', 0, 'createOption', 'Attach', 'managedDisk', createObject('id', if(equals(parameters('usePersistentVolume'), 'New'), resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name'))), resourceId('Microsoft.Compute/disks', parameters('existingPersistentVolume')))))))]",
+                  "dataDisks": [
+                    {
+                      "lun": 0,
+                      "createOption": "Attach",
+                      "managedDisk": {
+                        "id": "[if(equals(parameters('usePersistentVolume'), 'New'), resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name'))), resourceId('Microsoft.Compute/disks', parameters('existingPersistentVolume')))]"
+                      }
+                    }
+                  ],
                   "imageReference": "[variables('imageReference')[parameters('osVersion')]]"
                 },
                 "networkProfile": {
@@ -1072,8 +1079,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.26.170.59819",
-                      "templateHash": "7767394013870435864"
+                      "version": "0.27.1.19265",
+                      "templateHash": "13411721602606036822"
                     }
                   },
                   "parameters": {
