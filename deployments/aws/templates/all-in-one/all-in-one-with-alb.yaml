@@ -557,7 +557,7 @@ Resources:
                 RestartSec=2
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedVersion }
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
                     -p ${ AiUnlimitedSchedulerPort }:50051 \
