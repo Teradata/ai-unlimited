@@ -20,7 +20,7 @@ runcmd:
     /usr/bin/mount -a
 - while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
 - sleep 60
-- systemctl enable ai-unliited.service
+- systemctl enable ai-unlimited.service
 - systemctl start ai-unlimited.service
 - systemctl enable jupyter.service
 - systemctl start jupyter.service
