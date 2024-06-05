@@ -5,6 +5,11 @@ write_files:
   owner: root:root
   path: /usr/lib/systemd/system/ai-unlimited.service
   permissions: '0640'
+- encoding: b64
+  content: "{1}"
+  owner: root:root
+  path: /usr/lib/systemd/system/ai-unlimited-scheduler.service
+  permissions: '0640'
 
 runcmd:
 - mkdir -p /etc/td 
@@ -17,3 +22,5 @@ runcmd:
 - sleep 60
 - systemctl enable ai-unlimited.service
 - systemctl start ai-unlimited.service
+- systemctl enable ai-unlimited-scheduler.service
+- systemctl start ai-unlimited-scheduler.service

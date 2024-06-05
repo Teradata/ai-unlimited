@@ -39,6 +39,9 @@ param AiUnlimitedHttpPort int = 3000
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
 
+@description('port to access the AI Unlimited scheduler service api.')
+param AiUnlimitedSchedulerPort int = 50051
+
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
 
@@ -68,6 +71,9 @@ param ExistingPersistentVolume string = 'NONE'
 @description('Container Version of the AI Unlimited service')
 param AiUnlimitedVersion string = 'latest'
 
+@description('Container Version of the AI Unlimited scheduler service')
+param AiUnlimitedSchedulerVersion string = 'latest'
+
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
 
@@ -79,6 +85,7 @@ var nlbDnsLabelPrefix = 'td${dnsId}-nlb'
 // below are static and are not expected to be changed
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
+var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 
 
 var cloudInitData = base64(
@@ -95,6 +102,15 @@ var cloudInitData = base64(
         subscription().subscriptionId,
         subscription().tenantId,
         '--network-alias ${nlb.outputs.PublicDns}'
+      )
+    ),
+    base64(
+      format(
+        loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
+        registry,
+        workspaceSchedulerRepository,
+        AiUnlimitedSchedulerVersion,
+        AiUnlimitedSchedulerPort
       )
     )
   )

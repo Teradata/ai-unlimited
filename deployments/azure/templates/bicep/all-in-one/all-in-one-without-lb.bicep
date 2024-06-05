@@ -42,6 +42,9 @@ param AiUnlimitedHttpPort int = 3000
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
 
+@description('port to access the AI Unlimited scheduler service api.')
+param AiUnlimitedSchedulerPort int = 50051
+
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
 
@@ -74,6 +77,9 @@ param AiUnlimitedVersion string = 'latest'
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
 
+@description('Container Version of the AI Unlimited scheduler service')
+param AiUnlimitedSchedulerVersion string = 'latest'
+
 @description('Join token for the Jupyter Labs service')
 @secure()
 param JupyterToken string
@@ -88,6 +94,7 @@ var dnsLabelPrefix = 'td${uniqueString(rg.id, deployment().name, AiUnlimitedName
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var jupyterRepository = 'ai-unlimited-jupyter'
+var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 
 var cloudInitData = base64(
   format(
@@ -113,6 +120,15 @@ var cloudInitData = base64(
         JupyterVersion,
         JupyterHttpPort,
         JupyterToken
+      )
+    ),
+    base64(
+      format(
+        loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
+        registry,
+        workspaceSchedulerRepository,
+        AiUnlimitedSchedulerVersion,
+        AiUnlimitedSchedulerPort
       )
     )
   )
