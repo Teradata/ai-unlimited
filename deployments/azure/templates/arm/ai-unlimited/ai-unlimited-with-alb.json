@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.26.170.59819",
-      "templateHash": "4623647540068764773"
+      "version": "0.27.1.19265",
+      "templateHash": "1246773992555979710"
     }
   },
   "parameters": {
@@ -132,6 +132,13 @@
         "description": "Container Version of the AI Unlimited service"
       }
     },
+    "AiUnlimitedSchedulerVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container Version of the AI Unlimited scheduler service"
+      }
+    },
     "OSVersion": {
       "type": "string",
       "defaultValue": "Ubuntu-2004",
@@ -168,6 +175,13 @@
       "defaultValue": 3282,
       "metadata": {
         "description": "port to access the AI Unlimited service api."
+      }
+    },
+    "AiUnlimitedSchedulerPort": {
+      "type": "int",
+      "defaultValue": 50051,
+      "metadata": {
+        "description": "port to access the AI Unlimited scheduler service api."
       }
     },
     "SourceAppSecGroups": {
@@ -219,14 +233,16 @@
     }
   },
   "variables": {
-    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable ai-unlimited.service\n- systemctl start ai-unlimited.service\n",
+    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{1}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited-scheduler.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable ai-unlimited.service\n- systemctl start ai-unlimited.service\n- systemctl enable ai-unlimited-scheduler.service\n- systemctl start ai-unlimited-scheduler.service\n",
     "$fxv#1": "[Unit]\nDescription=AI Unlimited\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    --network ai_unlimited {7} \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
+    "$fxv#2": "[Unit]\nDescription=AI Unlimited Scheduler\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\nExecStart=/usr/bin/docker run \\\n    --network ai_unlimited \\\n    -p {3}:50051 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \\\n    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \\\n    -e TD_WSSCHED_POL_INTERVAL=2 \\\n    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \\\n    --rm --name %n {0}/{1}:{2} workspace-event-scheduler serve\n[Install]\nWantedBy=multi-user.target",
     "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
     "gtwPublicIP": "[format('{0}-gtw-inbound', parameters('AiUnlimitedName'))]",
     "gtwListenerCert": "[format('{0}-gtw-cert', parameters('AiUnlimitedName'))]",
     "gtwCertMSI": "[format('{0}-msi', parameters('AiUnlimitedName'))]",
     "registry": "teradata",
-    "workspaceRepository": "ai-unlimited-workspaces"
+    "workspaceRepository": "ai-unlimited-workspaces",
+    "workspaceSchedulerRepository": "ai-unlimited-scheduler"
   },
   "resources": [
     {
@@ -269,8 +285,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "1934440793653079974"
+              "version": "0.27.1.19265",
+              "templateHash": "1338942985945465944"
             }
           },
           "parameters": {
@@ -337,8 +353,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "1666532473399121342"
+              "version": "0.27.1.19265",
+              "templateHash": "2086007890190396523"
             }
           },
           "parameters": {
@@ -430,8 +446,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "1992814880431663076"
+              "version": "0.27.1.19265",
+              "templateHash": "15097183793238578678"
             }
           },
           "parameters": {
@@ -750,8 +766,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "14464587274009009526"
+              "version": "0.27.1.19265",
+              "templateHash": "8275252103706232855"
             }
           },
           "parameters": {
@@ -994,8 +1010,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "7767394013870435864"
+              "version": "0.27.1.19265",
+              "templateHash": "13411721602606036822"
             }
           },
           "parameters": {
@@ -1098,8 +1114,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "18223067811585337101"
+              "version": "0.27.1.19265",
+              "templateHash": "3298385779221673187"
             }
           },
           "parameters": {
@@ -1261,7 +1277,7 @@
             "value": "[parameters('OSVersion')]"
           },
           "cloudInitData": {
-            "value": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, format('--network-alias {0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value)))))]"
+            "value": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, format('--network-alias {0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'alb-frontend-public-ip'), '2022-09-01').outputs.Dns.value))), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), parameters('AiUnlimitedSchedulerVersion'), parameters('AiUnlimitedSchedulerPort')))))]"
           },
           "usePersistentVolume": {
             "value": "[parameters('UsePersistentVolume')]"
@@ -1288,8 +1304,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.26.170.59819",
-              "templateHash": "11841907909645302583"
+              "version": "0.27.1.19265",
+              "templateHash": "16496619553175174987"
             }
           },
           "parameters": {
@@ -1561,8 +1577,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.26.170.59819",
-                      "templateHash": "7767394013870435864"
+                      "version": "0.27.1.19265",
+                      "templateHash": "13411721602606036822"
                     }
                   },
                   "parameters": {

@@ -10,6 +10,11 @@ write_files:
   owner: root:root
   path: /usr/lib/systemd/system/jupyter.service
   permissions: '0640'
+- encoding: b64
+  content: "{2}"
+  owner: root:root
+  path: /usr/lib/systemd/system/ai-unlimited-scheduler.service
+  permissions: '0640'
 
 runcmd:
 - mkdir -p /etc/td 
@@ -20,7 +25,9 @@ runcmd:
     /usr/bin/mount -a
 - while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
 - sleep 60
-- systemctl enable ai-unliited.service
+- systemctl enable ai-unlimited.service
 - systemctl start ai-unlimited.service
 - systemctl enable jupyter.service
 - systemctl start jupyter.service
+- systemctl enable ai-unlimited-scheduler.service
+- systemctl start ai-unlimited-scheduler.service
