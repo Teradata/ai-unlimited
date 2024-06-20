@@ -3,8 +3,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "AWS CloudFormation Template with AI Unlimited with Jupyter: AI Unlimited is a instance based service for deploying and suspending ai-unlimited clusters, and managing project lifecycles. This template also includes a Jupyter Lab service running on the same host, suitable for demonstration environments.  Note: You will be billed for the AWS resources used if you create a stack from this template."
 
 Metadata:
-  License: TODO
-
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -160,10 +158,9 @@ Parameters:
     Description: Should we use a new or existing volume for persistent data on the AI Unlimited server.
     Type: String
     AllowedValues:
-      - None
       - New
       - Existing
-    Default: None
+    Default: New
     ConstraintDescription: Specify if you are using a a new persistent volume, an existing one, or none.
 
   PersistentVolumeSize:
@@ -345,14 +342,6 @@ Conditions:
     - !Ref UsePersistentVolume
     - New
 
-  USEEXISTINGPERSISTENTVOLUME: !Equals
-    - !Ref UsePersistentVolume
-    - Existing
-
-  USEPERSISTENTVOLUME: !Or
-    - !Condition USENEWPERSISTENTVOLUME
-    - !Condition USEEXISTINGPERSISTENTVOLUME
-
   HASIAMPERMISSIONSBOUNDARY: !Not
     - !Equals
       - !Ref IamPermissionsBoundary
@@ -403,14 +392,8 @@ Resources:
               - USENEWPERSISTENTVOLUME
               - prepare_new_storage
               - !Ref AWS::NoValue
-            - !If
-              - USEPERSISTENTVOLUME
-              - bind_storage
-              - !Ref AWS::NoValue
-            - !If
-              - USEPERSISTENTVOLUME
-              - mount_storage
-              - !Ref AWS::NoValue
+            - bind_storage
+            - mount_storage
             - install_docker
             - configure_ai_unlimited_service
             - configure_jupyter_service
@@ -593,7 +576,15 @@ Resources:
           Ebs:
             VolumeSize: !Ref RootVolumeSize
             Encrypted: true
-      SubnetId: !Ref Subnet
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref Subnet
+          GroupSet:
+            - !GetAtt AiUnlimitedSecurityGroup.GroupId
+          AssociatePublicIpAddress: !If
+            - HASPUBLICIP
+            - true
+            - !Ref AWS::NoValue
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       KeyName: !If
@@ -601,18 +592,13 @@ Resources:
         - !Ref KeyName
         - !Ref AWS::NoValue
       DisableApiTermination: !Ref TerminationProtection
-      SecurityGroupIds:
-        - !GetAtt AiUnlimitedSecurityGroup.GroupId
       IamInstanceProfile: !Ref AiUnlimitedInstanceProfile
       Volumes:
-        - !If
-          - USEPERSISTENTVOLUME
-          - Device: /dev/xvdb
-            VolumeId: !If
-              - USENEWPERSISTENTVOLUME
-              - !Ref AiUnlimitedVolume
-              - !Ref ExistingPersistentVolumeId
-          - !Ref AWS::NoValue
+        - Device: /dev/xvdb
+          VolumeId: !If
+            - USENEWPERSISTENTVOLUME
+            - !Ref AiUnlimitedVolume
+            - !Ref ExistingPersistentVolumeId
       Tags:
         - Key: Name
           Value: !Join

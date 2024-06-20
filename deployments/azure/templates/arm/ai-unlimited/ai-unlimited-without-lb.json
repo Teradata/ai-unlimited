@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.27.1.19265",
-      "templateHash": "5753191638106497609"
+      "templateHash": "13517890099059231480"
     }
   },
   "parameters": {
@@ -139,7 +139,6 @@
       "defaultValue": "New",
       "allowedValues": [
         "New",
-        "None",
         "Existing"
       ],
       "metadata": {
@@ -700,7 +699,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.27.1.19265",
-              "templateHash": "16496619553175174987"
+              "templateHash": "7784277815830270611"
             }
           },
           "parameters": {
@@ -873,7 +872,15 @@
                       "storageAccountType": "[variables('osDiskType')]"
                     }
                   },
-                  "dataDisks": "[if(equals(parameters('usePersistentVolume'), 'None'), createArray(), createArray(createObject('lun', 0, 'createOption', 'Attach', 'managedDisk', createObject('id', if(equals(parameters('usePersistentVolume'), 'New'), resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name'))), resourceId('Microsoft.Compute/disks', parameters('existingPersistentVolume')))))))]",
+                  "dataDisks": [
+                    {
+                      "lun": 0,
+                      "createOption": "Attach",
+                      "managedDisk": {
+                        "id": "[if(equals(parameters('usePersistentVolume'), 'New'), resourceId('Microsoft.Compute/disks', format('{0}-disk', parameters('name'))), resourceId('Microsoft.Compute/disks', parameters('existingPersistentVolume')))]"
+                      }
+                    }
+                  ],
                   "imageReference": "[variables('imageReference')[parameters('osVersion')]]"
                 },
                 "networkProfile": {

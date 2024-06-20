@@ -69,25 +69,23 @@ var resourcePools = [
   }
 ]
 
-resource existingPersistentDisk 'Microsoft.Compute/disks@2023-04-02' existing =
-  if (usePersistentVolume == 'Existing') {
-    name: existingPersistentVolume
-  }
+resource existingPersistentDisk 'Microsoft.Compute/disks@2023-04-02' existing = if (usePersistentVolume == 'Existing') {
+  name: existingPersistentVolume
+}
 
-resource newPersistentDisk 'Microsoft.Compute/disks@2023-04-02' =
-  if (usePersistentVolume == 'New') {
-    location: location
-    name: '${name}-disk'
-    tags: tags
-    properties: {
-      creationData: {
-        createOption: 'Empty'
-      }
-      diskSizeGB: persistentVolumeSize
-      maxShares: 1
-      osType: 'Linux'
+resource newPersistentDisk 'Microsoft.Compute/disks@2023-04-02' = if (usePersistentVolume == 'New') {
+  location: location
+  name: '${name}-disk'
+  tags: tags
+  properties: {
+    creationData: {
+      createOption: 'Empty'
     }
+    diskSizeGB: persistentVolumeSize
+    maxShares: 1
+    osType: 'Linux'
   }
+}
 
 resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
   name: networkInterfaceName
@@ -136,16 +134,15 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2022-11-01' = {
   }
 }
 
-module publicIP 'public-ip.bicep' =
-  if (usePublicIp) {
+module publicIP 'public-ip.bicep' = if (usePublicIp) {
+  name: publicIPAddressName
+  params: {
     name: publicIPAddressName
-    params: {
-      name: publicIPAddressName
-      location: location
-      dnsPrefix: dnsLabelPrefix
-      tags: tags
-    }
+    location: location
+    dnsPrefix: dnsLabelPrefix
+    tags: tags
   }
+}
 
 resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
   name: name
@@ -165,17 +162,15 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
           storageAccountType: osDiskType
         }
       }
-      dataDisks: usePersistentVolume == 'None'
-        ? []
-        : [
-            {
-              lun: 0
-              createOption: 'Attach'
-              managedDisk: {
-                id: usePersistentVolume == 'New' ? newPersistentDisk.id : existingPersistentDisk.id
-              }
-            }
-          ]
+      dataDisks: [
+        {
+          lun: 0
+          createOption: 'Attach'
+          managedDisk: {
+            id: usePersistentVolume == 'New' ? newPersistentDisk.id : existingPersistentDisk.id
+          }
+        }
+      ]
       imageReference: imageReference[osVersion]
     }
     networkProfile: {

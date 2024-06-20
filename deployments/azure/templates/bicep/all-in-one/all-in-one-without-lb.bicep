@@ -31,7 +31,7 @@ param Subnet string
 param SecurityGroup string = 'AiUnlimitedSecurityGroup'
 
 @description('The CIDR ranges that can be used to communicate with the AI Unlimited service instance.')
-param AccessCIDRs array = [ '0.0.0.0/0' ]
+param AccessCIDRs array = ['0.0.0.0/0']
 
 @description('port to access the Jupyter Labs UI.')
 param JupyterHttpPort int = 8888
@@ -58,11 +58,11 @@ param RoleDefinitionId string
 param AllowPublicSSH bool = true
 
 @description('should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes.')
-@allowed([ 'New', 'None' ])
+@allowed(['New', 'None'])
 param UseKeyVault string = 'New'
 
 @description('should we use a new or existing volume for persistent data on the AI Unlimited server.')
-@allowed([ 'New', 'None', 'Existing' ])
+@allowed(['New', 'Existing'])
 param UsePersistentVolume string = 'New'
 
 @description('size of the optional persistent disk to the AI Unlimited server.')
@@ -96,6 +96,7 @@ var workspaceRepository = 'ai-unlimited-workspaces'
 var jupyterRepository = 'ai-unlimited-jupyter'
 var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 
+<<<<<<< HEAD
 var cloudInitData = base64(
   format(
     loadTextContent('../../../scripts/all-in-one.cloudinit.yaml'),
@@ -133,6 +134,30 @@ var cloudInitData = base64(
     )
   )
 )
+=======
+var cloudInitData = base64(format(
+  loadTextContent('../../../scripts/all-in-one.cloudinit.yaml'),
+  base64(format(
+    loadTextContent('../../../scripts/ai-unlimited.service'),
+    registry,
+    workspaceRepository,
+    AiUnlimitedVersion,
+    AiUnlimitedHttpPort,
+    AiUnlimitedGrpcPort,
+    subscription().subscriptionId,
+    subscription().tenantId,
+    '--network-alias ai-unlimited'
+  )),
+  base64(format(
+    loadTextContent('../../../scripts/jupyter.service'),
+    registry,
+    jupyterRepository,
+    JupyterVersion,
+    JupyterHttpPort,
+    JupyterToken
+  ))
+))
+>>>>>>> develop
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
@@ -162,20 +187,33 @@ module vault '../modules/vault/vault.bicep' = if (UseKeyVault == 'New') {
 module vaultAccessPolicy '../modules/vault/access-policy.bicep' = if (UseKeyVault == 'New') {
   scope: rg
   name: 'vault-access-policy'
-  params:{
+  params: {
     vaultName: AiUnlimitedName
-    accessPolicy:  {
-        tenantId: subscription().tenantId
-        objectId: aiUnlimited.outputs.PrincipleId
-        permissions: {
-          keys: [
-            'Create', 'Delete', 'Get', 'List', 'Update', 'Purge', 'Recover', 'Decrypt', 'Encrypt'
-            'Sign', 'UnwrapKey', 'Verify', 'WrapKey', 'GetRotationPolicy', 'SetRotationPolicy'
-          ]
-          secrets: [ 'Get', 'Set', 'Delete', 'List', 'Purge' ]
-          storage: [ 'Get' ]
-        }
+    accessPolicy: {
+      tenantId: subscription().tenantId
+      objectId: aiUnlimited.outputs.PrincipleId
+      permissions: {
+        keys: [
+          'Create'
+          'Delete'
+          'Get'
+          'List'
+          'Update'
+          'Purge'
+          'Recover'
+          'Decrypt'
+          'Encrypt'
+          'Sign'
+          'UnwrapKey'
+          'Verify'
+          'WrapKey'
+          'GetRotationPolicy'
+          'SetRotationPolicy'
+        ]
+        secrets: ['Get', 'Set', 'Delete', 'List', 'Purge']
+        storage: ['Get']
       }
+    }
   }
 }
 

@@ -324,10 +324,8 @@ Deploy your first engine with the `%project_engine_deploy` command, setting the 
 TODO: Pending updates for use with Deployment Manager
 
 
-## Using a Persistent Volume
-The default behavior is to use the root volume of the instace for storage. This will persist any Jupyter notebook data saved under the userdata folder and the AI Unlimited database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or AI Unlimited database will be lost. 
-This can be especially problematic if running on spot instances which may be terminated without warning. If greater persistency is desired,
-You can enable the UsePersistentVolume parameter to move the Jupyter notebook data and/or AI Unlimited database to a separate volume.
+## Persistent Volume
+The deployments use a persistent volume to store any Jupyter notebook data saved under the userdata folder and/or the Workspaces database and configuration files. If the instance is rebooted, shutdown and restarted, or snapshot and relaunched, your data will persist. If the instance is terminated, your Jupyter notebook data and/or Workspaces database will remain on the persitent volume. The volume may be reattached to new deployment providing greater persistency, or can be snapshotted as a backup or used as the enabling means for migration over new ARM deployments.
 
 ### Suggested Persistent Volume Flow
 1. Create a new deployment with UsePersistentVolume=New

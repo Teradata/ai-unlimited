@@ -71,7 +71,7 @@ param OSVersion string = 'Ubuntu-2004'
 
 // 2vCPUs + 8GiB RAM
 @description('The AI Unlimited VM type')
-@allowed([ 'Standard_D2s_v3', 'Standard_D2s_v4', 'Standard_D2s_v5'])
+@allowed(['Standard_D2s_v3', 'Standard_D2s_v4', 'Standard_D2s_v5'])
 param InstanceType string = 'Standard_D2s_v3'
 
 @description('port to access the AI Unlimited service UI.')
@@ -90,7 +90,7 @@ param SourceAppSecGroups array = []
 param detinationAppSecGroups array = []
 
 @description('should we use a new or existing volume for persistent data on the AI Unlimited server.')
-@allowed(['New', 'None', 'Existing'])
+@allowed(['New', 'Existing'])
 param UsePersistentVolume string = 'New'
 
 @description('size of the optional persistent disk to the AI Unlimited server.')
@@ -149,28 +149,26 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' existing 
   name: SubnetName
 }
 
-module albKvMsi '../modules/identity.bicep' =
-  if (UseKeyVault != 'None') {
-    scope: rg
-    name: 'ssl-cert-keyvault-identity'
-    params: {
-      name: gtwCertMSI
-      location: rg.location
-      tags: Tags
-    }
+module albKvMsi '../modules/identity.bicep' = if (UseKeyVault != 'None') {
+  scope: rg
+  name: 'ssl-cert-keyvault-identity'
+  params: {
+    name: gtwCertMSI
+    location: rg.location
+    tags: Tags
   }
+}
 
-module vault '../modules/vault/vault.bicep' =
-  if (UseKeyVault == 'New') {
-    scope: rg
-    name: 'ssl-cert-keyvault'
-    params: {
-      encryptVolumes: false
-      keyVaultName: KeyVaultName
-      location: rg.location
-      tags: Tags
-    }
+module vault '../modules/vault/vault.bicep' = if (UseKeyVault == 'New') {
+  scope: rg
+  name: 'ssl-cert-keyvault'
+  params: {
+    encryptVolumes: false
+    keyVaultName: KeyVaultName
+    location: rg.location
+    tags: Tags
   }
+}
 
 // because of https://github.com/Azure/bicep/issues/2371
 // (UseKeyVault != 'None') confition is required for objectId
@@ -184,7 +182,7 @@ module albMsiVaultAccessPolicy '../modules/vault/access-policy.bicep' = if (UseK
       objectId: UseKeyVault != 'None' ? albKvMsi.outputs.principalId : ''
       permissions: {
         secrets: ['Get', 'Set', 'List']
-        certificates: [ 'Get', 'Set', 'List' ]
+        certificates: ['Get', 'Set', 'List']
       }
     }
   }
@@ -199,7 +197,7 @@ module gtwSelfSignedCert 'br/public:deployment-scripts/create-kv-certificate:1.1
     certificateName: gtwListenerCert
     certificateCommonName: dnsLabelPrefix
   }
-  dependsOn:[albMsiVaultAccessPolicy]
+  dependsOn: [albMsiVaultAccessPolicy]
 }
 
 module firewall '../modules/firewall.bicep' = {
@@ -213,7 +211,7 @@ module firewall '../modules/firewall.bicep' = {
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
-    sshAccess : AllowPublicSSH
+    sshAccess: AllowPublicSSH
     tags: Tags
   }
 }
