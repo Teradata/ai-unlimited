@@ -370,7 +370,6 @@ Resources:
               - USENEWPERSISTENTVOLUME
               - prepare_new_storage
               - !Ref AWS::NoValue
-              - USEPERSISTENTVOLUME
             - bind_storage
             - mount_storage
             - install_docker
