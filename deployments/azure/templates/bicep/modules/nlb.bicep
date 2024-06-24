@@ -152,7 +152,7 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             }
           ]
         : []
-      aiUnlimitedHttpPort != 0
+      aiUnlimitedSchedulerHttpPort != 0
         ? [
             {
               name: 'AiUnlimitedSchedulerHttp'
@@ -182,7 +182,7 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             }
           ]
         : []
-      aiUnlimitedGrpcPort != 0
+      aiUnlimitedSchedulerGrpcPort != 0
         ? [
             {
               name: 'AiUnlimitedSchedulerGrpc'
@@ -253,7 +253,7 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             }
           ]
         : []
-      aiUnlimitedHttpPort != 0
+      aiUnlimitedSchedulerHttpPort != 0
         ? [
             {
               name: '${name}SchedulerHttpLbProbe'
@@ -267,7 +267,7 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             }
           ]
         : []
-      aiUnlimitedGrpcPort != 0
+      aiUnlimitedSchedulerGrpcPort != 0
         ? [
             {
               name: '${name}SchedulerGrpcLbProbe'
