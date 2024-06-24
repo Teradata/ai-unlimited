@@ -45,7 +45,7 @@ param AiUnlimitedGrpcPort int = 3282
 // @description('port to access the AI Unlimited scheduler service grpc api.')
 var AiUnlimitedSchedulerGrpcPort = 50051
 
-@description('port to access the AI Unlimited scheduler service http api.')
+// @description('port to access the AI Unlimited scheduler service http api.')
 var AiUnlimitedSchedulerHttpPort = 50061
 
 @description('Source Application Security Groups to access the AI Unlimited service api.')
