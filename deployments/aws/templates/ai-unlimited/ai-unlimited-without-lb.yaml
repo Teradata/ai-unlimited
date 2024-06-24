@@ -609,6 +609,21 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
+        - FromPort: 50061
+          IpProtocol: tcp
+          ToPort: 50061
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
     Condition: HASCIDRORPREFIXLISTORSECGROUP
 
   SecurityGroupIngress:

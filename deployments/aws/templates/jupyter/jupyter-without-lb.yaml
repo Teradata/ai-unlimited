@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
+Description: "AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template."
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -341,12 +341,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref JupyterName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -370,7 +370,6 @@ Resources:
               - USENEWPERSISTENTVOLUME
               - prepare_new_storage
               - !Ref AWS::NoValue
-              - USEPERSISTENTVOLUME
             - bind_storage
             - mount_storage
             - install_docker
@@ -502,12 +501,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref JupyterName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -584,13 +583,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - jupyter
           - session
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -614,14 +613,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -630,7 +629,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref JupyterRole
     Condition: NEEDSROLEANDSESSIONMANAGER
