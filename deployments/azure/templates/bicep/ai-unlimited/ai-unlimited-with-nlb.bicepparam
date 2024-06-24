@@ -13,7 +13,8 @@ param AccessCIDRs = [
 ]
 param AiUnlimitedHttpPort = 3000
 param AiUnlimitedGrpcPort = 3282
-param AiUnlimitedSchedulerPort = 50051
+// param AiUnlimitedSchedulerHttpPort = 50061
+// param AiUnlimitedSchedulerGrpcPort = 50051
 param SourceAppSecGroups = []
 param detinationAppSecGroups = []
 param RoleDefinitionId = ''
@@ -22,5 +23,5 @@ param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
 param AiUnlimitedVersion = 'latest'
-param AiUnlimitedSchedulerVersion = 'latest'
+// param AiUnlimitedSchedulerVersion = 'latest'
 param Tags = {}
