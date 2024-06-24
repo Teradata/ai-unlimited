@@ -15,6 +15,7 @@ ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
 ExecStart=/usr/bin/docker run \
     --network ai_unlimited \
     -p {3}:50051 \
+    -p {4}:50061 \
     -v /etc/td/ai-unlimited:/etc/td \
     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \

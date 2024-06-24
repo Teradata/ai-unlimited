@@ -5,6 +5,8 @@ param tags object
 param virtualNetworkName string
 param aiUnlimitedHttpPort int = 0
 param aiUnlimitedGrpcPort int = 0
+param aiUnlimitedSchedulerHttpPort int = 0
+param aiUnlimitedSchedulerGrpcPort int = 0
 param jupyterHttpPort int = 0
 
 param gtwPublicSubnet string
@@ -27,6 +29,8 @@ var gtwListenerCert = '${name}-gtw-cert'
 
 var gtwBackendSettingUI = aiUnlimitedHttpPort != 0 ? '${name}-ui' : ''
 var gtwBackendSettingAPI = aiUnlimitedGrpcPort != 0 ? '${name}-api' : ''
+var gtwBackendSettingSchedulerHttp = aiUnlimitedSchedulerHttpPort != 0 ? '${name}-scheduler-http' : ''
+var gtwBackendSettingSchedulerGrpc = aiUnlimitedSchedulerGrpcPort != 0 ? '${name}-scheduler-grpc' : ''
 var gtwBackendSettingJupyter = jupyterHttpPort != 0 ? '${name}-jupyter' : ''
 var gtwBackendProtocol = 'Http'
 var gtwBackendPool = '${name}-ai-engine'
@@ -98,6 +102,26 @@ resource applicationGateWay 'Microsoft.Network/applicationGateways@2021-05-01' =
             }
           ]
         : []
+      aiUnlimitedSchedulerHttpPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerHttp
+              properties: {
+                port: aiUnlimitedSchedulerHttpPort
+              }
+            }
+          ]
+        : []
+      aiUnlimitedSchedulerGrpcPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerGrpc
+              properties: {
+                port: aiUnlimitedSchedulerGrpcPort
+              }
+            }
+          ]
+        : []
     ])
     backendAddressPools: [
       {
@@ -140,6 +164,23 @@ resource applicationGateWay 'Microsoft.Network/applicationGateways@2021-05-01' =
             }
           ]
     ])
+    probes: flatten([
+      aiUnlimitedSchedulerHttpPort != 0 
+        ? [
+            {
+              name: gtwBackendSettingSchedulerHttp
+              properties: {
+                host: gtwBackendPool
+                path: '/healthcheck'
+                protocol: gtwBackendProtocol
+                timeout: 30
+                interval: 30
+                unhealthyThreshold: 3
+              }
+            }
+        ]
+      : []
+    ])
     backendHttpSettingsCollection: flatten([
       aiUnlimitedHttpPort != 0
         ? [
@@ -175,6 +216,42 @@ resource applicationGateWay 'Microsoft.Network/applicationGateways@2021-05-01' =
               name: gtwBackendSettingJupyter
               properties: {
                 port: jupyterHttpPort
+                protocol: gtwBackendProtocol
+                cookieBasedAffinity: 'Disabled'
+                pickHostNameFromBackendAddress: false
+                requestTimeout: 20
+              }
+            }
+          ]
+        : []
+      aiUnlimitedSchedulerHttpPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerHttp
+              properties: {
+                port: aiUnlimitedSchedulerHttpPort
+                protocol: gtwBackendProtocol
+                probe: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/probes', 
+                    gatewayName, 
+                    gtwBackendSettingSchedulerHttp
+                  )
+                }
+                probeEnabled: true
+                cookieBasedAffinity: 'Disabled'
+                pickHostNameFromBackendAddress: false
+                requestTimeout: 20
+              }
+            }
+          ]
+        : []
+      aiUnlimitedSchedulerGrpcPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerGrpc
+              properties: {
+                port: aiUnlimitedSchedulerGrpcPort
                 protocol: gtwBackendProtocol
                 cookieBasedAffinity: 'Disabled'
                 pickHostNameFromBackendAddress: false
@@ -269,6 +346,62 @@ resource applicationGateWay 'Microsoft.Network/applicationGateways@2021-05-01' =
             }
           ]
         : []
+      aiUnlimitedSchedulerHttpPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerHttp
+              properties: {
+                frontendIPConfiguration: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/frontendIPConfigurations',
+                    gatewayName,
+                    gtwFrontEndIPConfigName
+                  )
+                }
+                frontendPort: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/frontendPorts',
+                    gatewayName,
+                    gtwBackendSettingSchedulerHttp
+                  )
+                }
+                // sslCertificate: {
+                //   id: resourceId('Microsoft.Network/applicationGateways/sslCertificates', gatewayName, gtwListenerCert)
+                // }
+                protocol: 'Http'
+                requireServerNameIndication: false
+              }
+            }
+          ]
+        : []
+      aiUnlimitedSchedulerGrpcPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerGrpc
+              properties: {
+                frontendIPConfiguration: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/frontendIPConfigurations',
+                    gatewayName,
+                    gtwFrontEndIPConfigName
+                  )
+                }
+                frontendPort: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/frontendPorts',
+                    gatewayName,
+                    gtwBackendSettingSchedulerGrpc
+                  )
+                }
+                // sslCertificate: {
+                //   id: resourceId('Microsoft.Network/applicationGateways/sslCertificates', gatewayName, gtwListenerCert)
+                // }
+                protocol: 'Http'
+                requireServerNameIndication: false
+              }
+            }
+          ]
+        : []
     ])
     requestRoutingRules: flatten([
       aiUnlimitedHttpPort != 0
@@ -358,6 +491,68 @@ resource applicationGateWay 'Microsoft.Network/applicationGateways@2021-05-01' =
                     'Microsoft.Network/applicationGateways/backendHttpSettingsCollection',
                     gatewayName,
                     gtwBackendSettingJupyter
+                  )
+                }
+              }
+            }
+          ]
+        : []
+      aiUnlimitedSchedulerHttpPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerHttp
+              properties: {
+                ruleType: 'Basic'
+                httpListener: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/httpListeners',
+                    gatewayName,
+                    gtwBackendSettingSchedulerHttp
+                  )
+                }
+                backendAddressPool: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/backendAddressPools',
+                    gatewayName,
+                    gtwBackendPool
+                  )
+                }
+                backendHttpSettings: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/backendHttpSettingsCollection',
+                    gatewayName,
+                    gtwBackendSettingSchedulerHttp
+                  )
+                }
+              }
+            }
+          ]
+        : []
+      aiUnlimitedSchedulerGrpcPort != 0
+        ? [
+            {
+              name: gtwBackendSettingSchedulerGrpc
+              properties: {
+                ruleType: 'Basic'
+                httpListener: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/httpListeners',
+                    gatewayName,
+                    gtwBackendSettingSchedulerGrpc
+                  )
+                }
+                backendAddressPool: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/backendAddressPools',
+                    gatewayName,
+                    gtwBackendPool
+                  )
+                }
+                backendHttpSettings: {
+                  id: resourceId(
+                    'Microsoft.Network/applicationGateways/backendHttpSettingsCollection',
+                    gatewayName,
+                    gtwBackendSettingSchedulerGrpc
                   )
                 }
               }
