@@ -40,7 +40,7 @@ param AiUnlimitedHttpPort int = 3000
 param AiUnlimitedGrpcPort int = 3282
 
 // @description('port to access the AI Unlimited scheduler service api.')
-var AiUnlimitedSchedulerGrpcPort = 50051
+// var AiUnlimitedSchedulerGrpcPort = 50051
 
 // @description('port to access the AI Unlimited scheduler service api.')
 var AiUnlimitedSchedulerHttpPort = 50061
@@ -110,7 +110,7 @@ var cloudInitData = base64(
         registry,
         workspaceSchedulerRepository,
         AiUnlimitedSchedulerVersion,
-        AiUnlimitedSchedulerGrpcPort,
+        // AiUnlimitedSchedulerGrpcPort,
         AiUnlimitedSchedulerHttpPort
       )
     )
@@ -186,7 +186,7 @@ module firewall '../modules/firewall.bicep' = {
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
-    aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
+    // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
     tags: Tags
