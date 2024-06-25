@@ -882,6 +882,19 @@ Resources:
               - secretsmanager:GetSecretValue
               - secretsmanager:PutSecretValue
               - secretsmanager:TagResource
+              - s3:CreateBucket
+              - s3:DeleteBucket
+              - s3:PutObject
+              - s3:GetObject
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:ListStacks
+              - cloudformation:DescribeStackEvents
+              - ssm:PutParameter
+              - ssm:GetParameter
+              - ssm:DeleteParameter
+              - ec2:RevokeSecurityGroupIngress
             Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole

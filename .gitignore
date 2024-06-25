@@ -4,3 +4,4 @@
 terraform.tfstate*
 _README.md
 volumes/
+.idea
