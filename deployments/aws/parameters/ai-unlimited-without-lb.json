@@ -1,7 +1,7 @@
 [
   {
     "ParameterKey": "AiUnlimitedName",
-    "ParameterValue": "test-unlimited2"
+    "ParameterValue": "test-unlimited"
   },
   {
     "ParameterKey": "InstanceType",
@@ -41,7 +41,7 @@
   },
   {
     "ParameterKey": "Vpc",
-    "ParameterValue": "vpc-0727eff21a8b49e0c"
+    "ParameterValue": ""
   },
   {
     "ParameterKey": "Subnet",
