@@ -3,6 +3,8 @@ param location string
 param dnsPrefix string
 param aiUnlimitedHttpPort int = 0
 param aiUnlimitedGrpcPort int = 0
+param aiUnlimitedSchedulerHttpPort int = 0
+// param aiUnlimitedSchedulerGrpcPort int = 0
 param jupyterHttpPort int = 0
 param tags object = {}
 
@@ -150,6 +152,66 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             }
           ]
         : []
+      aiUnlimitedSchedulerHttpPort != 0
+        ? [
+            {
+              name: 'AiUnlimitedSchedulerHttp'
+              properties: {
+                frontendIPConfiguration: {
+                  id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', name, '${name}Inbound')
+                }
+                backendAddressPool: {
+                  id: resourceId(
+                    'Microsoft.Network/loadBalancers/backendAddressPools',
+                    name,
+                    '${name}OutboundBackendPool'
+                  )
+                }
+                frontendPort: aiUnlimitedSchedulerHttpPort
+                backendPort: aiUnlimitedSchedulerHttpPort
+                enableFloatingIP: false
+                idleTimeoutInMinutes: 15
+                protocol: 'Tcp'
+                enableTcpReset: true
+                loadDistribution: 'Default'
+                disableOutboundSnat: true
+                probe: {
+                  id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}SchedulerHttpLbProbe')
+                }
+              }
+            }
+          ]
+        : []
+      // aiUnlimitedSchedulerGrpcPort != 0
+      //   ? [
+      //       {
+      //         name: 'AiUnlimitedSchedulerGrpc'
+      //         properties: {
+      //           frontendIPConfiguration: {
+      //             id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', name, '${name}Inbound')
+      //           }
+      //           backendAddressPool: {
+      //             id: resourceId(
+      //               'Microsoft.Network/loadBalancers/backendAddressPools',
+      //               name,
+      //               '${name}OutboundBackendPool'
+      //             )
+      //           }
+      //           frontendPort: aiUnlimitedSchedulerGrpcPort
+      //           backendPort: aiUnlimitedSchedulerGrpcPort
+      //           enableFloatingIP: false
+      //           idleTimeoutInMinutes: 15
+      //           protocol: 'Tcp'
+      //           enableTcpReset: true
+      //           loadDistribution: 'Default'
+      //           disableOutboundSnat: true
+      //           probe: {
+      //             id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}SchedulerGrpcLbProbe')
+      //           }
+      //         }
+      //       }
+      //     ]
+      //   : []
     ])
     probes: flatten([
       aiUnlimitedHttpPort != 0
@@ -191,6 +253,34 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             }
           ]
         : []
+      aiUnlimitedSchedulerHttpPort != 0
+        ? [
+            {
+              name: '${name}SchedulerHttpLbProbe'
+              properties: {
+                protocol: 'Http'
+                port: aiUnlimitedSchedulerHttpPort
+                requestPath: '/healthcheck'
+                intervalInSeconds: 5
+                numberOfProbes: 2
+              }
+            }
+          ]
+        : []
+      // aiUnlimitedSchedulerGrpcPort != 0
+      //   ? [
+      //       {
+      //         name: '${name}SchedulerGrpcLbProbe'
+      //         properties: {
+      //           protocol: 'Http'
+      //           port: aiUnlimitedSchedulerGrpcPort
+      //           requestPath: '/healthcheck'
+      //           intervalInSeconds: 5
+      //           numberOfProbes: 2
+      //         }
+      //       }
+      //     ]
+      //   : []
     ])
     outboundRules: [
       {

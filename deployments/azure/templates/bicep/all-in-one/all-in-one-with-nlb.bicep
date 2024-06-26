@@ -42,6 +42,12 @@ param AiUnlimitedHttpPort int = 3000
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
 
+// @description('port to access the AI Unlimited scheduler service grpc api.')
+var AiUnlimitedSchedulerGrpcPort = 50051
+
+// @description('port to access the AI Unlimited scheduler service http api.')
+var AiUnlimitedSchedulerHttpPort = 50061
+
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
 
@@ -74,6 +80,9 @@ param AiUnlimitedVersion string = 'latest'
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
 
+// @description('Container Version of the AI Unlimited scheduler service')
+var AiUnlimitedSchedulerVersion = 'latest'
+
 @description('Join token for the Jupyter Labs service')
 @secure()
 param JupyterToken string
@@ -90,29 +99,46 @@ var nlbDnsLabelPrefix = 'td${dnsId}-nlb'
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var jupyterRepository = 'ai-unlimited-jupyter'
+var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 
-var cloudInitData = base64(format(
-  loadTextContent('../../../scripts/all-in-one.cloudinit.yaml'),
-  base64(format(
-    loadTextContent('../../../scripts/ai-unlimited.service'),
-    registry,
-    workspaceRepository,
-    AiUnlimitedVersion,
-    AiUnlimitedHttpPort,
-    AiUnlimitedGrpcPort,
-    subscription().subscriptionId,
-    subscription().tenantId,
-    '--network-alias ${nlb.outputs.PublicDns}'
-  )),
-  base64(format(
-    loadTextContent('../../../scripts/jupyter.service'),
-    registry,
-    jupyterRepository,
-    JupyterVersion,
-    JupyterHttpPort,
-    JupyterToken
-  ))
-))
+var cloudInitData = base64(
+  format(
+    loadTextContent('../../../scripts/all-in-one.cloudinit.yaml'),
+    base64(
+      format(
+        loadTextContent('../../../scripts/ai-unlimited.service'),
+        registry,
+        workspaceRepository,
+        AiUnlimitedVersion,
+        AiUnlimitedHttpPort,
+        AiUnlimitedGrpcPort,
+        subscription().subscriptionId,
+        subscription().tenantId,
+        '--network-alias ${nlb.outputs.PublicDns}'
+      )
+    ),
+    base64(
+      format(
+        loadTextContent('../../../scripts/jupyter.service'),
+        registry,
+        jupyterRepository,
+        JupyterVersion,
+        JupyterHttpPort,
+        JupyterToken
+      )
+    ),
+    base64(
+      format(
+        loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
+        registry,
+        workspaceSchedulerRepository,
+        AiUnlimitedSchedulerVersion,
+        AiUnlimitedSchedulerGrpcPort,
+        AiUnlimitedSchedulerHttpPort
+      )
+    )
+  )
+)
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
@@ -182,6 +208,8 @@ module firewall '../modules/firewall.bicep' = {
     sshAccess: AllowPublicSSH
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
+    aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
+    aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
@@ -198,6 +226,8 @@ module nlb '../modules/nlb.bicep' = {
     dnsPrefix: dnsLabelPrefix
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
+    aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
+    aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     jupyterHttpPort: JupyterHttpPort
     tags: Tags
   }

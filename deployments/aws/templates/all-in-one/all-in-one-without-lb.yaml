@@ -30,6 +30,8 @@ Metadata:
           - AiUnlimitedHttpPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
+          - AiUnlimitedSchedulerVersion
+          - AiUnlimitedSchedulerPort
       - Label:
           default: Persistent volume
         Parameters:
@@ -113,11 +115,22 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
+  # AiUnlimitedSchedulerPort:
+  #   Description: port to access the AI Unlimited Scheduler API.
+  #   Type: Number
+  #   Default: 50051
+  #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+  #   MinValue: 0
+  #   MaxValue: 65535
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
     Default: latest
 
+  # AiUnlimitedSchedulerVersion:
+  #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
+  #   Type: String
+  #   Default: latest
   JupyterHttpPort:
     Description: port to access the Jupyter UI.
     Type: Number
@@ -383,6 +396,8 @@ Resources:
             - configure_ai_unlimited_service
             - configure_jupyter_service
             - start_ai_unlimited_service
+            - configure_ai_unlimited_scheduler_service
+            - start_ai_unlimited_scheduler_service
             - start_jupyter_service
         prepare_directory:
           commands:
@@ -449,7 +464,7 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
-                ExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
@@ -473,14 +488,14 @@ Resources:
               ai-unlimited:
                 enabled: "true"
                 ensureRunning: "true"
-        configure_jupyter_service:
+        configure_ai_unlimited_scheduler_service:
           files:
-            /usr/lib/systemd/system/jupyter.service:
+            /usr/lib/systemd/system/ai-unlimited-scheduler.service:
               content: !Sub |
                 [Unit]
-                Description=jupyter
-                After=docker.service
-                Requires=docker.service
+                Description=AI Unlimited Scheduler
+                After=ai-unlimited.service
+                Requires=ai-unlimited.service
                 StartLimitInterval=200
                 StartLimitBurst=10
 
@@ -488,7 +503,45 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
-                ExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited
+                ExecStartPre=-/usr/bin/docker exec %n stop || true
+                ExecStartPre=-/usr/bin/docker rm %n || true
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
+                ExecStart=/usr/bin/docker run \
+                    --network ai_unlimited \
+                    -p 50051:50051 \
+                    -p 50061:50061 \
+                    -v /etc/td/ai-unlimited:/etc/td \
+                    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
+                    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
+                    -e TD_WSSCHED_POL_INTERVAL=2 \
+                    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
+                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                [Install]
+                WantedBy=multi-user.target
+              group: root
+              mode: "000400"
+              owner: root
+        start_ai_unlimited_scheduler_service:
+          services:
+            systemd:
+              ai-unlimited-scheduler:
+                enabled: "true"
+                ensureRunning: "true"
+        configure_jupyter_service:
+          files:
+            /usr/lib/systemd/system/jupyter.service:
+              content: !Sub |
+                [Unit]
+                Description=jupyter
+                After=ai-unlimited.service
+                Requires=ai-unlimited.service
+                StartLimitInterval=200
+                StartLimitBurst=10
+
+                [Service]
+                TimeoutStartSec=0
+                Restart=always
+                RestartSec=2
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{userdata,ipython}
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
@@ -589,6 +642,21 @@ Resources:
         - FromPort: !Ref AiUnlimitedGrpcPort
           IpProtocol: tcp
           ToPort: !Ref AiUnlimitedGrpcPort
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+        - FromPort: 50061
+          IpProtocol: tcp
+          ToPort: 50061
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR

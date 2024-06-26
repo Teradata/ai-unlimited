@@ -32,6 +32,9 @@ Metadata:
           - AiUnlimitedHttpPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
+
+          # - AiUnlimitedSchedulerVersion
+          # - AiUnlimitedSchedulerPort
       - Label:
           default: Persistent volume
         Parameters:
@@ -106,6 +109,13 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
+  # AiUnlimitedSchedulerPort:
+  #   Description: port to access the AI Unlimited Scheduler API.
+  #   Type: Number
+  #   Default: 50051
+  #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+  #   MinValue: 0
+  #   MaxValue: 65535
   AiUnlimitedGrpcPort:
     Description: port to access the AI Unlimited API.
     Type: Number
@@ -119,6 +129,10 @@ Parameters:
     Type: String
     Default: latest
 
+  # AiUnlimitedSchedulerVersion:
+  #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
+  #   Type: String
+  #   Default: latest
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
     Type: Number
@@ -381,6 +395,8 @@ Resources:
             - install_docker
             - configure_ai_unlimited_service
             - start_ai_unlimited_service
+            - configure_ai_unlimited_scheduler_service
+            - start_ai_unlimited_scheduler_service
         prepare_directory:
           commands:
             mkdir:
@@ -449,6 +465,7 @@ Resources:
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
                 ExecStart=/usr/bin/docker run \
                     -e accept_license=Y \
@@ -456,6 +473,7 @@ Resources:
                     -v /etc/td/ai-unlimited:/etc/td \
                     -p ${ AiUnlimitedHttpPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
+                    --network ai_unlimited \
                     --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
 
                 [Install]
@@ -467,6 +485,45 @@ Resources:
           services:
             systemd:
               ai-unlimited:
+                enabled: "true"
+                ensureRunning: "true"
+        configure_ai_unlimited_scheduler_service:
+          files:
+            /usr/lib/systemd/system/ai-unlimited-scheduler.service:
+              content: !Sub |
+                [Unit]
+                Description=AI Unlimited Scheduler
+                After=docker.service
+                Requires=docker.service
+                StartLimitInterval=200
+                StartLimitBurst=10
+
+                [Service]
+                TimeoutStartSec=0
+                Restart=always
+                RestartSec=2
+                ExecStartPre=-/usr/bin/docker exec %n stop || true
+                ExecStartPre=-/usr/bin/docker rm %n || true
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
+                ExecStart=/usr/bin/docker run \
+                    --network ai_unlimited \
+                    -p 50051:50051 \
+                    -p 50061:50061 \
+                    -v /etc/td/ai-unlimited:/etc/td \
+                    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
+                    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
+                    -e TD_WSSCHED_POL_INTERVAL=60 \
+                    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
+                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                [Install]
+                WantedBy=multi-user.target
+              group: root
+              mode: "000400"
+              owner: root
+        start_ai_unlimited_scheduler_service:
+          services:
+            systemd:
+              ai-unlimited-scheduler:
                 enabled: "true"
                 ensureRunning: "true"
     Properties:
@@ -557,6 +614,36 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
+        - FromPort: 50051
+          IpProtocol: tcp
+          ToPort: 50051
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+        - FromPort: 50061
+          IpProtocol: tcp
+          ToPort: 50061
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
     Condition: HASCIDRORPREFIXLISTORSECGROUP
 
   LoadBalancer:
@@ -589,6 +676,25 @@ Resources:
       Port: !Ref AiUnlimitedGrpcPort
       Protocol: TCP
 
+  AiUnlimitedSchedulerHTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AiUnlimitedSchedulerHTTPTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 50061
+      Protocol: TCP
+
+  # AiUnlimitedSchedulerGRPCListener:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   Properties:
+  #     DefaultActions:
+  #       - Type: forward
+  #         TargetGroupArn: !Ref AiUnlimitedSchedulerGRPCTargetGroup
+  #     LoadBalancerArn: !Ref LoadBalancer
+  #     Port: 50051
+  #     Protocol: TCP
   AiUnlimitedHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -658,6 +764,77 @@ Resources:
           Port: !Ref AiUnlimitedGrpcPort
       VpcId: !Ref Vpc
 
+  AiUnlimitedSchedulerHTTPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /healthcheck
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      Matcher:
+        HttpCode: "200"
+      Name: !Join
+        - '-'
+        - - !Select
+            - 4
+            - !Split
+              - '-'
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
+          - aisch
+          - ui
+          - http
+      Port: 50061
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref AiUnlimitedServer
+          Port: 50061
+      VpcId: !Ref Vpc
+
+  # AiUnlimitedSchedulerGRPCTargetGroup:
+  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  #   Properties:
+  #     HealthCheckIntervalSeconds: 30
+  #     HealthCheckProtocol: TCP
+  #     HealthCheckTimeoutSeconds: 15
+  #     HealthyThresholdCount: 5
+  #     Name: !Join
+  #       - "-"
+  #       - - !Select
+  #           - 4
+  #           - !Split
+  #             - "-"
+  #             - !Select
+  #               - 2
+  #               - !Split
+  #                 - /
+  #                 - !Ref AWS::StackId
+  #         - td-aisch
+  #         - api
+  #         - grpc
+  #     Port: 50051
+  #     Protocol: TCP
+  #     TargetGroupAttributes:
+  #       - Key: stickiness.enabled
+  #         Value: true
+  #       - Key: stickiness.type
+  #         Value: source_ip
+  #       - Key: deregistration_delay.timeout_seconds
+  #         Value: "20"
+  #     Targets:
+  #       - Id: !Ref AiUnlimitedServer
+  #         Port: 50051
+  #     VpcId: !Ref Vpc
   AiUnlimitedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -671,6 +848,14 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref AiUnlimitedGrpcPort
           ToPort: !Ref AiUnlimitedGrpcPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 50061
+          ToPort: 50061
+          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 50051
+          ToPort: 50051
           SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
 
   SecurityGroupIngress:

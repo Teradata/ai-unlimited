@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.27.1.19265",
-      "templateHash": "6125407496472941994"
+      "templateHash": "2147970961421321338"
     }
   },
   "parameters": {
@@ -168,14 +168,18 @@
     }
   },
   "variables": {
-    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable ai-unlimited.service\n- systemctl start ai-unlimited.service\n",
+    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{1}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited-scheduler.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable ai-unlimited.service\n- systemctl start ai-unlimited.service\n- systemctl enable ai-unlimited-scheduler.service\n- systemctl start ai-unlimited-scheduler.service\n",
     "$fxv#1": "[Unit]\nDescription=AI Unlimited\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    --network ai_unlimited {7} \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
+    "$fxv#2": "[Unit]\nDescription=AI Unlimited Scheduler\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\nExecStart=/usr/bin/docker run \\\n    --network ai_unlimited \\\n    -p {3}:50061 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \\\n    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \\\n    -e TD_WSSCHED_POL_INTERVAL=2 \\\n    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \\\n    --rm --name %n {0}/{1}:{2} workspace-event-scheduler serve\n[Install]\nWantedBy=multi-user.target",
+    "AiUnlimitedSchedulerHttpPort": 50061,
+    "AiUnlimitedSchedulerVersion": "latest",
     "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
     "dnsId": "[uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName'))]",
     "dnsLabelPrefix": "[format('td{0}', variables('dnsId'))]",
     "nlbDnsLabelPrefix": "[format('td{0}-nlb', variables('dnsId'))]",
     "registry": "teradata",
-    "workspaceRepository": "ai-unlimited-workspaces"
+    "workspaceRepository": "ai-unlimited-workspaces",
+    "workspaceSchedulerRepository": "ai-unlimited-scheduler"
   },
   "resources": [
     {
@@ -387,6 +391,9 @@
           "aiUnlimitedGrpcPort": {
             "value": "[parameters('AiUnlimitedGrpcPort')]"
           },
+          "aiUnlimitedSchedulerHttpPort": {
+            "value": "[variables('AiUnlimitedSchedulerHttpPort')]"
+          },
           "sourceAppSecGroups": {
             "value": "[parameters('SourceAppSecGroups')]"
           },
@@ -407,7 +414,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.27.1.19265",
-              "templateHash": "8275252103706232855"
+              "templateHash": "14953220464415817385"
             }
           },
           "parameters": {
@@ -438,6 +445,10 @@
               "defaultValue": 0
             },
             "aiUnlimitedGrpcPort": {
+              "type": "int",
+              "defaultValue": 0
+            },
+            "aiUnlimitedSchedulerHttpPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -609,6 +620,44 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
               ]
+            },
+            {
+              "condition": "[not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0))]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), format('{0}-scheduler-http-allow', parameters('name')))]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "destinationApplicationSecurityGroups",
+                    "count": "[length(parameters('detinationAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('detinationAppSecGroups')[copyIndex('destinationApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  },
+                  {
+                    "name": "sourceApplicationSecurityGroups",
+                    "count": "[length(parameters('sourceAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('sourceAppSecGroups')[copyIndex('sourceApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  }
+                ],
+                "access": "Allow",
+                "description": "allow http to the scheduler instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "[string(parameters('aiUnlimitedSchedulerHttpPort'))]",
+                "direction": "Inbound",
+                "priority": 704,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+              ]
             }
           ],
           "outputs": {
@@ -646,6 +695,9 @@
           "aiUnlimitedGrpcPort": {
             "value": "[parameters('AiUnlimitedGrpcPort')]"
           },
+          "aiUnlimitedSchedulerHttpPort": {
+            "value": "[variables('AiUnlimitedSchedulerHttpPort')]"
+          },
           "tags": {
             "value": "[parameters('Tags')]"
           }
@@ -657,7 +709,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.27.1.19265",
-              "templateHash": "1313008413011978885"
+              "templateHash": "8548105070855149200"
             }
           },
           "parameters": {
@@ -675,6 +727,10 @@
               "defaultValue": 0
             },
             "aiUnlimitedGrpcPort": {
+              "type": "int",
+              "defaultValue": 0
+            },
+            "aiUnlimitedSchedulerHttpPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -723,8 +779,8 @@
                     "name": "[format('{0}OutboundBackendPool', parameters('name'))]"
                   }
                 ],
-                "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedHttpPort'), 'backendPort', parameters('aiUnlimitedHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', 'AiUnlimitedAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedGrpcPort'), 'backendPort', parameters('aiUnlimitedGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray())))]",
-                "probes": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', format('{0}UILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
+                "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedHttpPort'), 'backendPort', parameters('aiUnlimitedHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', 'AiUnlimitedAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedGrpcPort'), 'backendPort', parameters('aiUnlimitedGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedSchedulerHttp', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'backendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}SchedulerHttpLbProbe', parameters('name'))))))), createArray())))]",
+                "probes": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', format('{0}UILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', format('{0}SchedulerHttpLbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedSchedulerHttpPort'), 'requestPath', '/healthcheck', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
                 "outboundRules": [
                   {
                     "name": "myOutboundRule",
@@ -975,7 +1031,7 @@
             "value": "[parameters('OSVersion')]"
           },
           "cloudInitData": {
-            "value": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, format('--network-alias {0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value)))))]"
+            "value": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, format('--network-alias {0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value))), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), variables('AiUnlimitedSchedulerVersion'), variables('AiUnlimitedSchedulerHttpPort')))))]"
           },
           "usePersistentVolume": {
             "value": "[parameters('UsePersistentVolume')]"
