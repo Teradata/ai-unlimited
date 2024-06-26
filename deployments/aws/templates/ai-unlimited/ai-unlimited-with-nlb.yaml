@@ -513,10 +513,9 @@ Resources:
                     -v /etc/td/ai-unlimited:/etc/td \
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
-                    -e TD_WSSCHED_POL_INTERVAL=2 \
+                    -e TD_WSSCHED_POL_INTERVAL=60 \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
                     --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
-
                 [Install]
                 WantedBy=multi-user.target
               group: root
@@ -688,15 +687,15 @@ Resources:
       Port: 50061
       Protocol: TCP
 
-  AiUnlimitedSchedulerGRPCListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref AiUnlimitedSchedulerGRPCTargetGroup
-      LoadBalancerArn: !Ref LoadBalancer
-      Port: 50051
-      Protocol: TCP
+  # AiUnlimitedSchedulerGRPCListener:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   Properties:
+  #     DefaultActions:
+  #       - Type: forward
+  #         TargetGroupArn: !Ref AiUnlimitedSchedulerGRPCTargetGroup
+  #     LoadBalancerArn: !Ref LoadBalancer
+  #     Port: 50051
+  #     Protocol: TCP
 
   AiUnlimitedHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -771,9 +770,11 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: TCP
+      HealthCheckPath: "/healthcheck"
+      HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
-      HealthyThresholdCount: 5
+      Matcher:
+        HttpCode: "200"
       Name: !Join
         - "-"
         - - !Select
@@ -786,7 +787,7 @@ Resources:
                   - /
                   - !Ref AWS::StackId
           - aisch
-          - api
+          - ui
           - http
       Port: 50061
       Protocol: TCP
@@ -802,40 +803,40 @@ Resources:
           Port: 50061
       VpcId: !Ref Vpc
 
-  AiUnlimitedSchedulerGRPCTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: TCP
-      HealthCheckTimeoutSeconds: 15
-      HealthyThresholdCount: 5
-      Name: !Join
-        - "-"
-        - - !Select
-            - 4
-            - !Split
-              - "-"
-              - !Select
-                - 2
-                - !Split
-                  - /
-                  - !Ref AWS::StackId
-          - td-aisch
-          - api
-          - grpc
-      Port: 50051
-      Protocol: TCP
-      TargetGroupAttributes:
-        - Key: stickiness.enabled
-          Value: true
-        - Key: stickiness.type
-          Value: source_ip
-        - Key: deregistration_delay.timeout_seconds
-          Value: "20"
-      Targets:
-        - Id: !Ref AiUnlimitedServer
-          Port: 50051
-      VpcId: !Ref Vpc
+  # AiUnlimitedSchedulerGRPCTargetGroup:
+  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  #   Properties:
+  #     HealthCheckIntervalSeconds: 30
+  #     HealthCheckProtocol: TCP
+  #     HealthCheckTimeoutSeconds: 15
+  #     HealthyThresholdCount: 5
+  #     Name: !Join
+  #       - "-"
+  #       - - !Select
+  #           - 4
+  #           - !Split
+  #             - "-"
+  #             - !Select
+  #               - 2
+  #               - !Split
+  #                 - /
+  #                 - !Ref AWS::StackId
+  #         - td-aisch
+  #         - api
+  #         - grpc
+  #     Port: 50051
+  #     Protocol: TCP
+  #     TargetGroupAttributes:
+  #       - Key: stickiness.enabled
+  #         Value: true
+  #       - Key: stickiness.type
+  #         Value: source_ip
+  #       - Key: deregistration_delay.timeout_seconds
+  #         Value: "20"
+  #     Targets:
+  #       - Id: !Ref AiUnlimitedServer
+  #         Port: 50051
+  #     VpcId: !Ref Vpc
 
   AiUnlimitedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -1042,6 +1043,19 @@ Resources:
               - secretsmanager:GetSecretValue
               - secretsmanager:PutSecretValue
               - secretsmanager:TagResource
+              - s3:CreateBucket
+              - s3:DeleteBucket
+              - s3:PutObject
+              - s3:GetObject
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:ListStacks
+              - cloudformation:DescribeStackEvents
+              - ssm:PutParameter
+              - ssm:GetParameter
+              - ssm:DeleteParameter
+              - ec2:RevokeSecurityGroupIngress
             Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole

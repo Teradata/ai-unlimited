@@ -1,3 +1,9 @@
+# IMPORTANT NOTICE
+
+# The all-in-one CloudFormation templates provided in this directory are for informational purposes only. These templates are currently not supported by Teradata Corporation.
+
+# Use of these templates is at your own risk. Teradata Corporation assumes no responsibility or liability for any damages or issues that may arise from using these templates.**
+
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: "AWS CloudFormation Template with AI Unlimited with Jupyter: AI Unlimited is a instance based service for deploying and suspending ai-unlimited clusters, and managing project lifecycles. This template also includes a Jupyter Lab service running on the same host, suitable for demonstration environments.  Note: You will be billed for the AWS resources used if you create a stack from this template."
@@ -115,23 +121,23 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
-  AiUnlimitedSchedulerPort:
-    Description: port to access the AI Unlimited Scheduler API.
-    Type: Number
-    Default: 50051
-    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
-    MinValue: 0
-    MaxValue: 65535
+  # AiUnlimitedSchedulerPort:
+  #   Description: port to access the AI Unlimited Scheduler API.
+  #   Type: Number
+  #   Default: 50051
+  #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+  #   MinValue: 0
+  #   MaxValue: 65535
 
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
     Default: latest
 
-  AiUnlimitedSchedulerVersion:
-    Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
-    Type: String
-    Default: latest
+  # AiUnlimitedSchedulerVersion:
+  #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
+  #   Type: String
+  #   Default: latest
 
   JupyterHttpPort:
     Description: port to access the Jupyter UI.
@@ -508,16 +514,17 @@ Resources:
                 RestartSec=2
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
-                    -p ${ AiUnlimitedSchedulerPort }:50051 \
+                    -p 50051:50051 \
+                    -p 50061:50061 \
                     -v /etc/td/ai-unlimited:/etc/td \
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
                     -e TD_WSSCHED_POL_INTERVAL=2 \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
+                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
                 [Install]
                 WantedBy=multi-user.target
               group: root
@@ -657,9 +664,9 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: !Ref AiUnlimitedSchedulerPort
+        - FromPort: 50061
           IpProtocol: tcp
-          ToPort: !Ref AiUnlimitedSchedulerPort
+          ToPort: 50061
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -870,6 +877,19 @@ Resources:
               - secretsmanager:GetSecretValue
               - secretsmanager:PutSecretValue
               - secretsmanager:TagResource
+              - s3:CreateBucket
+              - s3:DeleteBucket
+              - s3:PutObject
+              - s3:GetObject
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:ListStacks
+              - cloudformation:DescribeStackEvents
+              - ssm:PutParameter
+              - ssm:GetParameter
+              - ssm:DeleteParameter
+              - ec2:RevokeSecurityGroupIngress
             Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole

@@ -60,7 +60,20 @@
                 "secretsmanager:GetResourcePolicy",
                 "secretsmanager:GetSecretValue",
                 "secretsmanager:PutSecretValue",
-                "secretsmanager:TagResource"
+                "secretsmanager:TagResource",
+                "s3:CreateBucket",
+                "s3:DeleteBucket",
+                "s3:PutObject",
+                "s3:GetObject",
+                "cloudformation:CreateStack",
+                "cloudformation:DeleteStack",
+                "cloudformation:DescribeStacks",
+                "cloudformation:ListStacks",
+                "ssm:PutParameter",
+                "ssm:GetParameter",
+                "ssm:DeleteParameter",
+                "ec2:RevokeSecurityGroupIngress",
+                "cloudformation:DescribeStackEvents"
             ],
             "Resource": "*",
             "Effect": "Allow"
