@@ -1067,7 +1067,25 @@ Resources:
               - ssm:GetParameter
               - ssm:DeleteParameter
               - ec2:RevokeSecurityGroupIngress
-            Resource: "*"
+              - ec2:CreateInternetGateway
+              - ec2:CreateVpc
+              - ec2:DescribeInternetGateways
+              - ec2:DeleteVpc
+              - ec2:ModifyVpcAttribute
+              - ec2:DeleteInternetGateway
+              - ec2:CreateSubnet
+              - ec2:CreateRouteTable
+              - ec2:DescribeRouteTables
+              - ec2:DeleteSubnet
+              - ec2:DeleteRouteTable
+              - ec2:AttachInternetGateway
+              - ec2:ModifySubnetAttribute
+              - ec2:DetachInternetGateway
+              - ec2:AssociateRouteTable
+              - ec2:CreateRoute
+              - ec2:DisassociateRouteTable
+              - ec2:DeleteRoute
+            Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLE
