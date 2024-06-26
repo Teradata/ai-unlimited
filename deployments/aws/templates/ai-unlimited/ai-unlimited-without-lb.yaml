@@ -453,15 +453,14 @@ Resources:
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
                 ExecStart=/usr/bin/docker run \
-                    --network ai_unlimited \
-                    -p 50051:50051 \
-                    -p 50061:50061 \
+                    -e accept_license=Y \
+                    -e PLATFORM=aws \
                     -v /etc/td/ai-unlimited:/etc/td \
-                    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
-                    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
-                    -e TD_WSSCHED_POL_INTERVAL=60 \
-                    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                    -p ${ AiUnlimitedHttpPort }:3000 \
+                    -p ${ AiUnlimitedGrpcPort }:3282 \
+                    --network ai_unlimited \
+                    --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
+
                 [Install]
                 WantedBy=multi-user.target
               group: root
