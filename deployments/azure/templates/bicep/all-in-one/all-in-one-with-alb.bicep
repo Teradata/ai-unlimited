@@ -64,8 +64,8 @@ param AiUnlimitedVersion string = 'latest'
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
 
-@description('Container Version of the AI Unlimited scheduler service')
-param AiUnlimitedSchedulerVersion string = 'latest'
+// @description('Container Version of the AI Unlimited scheduler service')
+var AiUnlimitedSchedulerVersion = 'latest'
 
 // below inputs are not so important from user
 @description('The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version.')
@@ -90,8 +90,11 @@ param AiUnlimitedHttpPort int = 3000
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
 
-@description('port to access the AI Unlimited scheduler service api.')
-param AiUnlimitedSchedulerPort int = 50051
+// @description('port to access the AI Unlimited scheduler service grpc api.')
+var AiUnlimitedSchedulerGrpcPort = 50051
+
+// @description('port to access the AI Unlimited scheduler service http api.')
+var AiUnlimitedSchedulerHttpPort = 50061
 
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
@@ -124,7 +127,6 @@ var workspaceRepository = 'ai-unlimited-workspaces'
 var jupyterRepository = 'ai-unlimited-jupyter'
 var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 
-<<<<<<< HEAD
 var cloudInitData = base64(
   format(
     loadTextContent('../../../scripts/all-in-one.cloudinit.yaml'),
@@ -157,35 +159,12 @@ var cloudInitData = base64(
         registry,
         workspaceSchedulerRepository,
         AiUnlimitedSchedulerVersion,
-        AiUnlimitedSchedulerPort
+        AiUnlimitedSchedulerGrpcPort,
+        AiUnlimitedSchedulerHttpPort
       )
     )
   )
 )
-=======
-var cloudInitData = base64(format(
-  loadTextContent('../../../scripts/all-in-one.cloudinit.yaml'),
-  base64(format(
-    loadTextContent('../../../scripts/ai-unlimited.service'),
-    registry,
-    workspaceRepository,
-    AiUnlimitedVersion,
-    AiUnlimitedHttpPort,
-    AiUnlimitedGrpcPort,
-    subscription().subscriptionId,
-    subscription().tenantId,
-    '--network-alias ${gtwFrontEndIP.outputs.Dns}'
-  )),
-  base64(format(
-    loadTextContent('../../../scripts/jupyter.service'),
-    registry,
-    jupyterRepository,
-    JupyterVersion,
-    JupyterHttpPort,
-    JupyterToken
-  ))
-))
->>>>>>> develop
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
@@ -292,6 +271,8 @@ module firewall '../modules/firewall.bicep' = {
     accessCidrs: AccessCIDRs
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
+    aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
+    aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
@@ -321,6 +302,8 @@ module alb '../modules/alb.bicep' = {
     virtualNetworkName: VirtualNetworkName
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
+    aiUnlimitedSchedulerHttpPort: int(AiUnlimitedSchedulerHttpPort)
+    aiUnlimitedSchedulerGrpcPort: int(AiUnlimitedSchedulerGrpcPort)
     jupyterHttpPort: JupyterHttpPort
 
     serviceIP: aiUnlimited.outputs.PrivateIP

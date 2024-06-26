@@ -39,8 +39,11 @@ param AiUnlimitedHttpPort int = 3000
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
 
-@description('port to access the AI Unlimited scheduler service api.')
-param AiUnlimitedSchedulerPort int = 50051
+// @description('port to access the AI Unlimited scheduler service api.')
+// var AiUnlimitedSchedulerGrpcPort = 50051
+
+// @description('port to access the AI Unlimited scheduler service api.')
+var AiUnlimitedSchedulerHttpPort = 50061
 
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
@@ -71,8 +74,8 @@ param ExistingPersistentVolume string = 'NONE'
 @description('Container Version of the AI Unlimited service')
 param AiUnlimitedVersion string = 'latest'
 
-@description('Container Version of the AI Unlimited scheduler service')
-param AiUnlimitedSchedulerVersion string = 'latest'
+// @description('Container Version of the AI Unlimited scheduler service')
+var AiUnlimitedSchedulerVersion = 'latest'
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
@@ -85,7 +88,6 @@ var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 
-<<<<<<< HEAD
 var cloudInitData = base64(
   format(
     loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
@@ -108,27 +110,12 @@ var cloudInitData = base64(
         registry,
         workspaceSchedulerRepository,
         AiUnlimitedSchedulerVersion,
-        AiUnlimitedSchedulerPort
+        // AiUnlimitedSchedulerGrpcPort,
+        AiUnlimitedSchedulerHttpPort
       )
     )
   )
 )
-=======
-var cloudInitData = base64(format(
-  loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
-  base64(format(
-    loadTextContent('../../../scripts/ai-unlimited.service'),
-    registry,
-    workspaceRepository,
-    AiUnlimitedVersion,
-    AiUnlimitedHttpPort,
-    AiUnlimitedGrpcPort,
-    subscription().subscriptionId,
-    subscription().tenantId,
-    '--network-alias ai-unlimited'
-  ))
-))
->>>>>>> develop
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
@@ -198,6 +185,8 @@ module firewall '../modules/firewall.bicep' = {
     sshAccess: AllowPublicSSH
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
+    aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
+    // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
     tags: Tags

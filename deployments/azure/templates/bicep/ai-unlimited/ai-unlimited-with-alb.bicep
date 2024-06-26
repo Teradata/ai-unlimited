@@ -57,8 +57,8 @@ param dnsLabelPrefix string
 @description('Container Version of the AI Unlimited service')
 param AiUnlimitedVersion string = 'latest'
 
-@description('Container Version of the AI Unlimited scheduler service')
-param AiUnlimitedSchedulerVersion string = 'latest'
+// @description('Container Version of the AI Unlimited scheduler service') Todo: change var to param and add string type
+var AiUnlimitedSchedulerVersion = 'latest'
 
 // below inputs are not so important from user
 @description('The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version.')
@@ -80,8 +80,11 @@ param AiUnlimitedHttpPort int = 3000
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
 
-@description('port to access the AI Unlimited scheduler service api.')
-param AiUnlimitedSchedulerPort int = 50051
+// @description('port to access the AI Unlimited scheduler service via http.') Todo: change var to param and add int type
+var AiUnlimitedSchedulerHttpPort = 50061
+
+// @description('port to access the AI Unlimited scheduler service via grpc.') Todo: change var to param and add int type
+var AiUnlimitedSchedulerGrpcPort = 50051
 
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
@@ -131,7 +134,8 @@ var cloudInitData = base64(format(
     registry,
     workspaceSchedulerRepository,
     AiUnlimitedSchedulerVersion,
-    AiUnlimitedSchedulerPort
+    AiUnlimitedSchedulerGrpcPort,
+    AiUnlimitedSchedulerHttpPort
   ))
 ))
 
@@ -209,6 +213,8 @@ module firewall '../modules/firewall.bicep' = {
     accessCidrs: AccessCIDRs
     aiUnlimitedHttpPort: AiUnlimitedHttpPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
+    aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
+    aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
     sshAccess: AllowPublicSSH
@@ -237,6 +243,8 @@ module alb '../modules/alb.bicep' = {
     virtualNetworkName: VirtualNetworkName
     aiUnlimitedHttpPort: int(AiUnlimitedHttpPort)
     aiUnlimitedGrpcPort: int(AiUnlimitedGrpcPort)
+    aiUnlimitedSchedulerHttpPort: int(AiUnlimitedSchedulerHttpPort)
+    aiUnlimitedSchedulerGrpcPort: int(AiUnlimitedSchedulerGrpcPort)
 
     serviceIP: aiUnlimited.outputs.PrivateIP
     gtwPublicIP: gtwPublicIP
