@@ -88,15 +88,7 @@
       "ParameterValue": "3282"
     },
     {
-      "ParameterKey": "AiUnlimitedSchedulerPort",
-      "ParameterValue": "50051"
-    },
-    {
       "ParameterKey": "AiUnlimitedVersion",
-      "ParameterValue": "latest"
-    },
-    {
-      "ParameterKey": "AiUnlimitedSchedulerVersion",
       "ParameterValue": "latest"
     },
     {
