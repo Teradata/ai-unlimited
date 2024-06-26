@@ -29,7 +29,7 @@
   },
   {
     "ParameterKey": "AvailabilityZone",
-    "ParameterValue": "us-west-2a"
+    "ParameterValue": ""
   },
   {
     "ParameterKey": "Private",
@@ -45,15 +45,15 @@
   },
   {
     "ParameterKey": "Subnet",
-    "ParameterValue": "subnet-06d2ed527894d8f17"
+    "ParameterValue": ""
   },
   {
     "ParameterKey": "KeyName",
-    "ParameterValue": "casworkspaces"
+    "ParameterValue": ""
   },
   {
     "ParameterKey": "AccessCIDR",
-    "ParameterValue": "47.149.75.247/32"
+    "ParameterValue": ""
   },
   {
     "ParameterKey": "PrefixList",
@@ -72,15 +72,7 @@
     "ParameterValue": "3282"
   },
   {
-    "ParameterKey": "AiUnlimitedSchedulerPort",
-    "ParameterValue": "50051"
-  },
-  {
     "ParameterKey": "AiUnlimitedVersion",
-    "ParameterValue": "latest"
-  },
-  {
-    "ParameterKey": "AiUnlimitedSchedulerVersion",
     "ParameterValue": "latest"
   },
   {
