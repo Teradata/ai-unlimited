@@ -1,12 +1,6 @@
-# IMPORTANT NOTICE
-
-# The all-in-one CloudFormation templates provided in this directory are for informational purposes only. These templates are currently not supported by Teradata Corporation.
-
-# Use of these templates is at your own risk. Teradata Corporation assumes no responsibility or liability for any damages or issues that may arise from using these templates.**
-
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "AWS CloudFormation Template with AI Unlimited with Jupyter: AI Unlimited is a instance based service for deploying and suspending ai-unlimited clusters, and managing project lifecycles. This template also includes a Jupyter Lab service running on the same host, suitable for demonstration environments.  Note: You will be billed for the AWS resources used if you create a stack from this template."
+Description: 'AWS CloudFormation Template with AI Unlimited with Jupyter: AI Unlimited is a instance based service for deploying and suspending ai-unlimited clusters, and managing project lifecycles. This template also includes a Jupyter Lab service running on the same host, suitable for demonstration environments.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -128,7 +122,6 @@ Parameters:
   #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
   #   MinValue: 0
   #   MaxValue: 65535
-
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
@@ -138,7 +131,6 @@ Parameters:
   #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
   #   Type: String
   #   Default: latest
-
   JupyterHttpPort:
     Description: port to access the Jupyter UI.
     Type: Number
@@ -369,12 +361,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - "-"
+            - '-'
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - "-"
+                  - '-'
                   - !Select
                     - 2
                     - !Split
@@ -496,7 +488,6 @@ Resources:
               ai-unlimited:
                 enabled: "true"
                 ensureRunning: "true"
-
         configure_ai_unlimited_scheduler_service:
           files:
             /usr/lib/systemd/system/ai-unlimited-scheduler.service:
@@ -536,7 +527,6 @@ Resources:
               ai-unlimited-scheduler:
                 enabled: "true"
                 ensureRunning: "true"
-
         configure_jupyter_service:
           files:
             /usr/lib/systemd/system/jupyter.service:
@@ -609,12 +599,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - "-"
+            - '-'
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - "-"
+                  - '-'
                   - !Select
                     - 2
                     - !Split
@@ -744,13 +734,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - "-"
+        - '-'
         - - ai-unlimited
           - session
           - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -774,14 +764,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: "*"
+            Resource: '*'
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: "*"
+            Resource: '*'
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -790,7 +780,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: "*"
+            Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -799,13 +789,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - "-"
+        - '-'
         - - ai-unlimited
           - deploy
           - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -908,7 +898,7 @@ Resources:
               - ec2:CreateRoute
               - ec2:DisassociateRouteTable
               - ec2:DeleteRoute
-            Resource: "*"
+            Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLE

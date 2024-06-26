@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template."
+Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -35,6 +35,7 @@ Metadata:
           - AiUnlimitedHttpPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
+
           # - AiUnlimitedSchedulerVersion
           # - AiUnlimitedSchedulerPort
       - Label:
@@ -131,7 +132,6 @@ Parameters:
   #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
   #   MinValue: 0
   #   MaxValue: 65535
-
   AiUnlimitedGrpcPort:
     Description: port to access the AI Unlimited API.
     Type: Number
@@ -149,7 +149,6 @@ Parameters:
   #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
   #   Type: String
   #   Default: latest
-
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
     Type: Number
@@ -378,12 +377,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - "-"
+            - '-'
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - "-"
+                  - '-'
                   - !Select
                     - 2
                     - !Split
@@ -414,7 +413,6 @@ Resources:
             - start_ai_unlimited_service
             - configure_ai_unlimited_scheduler_service
             - start_ai_unlimited_scheduler_service
-
         prepare_directory:
           commands:
             mkdir:
@@ -504,7 +502,6 @@ Resources:
               ai-unlimited:
                 enabled: "true"
                 ensureRunning: "true"
-
         configure_ai_unlimited_scheduler_service:
           files:
             /usr/lib/systemd/system/ai-unlimited-scheduler.service:
@@ -544,7 +541,6 @@ Resources:
               ai-unlimited-scheduler:
                 enabled: "true"
                 ensureRunning: "true"
-
     Properties:
       PropagateTagsToVolumeOnCreation: true
       BlockDeviceMappings:
@@ -578,12 +574,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - "-"
+            - '-'
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - "-"
+                  - '-'
                   - !Select
                     - 2
                     - !Split
@@ -719,7 +715,6 @@ Resources:
   #     LoadBalancerArn: !Ref LoadBalancer
   #     Port: 50051
   #     Protocol: HTTP
-
   AiUnlimitedHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -729,11 +724,11 @@ Resources:
       Matcher:
         HttpCode: "200"
       Name: !Join
-        - "-"
+        - '-'
         - - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -768,11 +763,11 @@ Resources:
       Matcher:
         GrpcCode: "0"
       Name: !Join
-        - "-"
+        - '-'
         - - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -804,15 +799,15 @@ Resources:
       HealthCheckIntervalSeconds: 30
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
-      HealthCheckPath: "/healthcheck"
+      HealthCheckPath: /healthcheck
       Matcher:
         HttpCode: "200"
       Name: !Join
-        - "-"
+        - '-'
         - - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -875,7 +870,6 @@ Resources:
   #       - Id: !Ref AiUnlimitedServer
   #         Port: 50051
   #     VpcId: !Ref Vpc
-
   AiUnlimitedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -898,6 +892,7 @@ Resources:
           FromPort: 50051
           ToPort: 50051
           SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+
   SecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -946,13 +941,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - "-"
+        - '-'
         - - ai-unlimited
           - session
           - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -976,14 +971,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: "*"
+            Resource: '*'
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: "*"
+            Resource: '*'
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -992,7 +987,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: "*"
+            Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -1001,13 +996,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - "-"
+        - '-'
         - - ai-unlimited
           - deploy
           - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split

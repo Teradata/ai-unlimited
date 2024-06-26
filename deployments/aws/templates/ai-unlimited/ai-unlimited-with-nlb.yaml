@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template."
+Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -32,6 +32,7 @@ Metadata:
           - AiUnlimitedHttpPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
+
           # - AiUnlimitedSchedulerVersion
           # - AiUnlimitedSchedulerPort
       - Label:
@@ -115,7 +116,6 @@ Parameters:
   #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
   #   MinValue: 0
   #   MaxValue: 65535
-
   AiUnlimitedGrpcPort:
     Description: port to access the AI Unlimited API.
     Type: Number
@@ -133,7 +133,6 @@ Parameters:
   #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
   #   Type: String
   #   Default: latest
-
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
     Type: Number
@@ -362,12 +361,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - "-"
+            - '-'
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - "-"
+                  - '-'
                   - !Select
                     - 2
                     - !Split
@@ -560,12 +559,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - "-"
+            - '-'
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - "-"
+                  - '-'
                   - !Select
                     - 2
                     - !Split
@@ -696,7 +695,6 @@ Resources:
   #     LoadBalancerArn: !Ref LoadBalancer
   #     Port: 50051
   #     Protocol: TCP
-
   AiUnlimitedHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -704,11 +702,11 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
       Name: !Join
-        - "-"
+        - '-'
         - - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -739,11 +737,11 @@ Resources:
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
       Name: !Join
-        - "-"
+        - '-'
         - - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -770,17 +768,17 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
-      HealthCheckPath: "/healthcheck"
+      HealthCheckPath: /healthcheck
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
       Matcher:
         HttpCode: "200"
       Name: !Join
-        - "-"
+        - '-'
         - - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -837,7 +835,6 @@ Resources:
   #       - Id: !Ref AiUnlimitedServer
   #         Port: 50051
   #     VpcId: !Ref Vpc
-
   AiUnlimitedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -880,7 +877,6 @@ Resources:
         - HASSECURITYGROUP
         - !Ref SecurityGroup
         - !Ref AWS::NoValue
-
     Condition: HASKEYANDCIDRORPREFIXLISTORSECGROUP
 
   AiUnlimitedRole:
@@ -910,13 +906,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - "-"
+        - '-'
         - - ai-unlimited
           - session
           - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -940,14 +936,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: "*"
+            Resource: '*'
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: "*"
+            Resource: '*'
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -956,7 +952,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: "*"
+            Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -965,13 +961,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - "-"
+        - '-'
         - - ai-unlimited
           - deploy
           - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
