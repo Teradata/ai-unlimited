@@ -131,7 +131,8 @@
               "Microsoft.Resources/deployments/operationStatuses/read",
               "Microsoft.Resources/deploymentStacks/read",
               "Microsoft.Resources/deploymentStacks/write",
-              "Microsoft.Resources/deploymentStacks/delete"
+              "Microsoft.Resources/deploymentStacks/delete",
+              "Microsoft.Compute/galleries/images/versions/read"
             ]
           }
         ],
