@@ -9,12 +9,6 @@ param networkCidr array = [ '10.0.0.0/16' ]
 @description('New subnet CIDR.')
 param subnetCidr string = '10.0.0.0/24'
 
-@description('Application Load Balancer subnet CIDR.')
-param albSubnetCidr string = '10.0.1.0/24'
-
-@description('deploy ALB components')
-param deployALBComponents bool = false
-
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
 
@@ -34,8 +28,6 @@ module network 'network.bicep' = {
     networkCidr: networkCidr
     subnetCidr: subnetCidr
     location: location
-    albSubnetCidr: albSubnetCidr
-    deployAlbSubnet: deployALBComponents
     tags: Tags
   }
 }
@@ -117,4 +109,3 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
 output RoleDefinitionId string = roleDef.name
 output NetworkName string = network.outputs.networkName
 output SubnetName string = network.outputs.subnetName
-output ALBSubnetName string = deployALBComponents ? network.outputs.subnetName : '' 

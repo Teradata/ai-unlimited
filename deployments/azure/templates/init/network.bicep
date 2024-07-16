@@ -1,12 +1,8 @@
 param networkName string
 param networkCidr array
 param subnetCidr string
-param albSubnetCidr string
-param deployAlbSubnet bool
 param location string
 param tags object = {}
-
-var gwSubnetName = '${networkName}-gtw-subnet'
 
 resource network 'Microsoft.Network/virtualNetworks@2022-11-01' = {
   name: networkName
@@ -30,17 +26,5 @@ resource network 'Microsoft.Network/virtualNetworks@2022-11-01' = {
   tags: tags
 }
 
-resource gwSubnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' = if (deployAlbSubnet) { 
-  parent: network
-  name: gwSubnetName
-
-  properties: {
-    addressPrefix: albSubnetCidr
-    privateEndpointNetworkPolicies: 'Enabled'
-    privateLinkServiceNetworkPolicies: 'Enabled'
-  }
-}
-
 output networkName string = network.name
 output subnetName string = network.properties.subnets[0].name
-output albSubnetName string = deployAlbSubnet ? gwSubnet.name : ''

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.27.1.19265",
-      "templateHash": "18237593260730113827"
+      "templateHash": "4707887880859282690"
     }
   },
   "parameters": {
@@ -30,20 +30,6 @@
       "defaultValue": "10.0.0.0/24",
       "metadata": {
         "description": "New subnet CIDR."
-      }
-    },
-    "albSubnetCidr": {
-      "type": "string",
-      "defaultValue": "10.0.1.0/24",
-      "metadata": {
-        "description": "Application Load Balancer subnet CIDR."
-      }
-    },
-    "deployALBComponents": {
-      "type": "bool",
-      "defaultValue": false,
-      "metadata": {
-        "description": "deploy ALB components"
       }
     },
     "Tags": {
@@ -166,12 +152,6 @@
           "location": {
             "value": "[variables('location')]"
           },
-          "albSubnetCidr": {
-            "value": "[parameters('albSubnetCidr')]"
-          },
-          "deployAlbSubnet": {
-            "value": "[parameters('deployALBComponents')]"
-          },
           "tags": {
             "value": "[parameters('Tags')]"
           }
@@ -183,7 +163,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.27.1.19265",
-              "templateHash": "2707292976893196822"
+              "templateHash": "6905809493163786927"
             }
           },
           "parameters": {
@@ -196,12 +176,6 @@
             "subnetCidr": {
               "type": "string"
             },
-            "albSubnetCidr": {
-              "type": "string"
-            },
-            "deployAlbSubnet": {
-              "type": "bool"
-            },
             "location": {
               "type": "string"
             },
@@ -209,9 +183,6 @@
               "type": "object",
               "defaultValue": {}
             }
-          },
-          "variables": {
-            "gwSubnetName": "[format('{0}-gtw-subnet', parameters('networkName'))]"
           },
           "resources": [
             {
@@ -235,20 +206,6 @@
                 ]
               },
               "tags": "[parameters('tags')]"
-            },
-            {
-              "condition": "[parameters('deployAlbSubnet')]",
-              "type": "Microsoft.Network/virtualNetworks/subnets",
-              "apiVersion": "2022-11-01",
-              "name": "[format('{0}/{1}', parameters('networkName'), variables('gwSubnetName'))]",
-              "properties": {
-                "addressPrefix": "[parameters('albSubnetCidr')]",
-                "privateEndpointNetworkPolicies": "Enabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('networkName'))]"
-              ]
             }
           ],
           "outputs": {
@@ -259,10 +216,6 @@
             "subnetName": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('networkName')), '2022-11-01').subnets[0].name]"
-            },
-            "albSubnetName": {
-              "type": "string",
-              "value": "[if(parameters('deployAlbSubnet'), variables('gwSubnetName'), '')]"
             }
           }
         }
@@ -284,10 +237,6 @@
     "SubnetName": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('name')), 'Microsoft.Resources/deployments', 'networkDeployment'), '2022-09-01').outputs.subnetName.value]"
-    },
-    "ALBSubnetName": {
-      "type": "string",
-      "value": "[if(parameters('deployALBComponents'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('name')), 'Microsoft.Resources/deployments', 'networkDeployment'), '2022-09-01').outputs.subnetName.value, '')]"
     }
   }
 }
