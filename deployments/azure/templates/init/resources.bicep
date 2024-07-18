@@ -97,6 +97,7 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.Resources/deploymentStacks/read'
           'Microsoft.Resources/deploymentStacks/write'
           'Microsoft.Resources/deploymentStacks/delete'
+          'Microsoft.Compute/galleries/images/versions/read'
         ]
       }
     ]
