@@ -90,35 +90,28 @@ var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 
-
-var cloudInitData = base64(
-  format(
-    loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
-    base64(
-      format(
-        loadTextContent('../../../scripts/ai-unlimited.service'),
-        registry,
-        workspaceRepository,
-        AiUnlimitedVersion,
-        AiUnlimitedHttpPort,
-        AiUnlimitedGrpcPort,
-        subscription().subscriptionId,
-        subscription().tenantId,
-        '--network-alias ${nlb.outputs.PublicDns}'
-      )
-    ),
-    base64(
-      format(
-        loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
-        registry,
-        workspaceSchedulerRepository,
-        AiUnlimitedSchedulerVersion,
-        // AiUnlimitedSchedulerGrpcPort,
-        AiUnlimitedSchedulerHttpPort
-      )
-    )
-  )
-)
+var cloudInitData = base64(format(
+  loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
+  base64(format(
+    loadTextContent('../../../scripts/ai-unlimited.service'),
+    registry,
+    workspaceRepository,
+    AiUnlimitedVersion,
+    AiUnlimitedHttpPort,
+    AiUnlimitedGrpcPort,
+    subscription().subscriptionId,
+    subscription().tenantId,
+    '--network-alias ${nlb.outputs.PublicDns}'
+  )),
+  base64(format(
+    loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
+    registry,
+    workspaceSchedulerRepository,
+    AiUnlimitedSchedulerVersion,
+    // AiUnlimitedSchedulerGrpcPort,
+    AiUnlimitedSchedulerHttpPort
+  ))
+))
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
@@ -149,7 +142,7 @@ module vaultAccessPolicy '../modules/vault/access-policy.bicep' = if (UseKeyVaul
   scope: rg
   name: 'vault-access-policy'
   params: {
-    vaultName: AiUnlimitedName
+    vaultName: vault.outputs.name
     accessPolicy: {
       tenantId: subscription().tenantId
       objectId: aiUnlimited.outputs.PrincipleId
@@ -251,4 +244,5 @@ output AiUnlimitedPrivateHttpAccess string = 'http://${aiUnlimited.outputs.Priva
 output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${AiUnlimitedGrpcPort}'
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
 output sshCommand string = 'ssh azureuser@${aiUnlimited.outputs.PrivateIP}'
-output SecurityGroup string = firewall.outputs.Id
+output KeyVaultName string = (UseKeyVault == 'New') ? vault.outputs.name : ''
+output NetworkSecurityGroupId string = firewall.outputs.Id
