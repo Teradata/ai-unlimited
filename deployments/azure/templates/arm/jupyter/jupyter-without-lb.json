@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.27.1.19265",
-      "templateHash": "3264134040675753697"
+      "version": "0.28.1.47646",
+      "templateHash": "8452004607038960062"
     }
   },
   "parameters": {
@@ -200,8 +200,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.27.1.19265",
-              "templateHash": "8275252103706232855"
+              "version": "0.28.1.47646",
+              "templateHash": "4929926268271391774"
             }
           },
           "parameters": {
@@ -235,6 +235,10 @@
               "type": "int",
               "defaultValue": 0
             },
+            "aiUnlimitedSchedulerHttpPort": {
+              "type": "int",
+              "defaultValue": 0
+            },
             "jupyterHttpPort": {
               "type": "int",
               "defaultValue": 0
@@ -242,13 +246,22 @@
             "tags": {
               "type": "object",
               "defaultValue": {}
+            },
+            "uuid": {
+              "type": "string",
+              "defaultValue": "[newGuid()]"
             }
+          },
+          "variables": {
+            "nameCharLimit": 60,
+            "uniqueName": "[format('{0}-{1}', parameters('name'), uniqueString(parameters('uuid')))]",
+            "uniqueSecurityGroupName": "[substring(format('{0}', variables('uniqueName')), 0, if(less(length(variables('uniqueName')), variables('nameCharLimit')), length(variables('uniqueName')), variables('nameCharLimit')))]"
           },
           "resources": [
             {
               "type": "Microsoft.Network/networkSecurityGroups",
               "apiVersion": "2022-11-01",
-              "name": "[parameters('name')]",
+              "name": "[variables('uniqueSecurityGroupName')]",
               "tags": "[parameters('tags')]",
               "location": "[parameters('location')]"
             },
@@ -256,7 +269,7 @@
               "condition": "[parameters('sshAccess')]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
-              "name": "[format('{0}/{1}', parameters('name'), format('{0}-ssh-allow', parameters('name')))]",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-ssh-allow', variables('uniqueSecurityGroupName')))]",
               "properties": {
                 "copy": [
                   {
@@ -287,14 +300,14 @@
                 "sourcePortRange": "*"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
               ]
             },
             {
               "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
-              "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-http-allow', parameters('name')))]",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-http-allow', variables('uniqueSecurityGroupName')))]",
               "properties": {
                 "copy": [
                   {
@@ -325,14 +338,14 @@
                 "sourcePortRange": "*"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
               ]
             },
             {
               "condition": "[not(equals(parameters('aiUnlimitedGrpcPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
-              "name": "[format('{0}/{1}', parameters('name'), format('{0}-workspace-grpc-allow', parameters('name')))]",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-grpc-allow', variables('uniqueSecurityGroupName')))]",
               "properties": {
                 "copy": [
                   {
@@ -363,14 +376,14 @@
                 "sourcePortRange": "*"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
               ]
             },
             {
               "condition": "[not(equals(parameters('jupyterHttpPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
-              "name": "[format('{0}/{1}', parameters('name'), format('{0}-juptyer-http-allow', parameters('name')))]",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-juptyer-http-allow', variables('uniqueSecurityGroupName')))]",
               "properties": {
                 "copy": [
                   {
@@ -401,14 +414,52 @@
                 "sourcePortRange": "*"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
+              ]
+            },
+            {
+              "condition": "[not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0))]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-scheduler-http-allow', variables('uniqueSecurityGroupName')))]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "destinationApplicationSecurityGroups",
+                    "count": "[length(parameters('detinationAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('detinationAppSecGroups')[copyIndex('destinationApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  },
+                  {
+                    "name": "sourceApplicationSecurityGroups",
+                    "count": "[length(parameters('sourceAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('sourceAppSecGroups')[copyIndex('sourceApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  }
+                ],
+                "access": "Allow",
+                "description": "allow http to the scheduler instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "[string(parameters('aiUnlimitedSchedulerHttpPort'))]",
+                "direction": "Inbound",
+                "priority": 704,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
               ]
             }
           ],
           "outputs": {
             "Id": {
               "type": "string",
-              "value": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+              "value": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
             }
           }
         }
@@ -477,8 +528,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.27.1.19265",
-              "templateHash": "7784277815830270611"
+              "version": "0.28.1.47646",
+              "templateHash": "14119123377490335719"
             }
           },
           "parameters": {
@@ -758,8 +809,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.27.1.19265",
-                      "templateHash": "13411721602606036822"
+                      "version": "0.28.1.47646",
+                      "templateHash": "6759154498137298299"
                     }
                   },
                   "parameters": {
@@ -854,7 +905,7 @@
       "type": "string",
       "value": "[format('ssh azureuser@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PublicIP.value)]"
     },
-    "SecurityGroup": {
+    "NetworkSecurityGroupId": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall'), '2022-09-01').outputs.Id.value]"
     }
