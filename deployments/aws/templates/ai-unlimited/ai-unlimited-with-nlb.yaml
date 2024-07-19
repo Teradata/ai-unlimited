@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 
 Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
@@ -32,9 +32,9 @@ Metadata:
           - AiUnlimitedHttpPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
-
-          # - AiUnlimitedSchedulerVersion
-          # - AiUnlimitedSchedulerPort
+          - AiUnlimitedSchedulerVersion
+          - AiUnlimitedSchedulerHttpPort
+          - AiUnlimitedSchedulerGrpcPort
       - Label:
           default: Persistent volume
         Parameters:
@@ -109,13 +109,22 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
-  # AiUnlimitedSchedulerPort:
-  #   Description: port to access the AI Unlimited Scheduler API.
-  #   Type: Number
-  #   Default: 50051
-  #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
-  #   MinValue: 0
-  #   MaxValue: 65535
+  AiUnlimitedSchedulerHttpPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50061
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
+  AiUnlimitedSchedulerGrpcPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50051
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
   AiUnlimitedGrpcPort:
     Description: port to access the AI Unlimited API.
     Type: Number
@@ -129,10 +138,11 @@ Parameters:
     Type: String
     Default: latest
 
-  # AiUnlimitedSchedulerVersion:
-  #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
-  #   Type: String
-  #   Default: latest
+  AiUnlimitedSchedulerVersion:
+    Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
+    Type: String
+    Default: latest
+
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
     Type: Number
@@ -314,6 +324,10 @@ Conditions:
     - !Equals
       - !Ref SecurityGroup
       - ""
+
+  HASCIDRORPREFIXLIST: !Or
+    - !Condition HASCIDR
+    - !Condition HASPREFIXLIST
 
   HASCIDRORPREFIXLISTORSECGROUP: !Or
     - !Condition HASCIDR
@@ -507,8 +521,8 @@ Resources:
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
-                    -p 50051:50051 \
-                    -p 50061:50061 \
+                    -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
+                    -p ${ AiUnlimitedSchedulerHttpPort }:50061 \
                     -v /etc/td/ai-unlimited:/etc/td \
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
@@ -595,10 +609,6 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If
-            - HASSECURITYGROUP
-            - !Ref SecurityGroup
-            - !Ref AWS::NoValue
         - FromPort: !Ref AiUnlimitedGrpcPort
           IpProtocol: tcp
           ToPort: !Ref AiUnlimitedGrpcPort
@@ -609,10 +619,6 @@ Resources:
           SourcePrefixListId: !If
             - HASPREFIXLIST
             - !Ref PrefixList
-            - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If
-            - HASSECURITYGROUP
-            - !Ref SecurityGroup
             - !Ref AWS::NoValue
         - FromPort: 50051
           IpProtocol: tcp
@@ -625,10 +631,6 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If
-            - HASSECURITYGROUP
-            - !Ref SecurityGroup
-            - !Ref AWS::NoValue
         - FromPort: 50061
           IpProtocol: tcp
           ToPort: 50061
@@ -640,11 +642,7 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If
-            - HASSECURITYGROUP
-            - !Ref SecurityGroup
-            - !Ref AWS::NoValue
-    Condition: HASCIDRORPREFIXLISTORSECGROUP
+    Condition: HASCIDRORPREFIXLIST
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -683,18 +681,19 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref AiUnlimitedSchedulerHTTPTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: 50061
+      Port: !Ref AiUnlimitedSchedulerHttpPort
       Protocol: TCP
 
-  # AiUnlimitedSchedulerGRPCListener:
-  #   Type: AWS::ElasticLoadBalancingV2::Listener
-  #   Properties:
-  #     DefaultActions:
-  #       - Type: forward
-  #         TargetGroupArn: !Ref AiUnlimitedSchedulerGRPCTargetGroup
-  #     LoadBalancerArn: !Ref LoadBalancer
-  #     Port: 50051
-  #     Protocol: TCP
+  AiUnlimitedSchedulerGRPCListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AiUnlimitedSchedulerGRPCTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: !Ref AiUnlimitedSchedulerGrpcPort
+      Protocol: TCP
+
   AiUnlimitedHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -787,7 +786,7 @@ Resources:
           - aisch
           - ui
           - http
-      Port: 50061
+      Port: !Ref AiUnlimitedSchedulerHttpPort
       Protocol: TCP
       TargetGroupAttributes:
         - Key: stickiness.enabled
@@ -798,43 +797,44 @@ Resources:
           Value: "20"
       Targets:
         - Id: !Ref AiUnlimitedServer
-          Port: 50061
+          Port: !Ref AiUnlimitedSchedulerHttpPort
       VpcId: !Ref Vpc
 
-  # AiUnlimitedSchedulerGRPCTargetGroup:
-  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
-  #   Properties:
-  #     HealthCheckIntervalSeconds: 30
-  #     HealthCheckProtocol: TCP
-  #     HealthCheckTimeoutSeconds: 15
-  #     HealthyThresholdCount: 5
-  #     Name: !Join
-  #       - "-"
-  #       - - !Select
-  #           - 4
-  #           - !Split
-  #             - "-"
-  #             - !Select
-  #               - 2
-  #               - !Split
-  #                 - /
-  #                 - !Ref AWS::StackId
-  #         - td-aisch
-  #         - api
-  #         - grpc
-  #     Port: 50051
-  #     Protocol: TCP
-  #     TargetGroupAttributes:
-  #       - Key: stickiness.enabled
-  #         Value: true
-  #       - Key: stickiness.type
-  #         Value: source_ip
-  #       - Key: deregistration_delay.timeout_seconds
-  #         Value: "20"
-  #     Targets:
-  #       - Id: !Ref AiUnlimitedServer
-  #         Port: 50051
-  #     VpcId: !Ref Vpc
+  AiUnlimitedSchedulerGRPCTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: TCP
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 5
+      Name: !Join
+        - "-"
+        - - !Select
+            - 4
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
+          - td-aisch
+          - api
+          - grpc
+      Port: !Ref AiUnlimitedSchedulerGrpcPort
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref AiUnlimitedServer
+          Port: !Ref AiUnlimitedSchedulerGrpcPort
+      VpcId: !Ref Vpc
+
   AiUnlimitedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -850,13 +850,41 @@ Resources:
           ToPort: !Ref AiUnlimitedGrpcPort
           SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
         - IpProtocol: tcp
-          FromPort: 50061
-          ToPort: 50061
+          FromPort: !Ref AiUnlimitedSchedulerHttpPort
+          ToPort: !Ref AiUnlimitedSchedulerHttpPort
           SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
         - IpProtocol: tcp
-          FromPort: 50051
-          ToPort: 50051
+          FromPort: !Ref AiUnlimitedSchedulerGrpcPort
+          ToPort: !Ref AiUnlimitedSchedulerGrpcPort
           SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+        - !If 
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref AiUnlimitedHttpPort
+            ToPort: !Ref AiUnlimitedHttpPort
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - !If 
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref AiUnlimitedGrpcPort
+            ToPort: !Ref AiUnlimitedGrpcPort
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - !If 
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref AiUnlimitedSchedulerHttpPort
+            ToPort: !Ref AiUnlimitedSchedulerHttpPort
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - !If 
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref AiUnlimitedSchedulerGRPCTargetGroup
+            ToPort: !Ref AiUnlimitedSchedulerGRPCTargetGroup
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
 
   SecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -1102,9 +1130,13 @@ Outputs:
     Description: Loadbalancer access endpoint for AI Unlimited API Access
     Value: !Sub ${ LoadBalancer.DNSName }:${ AiUnlimitedGrpcPort }
 
-  SecurityGroup:
+  InstanceSecurityGroup:
     Description: AI Unlimited Security Group
     Value: !GetAtt AiUnlimitedSecurityGroup.GroupId
+
+  LoadBalancerSecurityGroup:
+    Description: AI Unlimited Load Balancer Security Group
+    Value: !GetAtt LoadBalancerSecurityGroup.GroupId
 
   PublicSSHConeection:
     Description: AI Unlimited ssh connnection string

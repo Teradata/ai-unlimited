@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 
 Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
@@ -289,6 +289,10 @@ Conditions:
     - !Equals
       - !Ref SecurityGroup
       - ""
+
+  HASCIDRORPREFIXLIST: !Or
+    - !Condition HASCIDR
+    - !Condition HASPREFIXLIST
 
   HASCIDRORPREFIXLISTORSECGROUP: !Or
     - !Condition HASCIDR
@@ -663,7 +667,7 @@ Outputs:
     Description: Teradata jupyter Server
     Value: !Sub http://${JupyterServer.PrivateDnsName}:${ JupyterHttpPort }?token=${ JupyterToken }
 
-  SecurityGroup:
+  InstanceSecurityGroup:
     Description: Jupyter Security Group
     Value: !GetAtt JupyterSecurityGroup.GroupId
 

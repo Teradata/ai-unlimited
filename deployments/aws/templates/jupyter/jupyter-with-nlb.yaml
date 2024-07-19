@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 
 Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
@@ -305,6 +305,10 @@ Conditions:
       - !Ref SecurityGroup
       - ""
 
+  HASCIDRORPREFIXLIST: !Or
+    - !Condition HASCIDR
+    - !Condition HASPREFIXLIST
+
   HASCIDRORPREFIXLISTORSECGROUP: !Or
     - !Condition HASCIDR
     - !Condition HASPREFIXLIST
@@ -552,11 +556,7 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If
-            - HASSECURITYGROUP
-            - !Ref SecurityGroup
-            - !Ref AWS::NoValue
-    Condition: HASCIDRORPREFIXLISTORSECGROUP
+    Condition: HASCIDRORPREFIXLIST
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -622,6 +622,13 @@ Resources:
           FromPort: !Ref JupyterHttpPort
           ToPort: !Ref JupyterHttpPort
           SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+        - !If 
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref JupyterHttpPort
+            ToPort: !Ref JupyterHttpPort
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
 
   SecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -738,9 +745,13 @@ Outputs:
     Description: Loadbalancer access endpoint for API Access
     Value: !Sub http://${ LoadBalancer.DNSName }:${ JupyterHttpPort }?token=${ JupyterToken }
 
-  SecurityGroup:
+  InstanceSecurityGroup:
     Description: Jupyter Security Group
     Value: !GetAtt JupyterSecurityGroup.GroupId
+
+  LoadBalancerSecurityGroup:
+    Description: Jupyter Load Balancer Security Group
+    Value: !GetAtt LoadBalancerSecurityGroup.GroupId
 
   PublicSSHConeection:
     Description: Jupyter ssh connnection string

@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 
 Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
@@ -30,9 +30,9 @@ Metadata:
           - AiUnlimitedHttpPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
-
-          # - AiUnlimitedSchedulerVersion
-          # - AiUnlimitedSchedulerPort
+          - AiUnlimitedSchedulerVersion
+          - AiUnlimitedSchedulerHttpPort
+          - AiUnlimitedSchedulerGrpcPort
       - Label:
           default: Persistent volume
         Parameters:
@@ -102,22 +102,32 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
-  # AiUnlimitedSchedulerPort:
-  #   Description: port to access the AI Unlimited Scheduler API.
-  #   Type: Number
-  #   Default: 50051
-  #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
-  #   MinValue: 0
-  #   MaxValue: 65535
+  AiUnlimitedSchedulerHttpPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50061
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
+  AiUnlimitedSchedulerGrpcPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50051
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
     Default: latest
 
-  # AiUnlimitedSchedulerVersion:
-  #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
-  #   Type: String
-  #   Default: latest
+  AiUnlimitedSchedulerVersion:
+    Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
+    Type: String
+    Default: latest
+
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
     Type: Number
@@ -299,6 +309,10 @@ Conditions:
     - !Equals
       - !Ref SecurityGroup
       - ""
+
+  HASCIDRORPREFIXLIST: !Or
+    - !Condition HASCIDR
+    - !Condition HASPREFIXLIST
 
   HASCIDRORPREFIXLISTORSECGROUP: !Or
     - !Condition HASCIDR
@@ -492,8 +506,8 @@ Resources:
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
-                    -p 50051:50051 \
-                    -p 50061:50061 \
+                    -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
+                    -p ${ AiUnlimitedSchedulerHttpPort }:50061 \
                     -v /etc/td/ai-unlimited:/etc/td \
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
@@ -592,9 +606,9 @@ Resources:
             - HASCIDR
             - !Ref AccessCIDR
             - !Ref AWS::NoValue
-        - FromPort: 50051
+        - FromPort: !Ref AiUnlimitedSchedulerGrpcPort
           IpProtocol: tcp
-          ToPort: 50051
+          ToPort: !Ref AiUnlimitedSchedulerGrpcPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -607,9 +621,9 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: 50061
+        - FromPort: !Ref AiUnlimitedSchedulerHttpPort
           IpProtocol: tcp
-          ToPort: 50061
+          ToPort: !Ref AiUnlimitedSchedulerHttpPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -875,7 +889,7 @@ Outputs:
     Description: Teradata AI Unlimited private API Access
     Value: !Sub http://${AiUnlimitedServer.PrivateDnsName}:${ AiUnlimitedGrpcPort }
 
-  SecurityGroup:
+  InstanceSecurityGroup:
     Description: AI Unlimited Security Group
     Value: !GetAtt AiUnlimitedSecurityGroup.GroupId
 
