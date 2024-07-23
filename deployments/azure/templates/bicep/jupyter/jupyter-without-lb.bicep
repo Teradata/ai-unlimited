@@ -139,4 +139,4 @@ output PrivateIP string = jupyter.outputs.PrivateIP
 output JupyterLabPublicHttpAccess string = 'http://${jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output sshCommand string = 'ssh azureuser@${jupyter.outputs.PublicIP}'
-output SecurityGroup string = firewall.outputs.Id
+output NetworkSecurityGroupId string = firewall.outputs.Id

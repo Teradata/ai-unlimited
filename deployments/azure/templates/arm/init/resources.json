@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.27.1.19265",
-      "templateHash": "4707887880859282690"
+      "version": "0.28.1.47646",
+      "templateHash": "3755223610480160492"
     }
   },
   "parameters": {
@@ -117,7 +117,8 @@
               "Microsoft.Resources/deployments/operationStatuses/read",
               "Microsoft.Resources/deploymentStacks/read",
               "Microsoft.Resources/deploymentStacks/write",
-              "Microsoft.Resources/deploymentStacks/delete"
+              "Microsoft.Resources/deploymentStacks/delete",
+              "Microsoft.Compute/galleries/images/versions/read"
             ]
           }
         ],
@@ -162,8 +163,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.27.1.19265",
-              "templateHash": "6905809493163786927"
+              "version": "0.28.1.47646",
+              "templateHash": "3893635077912970094"
             }
           },
           "parameters": {
