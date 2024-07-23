@@ -610,6 +610,12 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !GetAtt AiUnlimitedSecurityGroup.GroupId
+            - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
+            - !GetAtt JupyterSecurityGroup.GroupId
+            - !If
+              - HASKEYANDCIDRORPREFIXLISTORSECGROUP
+              - !GetAtt SecurityGroupIngress.GroupId
+              - !Ref AWS::NoValue
           AssociatePublicIpAddress: !If
             - HASPUBLICIP
             - true
@@ -650,7 +656,7 @@ Resources:
           /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource AiUnlimitedServer --configsets ai_unlimited_install --region ${AWS::Region}
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource AiUnlimitedServer --region ${AWS::Region}
 
-  LoadBalancerSecurityGroup:
+  LoadBalancerAiUnlimitedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref Vpc
@@ -678,17 +684,18 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-        - FromPort: !Ref JupyterHttpPort
-          IpProtocol: tcp
-          ToPort: !Ref JupyterHttpPort
-          CidrIp: !If
-            - HASCIDR
-            - !Ref AccessCIDR
+          SourceSecurityGroupId: !If 
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
             - !Ref AWS::NoValue
-          SourcePrefixListId: !If
-            - HASPREFIXLIST
-            - !Ref PrefixList
-            - !Ref AWS::NoValue
+    Condition: HASCIDRORPREFIXLISTORSECGROUP
+
+  LoadBalancerSchedulerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to AI Unlimited server from LoadBalancer over http, grpc, and ssh
+      SecurityGroupIngress:
         - FromPort: !Ref AiUnlimitedSchedulerHttpPort
           IpProtocol: tcp
           ToPort: !Ref AiUnlimitedSchedulerHttpPort
@@ -711,7 +718,34 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-    Condition: HASCIDRORPREFIXLIST
+          SourceSecurityGroupId: !If 
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+    Condition: HASCIDRORPREFIXLISTORSECGROUP
+
+  LoadBalancerJupyterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to AI Unlimited server from LoadBalancer over http, grpc, and ssh
+      SecurityGroupIngress:
+        - FromPort: !Ref JupyterHttpPort
+          IpProtocol: tcp
+          ToPort: !Ref JupyterHttpPort
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If 
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+    Condition: HASCIDRORPREFIXLISTORSECGROUP
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -720,7 +754,9 @@ Resources:
       Subnets:
         - !Ref LoadBalancerSubnet
       SecurityGroups:
-        - !GetAtt LoadBalancerSecurityGroup.GroupId
+        - !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
+        - !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId
+        - !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
       Type: network
 
   AiUnlimitedHTTPListener:
@@ -751,7 +787,7 @@ Resources:
           TargetGroupArn: !Ref AiUnlimitedSchedulerHTTPTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
       Port: !Ref AiUnlimitedSchedulerHttpPort
-      Protocol: HTTP
+      Protocol: TCP
 
   AiUnlimitedSchedulerGRPCListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -761,7 +797,7 @@ Resources:
           TargetGroupArn: !Ref AiUnlimitedSchedulerGRPCTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
       Port: !Ref AiUnlimitedSchedulerGrpcPort
-      Protocol: HTTP
+      Protocol: TCP
 
   AiUnlimitedGRPCListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -916,7 +952,7 @@ Resources:
           Value: "20"
       Targets:
         - Id: !Ref AiUnlimitedServer
-          Port: !ref AiUnlimitedSchedulerGrpcPort
+          Port: !Ref AiUnlimitedSchedulerGrpcPort
       VpcId: !Ref Vpc
 
   AiUnlimitedGRPCTargetGroup:
@@ -963,15 +999,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref AiUnlimitedHttpPort
           ToPort: !Ref AiUnlimitedHttpPort
-          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+          SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - IpProtocol: tcp
           FromPort: !Ref AiUnlimitedGrpcPort
           ToPort: !Ref AiUnlimitedGrpcPort
-          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
-        - IpProtocol: tcp
-          FromPort: !Ref JupyterHttpPort
-          ToPort: !Ref JupyterHttpPort
-          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+          SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !If 
           - HASSECURITYGROUP
           - IpProtocol: tcp
@@ -986,6 +1018,21 @@ Resources:
             ToPort: !Ref AiUnlimitedGrpcPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
+
+  AiUnlimitedSchedulerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to AI Unlimited server over http and grpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref AiUnlimitedSchedulerGrpcPort
+          ToPort: !Ref AiUnlimitedSchedulerGrpcPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: !Ref AiUnlimitedSchedulerHttpPort
+          ToPort: !Ref AiUnlimitedSchedulerHttpPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId
         - !If 
           - HASSECURITYGROUP
           - IpProtocol: tcp
@@ -1000,6 +1047,32 @@ Resources:
             ToPort: !Ref AiUnlimitedSchedulerHttpPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
+
+  JupyterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to jupyter server over http
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref JupyterHttpPort
+          ToPort: !Ref JupyterHttpPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
+        - FromPort: !Ref JupyterHttpPort
+          IpProtocol: tcp
+          ToPort: !Ref JupyterHttpPort
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
 
   SecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -1245,13 +1318,25 @@ Outputs:
     Description: Loadbalancer access endpoint for AI Unlimited API Access
     Value: !Sub ${ LoadBalancer.DNSName }:${ AiUnlimitedGrpcPort }
 
-  InstanceSecurityGroup:
-    Description: AI Unlimited Security Group
-    Value: !GetAtt AiUnlimitedSecurityGroup.GroupId
+  InstanceSecurityGroups:
+    Description: AI Unlimited Security Groups
+    Value: !Join 
+      - ', '
+      - - !GetAtt AiUnlimitedSecurityGroup.GroupId
+        - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
+        - !GetAtt JupyterSecurityGroup.GroupId
+        - !If
+          - HASKEYANDCIDRORPREFIXLISTORSECGROUP
+          - !GetAtt SecurityGroupIngress.GroupId
+          - !Ref AWS::NoValue
 
-  LoadBalancerSecurityGroup:
+  LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
-    Value: !GetAtt LoadBalancerSecurityGroup.GroupId
+    Value: !Join 
+      - ', '
+      - - !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
+        - !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId
+        - !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
 
   PublicSSHConeection:
     Description: AI Unlimited ssh connnection string
