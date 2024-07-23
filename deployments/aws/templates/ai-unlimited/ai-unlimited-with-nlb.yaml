@@ -828,7 +828,6 @@ Resources:
       HealthCheckIntervalSeconds: 30
       HealthCheckProtocol: TCP
       HealthCheckTimeoutSeconds: 15
-      HealthyThresholdCount: 5
       Name: !Join
         - '-'
         - - !Select
@@ -840,7 +839,7 @@ Resources:
                 - !Split
                   - /
                   - !Ref AWS::StackId
-          - td-aisch
+          - aisch
           - api
           - grpc
       Port: !Ref AiUnlimitedSchedulerGrpcPort
@@ -911,7 +910,7 @@ Resources:
           - HASSECURITYGROUP
           - IpProtocol: tcp
             FromPort: !Ref AiUnlimitedSchedulerGrpcPort
-            ToPort: !Ref AiUnlimitedScheduleGrpcPort
+            ToPort: !Ref AiUnlimitedSchedulerGrpcPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
 

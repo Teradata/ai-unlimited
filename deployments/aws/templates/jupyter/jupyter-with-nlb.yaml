@@ -543,7 +543,7 @@ Resources:
           /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource JupyterServer --configsets jupyter_install --region ${AWS::Region}
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource JupyterServer --region ${AWS::Region}
 
-  LoadBalancerSecurityGroup:
+  LoadBalancerJupyterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref Vpc
@@ -573,7 +573,7 @@ Resources:
       Subnets:
         - !Ref LoadBalancerSubnet
       SecurityGroups:
-        - !GetAtt LoadBalancerSecurityGroup.GroupId
+        - !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
       Type: network
 
   JupyterHTTPListener:
@@ -629,7 +629,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref JupyterHttpPort
           ToPort: !Ref JupyterHttpPort
-          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+          SourceSecurityGroupId: !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
         - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp

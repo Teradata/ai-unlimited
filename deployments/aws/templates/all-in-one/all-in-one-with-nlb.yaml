@@ -920,8 +920,6 @@ Resources:
       HealthCheckIntervalSeconds: 30
       HealthCheckProtocol: TCP
       HealthCheckTimeoutSeconds: 15
-      Matcher:
-        GrpcCode: "0"
       Name: !Join
         - '-'
         - - !Select
