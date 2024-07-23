@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 
 Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
@@ -625,7 +625,7 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If 
+          SourceSecurityGroupId: !If
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
@@ -659,7 +659,7 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If 
+          SourceSecurityGroupId: !If
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
@@ -830,11 +830,11 @@ Resources:
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
       Name: !Join
-        - "-"
+        - '-'
         - - !Select
             - 4
             - !Split
-              - "-"
+              - '-'
               - !Select
                 - 2
                 - !Split
@@ -871,14 +871,14 @@ Resources:
           FromPort: !Ref AiUnlimitedGrpcPort
           ToPort: !Ref AiUnlimitedGrpcPort
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
-        - !If 
+        - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
             FromPort: !Ref AiUnlimitedHttpPort
             ToPort: !Ref AiUnlimitedHttpPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
-        - !If 
+        - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
             FromPort: !Ref AiUnlimitedGrpcPort
@@ -900,14 +900,14 @@ Resources:
           FromPort: !Ref AiUnlimitedSchedulerHttpPort
           ToPort: !Ref AiUnlimitedSchedulerHttpPort
           SourceSecurityGroupId: !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId
-        - !If 
+        - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
             FromPort: !Ref AiUnlimitedSchedulerHttpPort
             ToPort: !Ref AiUnlimitedSchedulerHttpPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
-        - !If 
+        - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
             FromPort: !Ref AiUnlimitedSchedulerGrpcPort
@@ -1161,7 +1161,7 @@ Outputs:
 
   InstanceSecurityGroups:
     Description: AI Unlimited Security Groups
-    Value: !Join 
+    Value: !Join
       - ', '
       - - !GetAtt AiUnlimitedSecurityGroup.GroupId
         - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
@@ -1172,7 +1172,7 @@ Outputs:
 
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
-    Value: !Join 
+    Value: !Join
       - ', '
       - - !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId

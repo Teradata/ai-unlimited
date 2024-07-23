@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 
 Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
 
@@ -560,7 +560,7 @@ Resources:
             - HASPREFIXLIST
             - !Ref PrefixList
             - !Ref AWS::NoValue
-          SourceSecurityGroupId: !If 
+          SourceSecurityGroupId: !If
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
@@ -630,7 +630,7 @@ Resources:
           FromPort: !Ref JupyterHttpPort
           ToPort: !Ref JupyterHttpPort
           SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
-        - !If 
+        - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
             FromPort: !Ref JupyterHttpPort
@@ -755,7 +755,7 @@ Outputs:
 
   InstanceSecurityGroups:
     Description: AI Unlimited Security Group
-    Value: !Join 
+    Value: !Join
       - ', '
       - - !GetAtt JupyterSecurityGroup.GroupId
         - !If
@@ -765,7 +765,7 @@ Outputs:
 
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
-    Value: !Join 
+    Value: !Join
       - ', '
       - - !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
 
