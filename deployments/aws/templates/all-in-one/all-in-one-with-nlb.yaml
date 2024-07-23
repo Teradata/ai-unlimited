@@ -906,9 +906,7 @@ Resources:
         - Key: stickiness.enabled
           Value: true
         - Key: stickiness.type
-          Value: app_cookie
-        - Key: stickiness.app_cookie.cookie_name
-          Value: TDWUNLIMITEDHTTPSSESSION
+          Value: source_ip
         - Key: deregistration_delay.timeout_seconds
           Value: "20"
       Targets:
@@ -940,14 +938,11 @@ Resources:
           - grpc
       Port: !Ref AiUnlimitedSchedulerGrpcPort
       Protocol: TCP
-      ProtocolVersion: GRPC
       TargetGroupAttributes:
         - Key: stickiness.enabled
           Value: true
         - Key: stickiness.type
-          Value: app_cookie
-        - Key: stickiness.app_cookie.cookie_name
-          Value: TDWUNLIMITEDHTTPSSESSION
+          Value: source_ip
         - Key: deregistration_delay.timeout_seconds
           Value: "20"
       Targets:
