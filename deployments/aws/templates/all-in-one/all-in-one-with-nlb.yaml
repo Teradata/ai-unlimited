@@ -901,7 +901,7 @@ Resources:
           - ui
           - http
       Port: !Ref AiUnlimitedSchedulerHttpPort
-      Protocol: HTTP
+      Protocol: TCP
       TargetGroupAttributes:
         - Key: stickiness.enabled
           Value: true
