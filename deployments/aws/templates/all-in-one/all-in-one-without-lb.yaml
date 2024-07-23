@@ -31,7 +31,8 @@ Metadata:
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
           - AiUnlimitedSchedulerVersion
-          - AiUnlimitedSchedulerPort
+          - AiUnlimitedSchedulerHttpPort
+          - AiUnlimitedSchedulerGrpcPort
       - Label:
           default: Persistent volume
         Parameters:
@@ -115,22 +116,32 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
-  # AiUnlimitedSchedulerPort:
-  #   Description: port to access the AI Unlimited Scheduler API.
-  #   Type: Number
-  #   Default: 50051
-  #   ConstraintDescription: must be a valid ununsed port between 0 and 65535.
-  #   MinValue: 0
-  #   MaxValue: 65535
+  AiUnlimitedSchedulerHttpPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50061
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
+  AiUnlimitedSchedulerGrpcPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50051
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
     Default: latest
 
-  # AiUnlimitedSchedulerVersion:
-  #   Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
-  #   Type: String
-  #   Default: latest
+  AiUnlimitedSchedulerVersion:
+    Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
+    Type: String
+    Default: latest
+
   JupyterHttpPort:
     Description: port to access the Jupyter UI.
     Type: Number
@@ -314,6 +325,10 @@ Conditions:
     - !Equals
       - !Ref SecurityGroup
       - ""
+
+  HASCIDRORPREFIXLIST: !Or
+    - !Condition HASCIDR
+    - !Condition HASPREFIXLIST
 
   HASCIDRORPREFIXLISTORSECGROUP: !Or
     - !Condition HASCIDR
@@ -508,8 +523,8 @@ Resources:
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
-                    -p 50051:50051 \
-                    -p 50061:50061 \
+                    -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
+                    -p ${ AiUnlimitedSchedulerHttpPort }:50061 \
                     -v /etc/td/ai-unlimited:/etc/td \
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
@@ -578,6 +593,12 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !GetAtt AiUnlimitedSecurityGroup.GroupId
+            - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
+            - !GetAtt JupyterSecurityGroup.GroupId
+            - !If
+              - HASKEYANDCIDRORPREFIXLISTORSECGROUP
+              - !GetAtt SecurityGroupIngress.GroupId
+              - !Ref AWS::NoValue
           AssociatePublicIpAddress: !If
             - HASPUBLICIP
             - true
@@ -654,9 +675,16 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: 50061
+
+  AiUnlimitedSchedulerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to AI Unlimited server over http and grpc
+      SecurityGroupIngress:
+        - FromPort: !Ref AiUnlimitedSchedulerHttpPort
           IpProtocol: tcp
-          ToPort: 50061
+          ToPort: !Ref AiUnlimitedSchedulerHttpPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -669,6 +697,28 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
+        - FromPort: !Ref AiUnlimitedSchedulerGrpcPort
+          IpProtocol: tcp
+          ToPort: !Ref AiUnlimitedSchedulerGrpcPort
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+
+  JupyterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Enable access to jupyter server over http
+      SecurityGroupIngress:
         - FromPort: !Ref JupyterHttpPort
           IpProtocol: tcp
           ToPort: !Ref JupyterHttpPort
@@ -940,9 +990,17 @@ Outputs:
     Description: Teradata AI Unlimited private API Access
     Value: !Sub http://${AiUnlimitedServer.PrivateDnsName}:${ AiUnlimitedGrpcPort }
 
-  SecurityGroup:
+  InstanceSecurityGroups:
     Description: AI Unlimited Security Group
-    Value: !GetAtt AiUnlimitedSecurityGroup.GroupId
+    Value: !Join
+      - ', '
+      - - !GetAtt AiUnlimitedSecurityGroup.GroupId
+        - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
+        - !GetAtt JupyterSecurityGroup.GroupId
+        - !If
+          - HASKEYANDCIDRORPREFIXLISTORSECGROUP
+          - !GetAtt SecurityGroupIngress.GroupId
+          - !Ref AWS::NoValue
 
   PublicSSHConeection:
     Description: AI Unlimited ssh connnection string

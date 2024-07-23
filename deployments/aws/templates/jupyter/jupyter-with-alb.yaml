@@ -317,6 +317,10 @@ Conditions:
       - !Ref SecurityGroup
       - ""
 
+  HASCIDRORPREFIXLIST: !Or
+    - !Condition HASCIDR
+    - !Condition HASPREFIXLIST
+
   HASCIDRORPREFIXLISTORSECGROUP: !Or
     - !Condition HASCIDR
     - !Condition HASPREFIXLIST
@@ -504,6 +508,10 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !GetAtt JupyterSecurityGroup.GroupId
+            - !If
+              - HASKEYANDCIDRORPREFIXLISTORSECGROUP
+              - !GetAtt SecurityGroupIngress.GroupId
+              - !Ref AWS::NoValue
           AssociatePublicIpAddress: !If
             - HASPUBLICIP
             - true
@@ -547,7 +555,7 @@ Resources:
           /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource JupyterServer --configsets jupyter_install --region ${AWS::Region}
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource JupyterServer --region ${AWS::Region}
 
-  LoadBalancerSecurityGroup:
+  LoadBalancerJupyterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref Vpc
@@ -578,7 +586,7 @@ Resources:
         - !Ref LoadBalancerSubnetOne
         - !Ref LoadBalancerSubnetTwo
       SecurityGroups:
-        - !GetAtt LoadBalancerSecurityGroup.GroupId
+        - !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
       Type: application
 
   JupyterHTTPListener:
@@ -640,7 +648,14 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref JupyterHttpPort
           ToPort: !Ref JupyterHttpPort
-          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+          SourceSecurityGroupId: !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
+        - !If
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref JupyterHttpPort
+            ToPort: !Ref JupyterHttpPort
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
 
   SecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -777,9 +792,21 @@ Outputs:
     Description: Loadbalancer access endpoint for API Access
     Value: !Sub https://${ DnsName }:${ JupyterHttpPort }?token=${ JupyterToken }
 
-  SecurityGroup:
-    Description: Jupyter Security Group
-    Value: !GetAtt JupyterSecurityGroup.GroupId
+  InstanceSecurityGroups:
+    Description: AI Unlimited Security Group
+    Value: !Join
+      - ', '
+      - - !GetAtt JupyterSecurityGroup.GroupId
+        - !If
+          - HASKEYANDCIDRORPREFIXLISTORSECGROUP
+          - !GetAtt SecurityGroupIngress.GroupId
+          - !Ref AWS::NoValue
+
+  LoadBalancerSecurityGroups:
+    Description: AI Unlimited Load Balancer Security Group
+    Value: !Join
+      - ', '
+      - - !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
 
   PublicSSHConeection:
     Description: Jupyter ssh connnection string
