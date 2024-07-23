@@ -959,7 +959,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: HTTP
+      HealthCheckProtocol: TCP
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
       Name: !Join
