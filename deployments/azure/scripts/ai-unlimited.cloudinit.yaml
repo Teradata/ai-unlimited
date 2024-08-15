@@ -26,7 +26,6 @@ runcmd:
 - while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
 - echo "TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)" > /tmp/init_api_key.txt
 - sleep 60
-- az acr login
 - systemctl enable ai-unlimited.service
 - systemctl start ai-unlimited.service
 - systemctl enable ai-unlimited-scheduler.service
