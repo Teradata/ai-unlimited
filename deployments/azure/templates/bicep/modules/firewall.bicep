@@ -9,6 +9,7 @@ param aiUnlimitedHttpPort int = 0
 param aiUnlimitedGrpcPort int = 0
 param aiUnlimitedSchedulerHttpPort int = 0
 // param aiUnlimitedSchedulerGrpcPort int = 0
+param aiUnlimitedUIHttpPort int = 0
 param jupyterHttpPort int = 0
 param tags object = {}
 
@@ -159,6 +160,33 @@ resource AiUnlimitedSchedulerHTTP 'Microsoft.Network/networkSecurityGroups/secur
     destinationPortRange: string(aiUnlimitedSchedulerHttpPort) // destinationPortRanges: []
     direction: 'Inbound'
     priority: 704
+    protocol: 'Tcp'
+    sourceAddressPrefixes: accessCidrs // sourceAddressPrefix: 'string'
+    sourceApplicationSecurityGroups: [for secgroup in sourceAppSecGroups: {
+      id: secgroup
+      location: location
+    }
+    ]
+    sourcePortRange: '*' // sourcePortRanges: []
+  }
+}
+
+resource AiUnlimitedUIHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedUIHttpPort != 0) {
+  name: '${name}-workspace-ui-http-allow'
+  parent: networkSecurityGroup
+
+  properties: {
+    access: 'Allow'
+    description: 'allow http to the workspace ui instance'
+    destinationAddressPrefix: '*' // destinationAddressPrefixes: []
+    destinationApplicationSecurityGroups: [for secgroup in detinationAppSecGroups: {
+      id: secgroup
+      location: location
+    }
+    ]
+    destinationPortRange: string(aiUnlimitedUIHttpPort) // destinationPortRanges: []
+    direction: 'Inbound'
+    priority: 705
     protocol: 'Tcp'
     sourceAddressPrefixes: accessCidrs // sourceAddressPrefix: 'string'
     sourceApplicationSecurityGroups: [for secgroup in sourceAppSecGroups: {
