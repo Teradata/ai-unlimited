@@ -45,6 +45,9 @@ param AiUnlimitedGrpcPort int = 3282
 // @description('port to access the AI Unlimited scheduler service grpc api.')
 var AiUnlimitedSchedulerHttpPort = 50061
 
+@description('port to access the AI Unlimited service UI.')
+param AiUnlimitedUIHttpPort int = 80
+
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
 
@@ -74,6 +77,9 @@ param ExistingPersistentVolume string = 'NONE'
 @description('Container Version of the AI Unlimited service')
 param AiUnlimitedVersion string = 'latest'
 
+@description('Container Version of the AI Unlimited UI service')
+param AiUnlimitedUIVersion string = 'latest'
+
 // @description('Container Version of the AI Unlimited scheduler service')
 var AiUnlimitedSchedulerVersion = 'latest'
 
@@ -89,29 +95,49 @@ var nlbDnsLabelPrefix = 'td${dnsId}-nlb'
 var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
+var workspaceUIRepository = 'ai-unlimited-workspaces-ui'
 
-var cloudInitData = base64(format(
-  loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
-  base64(format(
-    loadTextContent('../../../scripts/ai-unlimited.service'),
-    registry,
-    workspaceRepository,
-    AiUnlimitedVersion,
-    AiUnlimitedHttpPort,
-    AiUnlimitedGrpcPort,
-    subscription().subscriptionId,
-    subscription().tenantId,
-    '--network-alias ${nlb.outputs.PublicDns}'
-  )),
-  base64(format(
-    loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
-    registry,
-    workspaceSchedulerRepository,
-    AiUnlimitedSchedulerVersion,
-    // AiUnlimitedSchedulerGrpcPort,
-    AiUnlimitedSchedulerHttpPort
-  ))
-))
+
+var cloudInitData = base64(
+  format(
+    loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
+    base64(
+      format(
+        loadTextContent('../../../scripts/ai-unlimited.service'),
+        registry,
+        workspaceRepository,
+        AiUnlimitedVersion,
+        AiUnlimitedHttpPort,
+        AiUnlimitedGrpcPort,
+        subscription().subscriptionId,
+        subscription().tenantId,
+        '--network-alias ${nlb.outputs.PublicDns}'
+      )
+    ),
+    base64(
+      format(
+        loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
+        registry,
+        workspaceSchedulerRepository,
+        AiUnlimitedSchedulerVersion,
+        // AiUnlimitedSchedulerGrpcPort,
+        AiUnlimitedSchedulerHttpPort
+      )
+    ),
+    base64(
+      format(
+        loadTextContent('../../../scripts/ai-unlimited-ui.service'),
+        registry,
+        workspaceUIRepository,
+        AiUnlimitedUIVersion,
+        AiUnlimitedUIHttpPort,
+        AiUnlimitedHttpPort,
+        AiUnlimitedGrpcPort,
+        '--network-alias ${nlb.outputs.PublicDns}'
+      )
+    )
+  )
+)
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
@@ -182,6 +208,7 @@ module firewall '../modules/firewall.bicep' = {
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
     // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
+    aiUnlimitedUIHttpPort: AiUnlimitedUIHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
     sshAccess: AllowPublicSSH
@@ -200,6 +227,7 @@ module nlb '../modules/nlb.bicep' = {
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
     // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
+    aiUnlimitedUIHttpPort: AiUnlimitedUIHttpPort
     tags: Tags
   }
 }
@@ -239,8 +267,8 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 output PublicIP string = nlb.outputs.PublicIp
 output PrivateIP string = aiUnlimited.outputs.PrivateIP
-output AiUnlimitedPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${AiUnlimitedHttpPort}'
-output AiUnlimitedPrivateHttpAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedHttpPort}'
+output AiUnlimitedPublicHttpAccess string = concat('http://${nlb.outputs.PublicDns}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
+output AiUnlimitedPrivateHttpAccess string = concat('http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedHttpPort}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
 output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${AiUnlimitedGrpcPort}'
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
 output sshCommand string = 'ssh azureuser@${aiUnlimited.outputs.PrivateIP}'
