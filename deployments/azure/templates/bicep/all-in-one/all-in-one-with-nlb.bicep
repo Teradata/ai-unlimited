@@ -134,7 +134,11 @@ var cloudInitData = base64(format(
     registry,
     workspaceSchedulerRepository,
     AiUnlimitedSchedulerVersion,
+<<<<<<< HEAD
     // AiUnlimitedSchedulerGrpcPort,
+=======
+    AiUnlimitedSchedulerGrpcPort,
+>>>>>>> 44f28cd (Reformating cloud-init data.)
     AiUnlimitedSchedulerHttpPort
   )),
   base64(format(
