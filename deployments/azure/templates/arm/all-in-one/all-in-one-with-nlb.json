@@ -314,7 +314,7 @@
         "mode": "Incremental",
         "parameters": {
           "vaultName": {
-            "value": "[parameters('AiUnlimitedName')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault'), '2022-09-01').outputs.name.value]"
           },
           "accessPolicy": {
             "value": {

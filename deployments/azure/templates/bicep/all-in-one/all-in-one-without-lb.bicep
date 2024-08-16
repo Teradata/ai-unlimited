@@ -167,7 +167,7 @@ module vaultAccessPolicy '../modules/vault/access-policy.bicep' = if (UseKeyVaul
   scope: rg
   name: 'vault-access-policy'
   params: {
-    vaultName: AiUnlimitedName
+    vaultName: vault.outputs.name
     accessPolicy: {
       tenantId: subscription().tenantId
       objectId: aiUnlimited.outputs.PrincipleId
