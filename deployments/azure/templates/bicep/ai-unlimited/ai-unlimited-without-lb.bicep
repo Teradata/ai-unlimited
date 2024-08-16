@@ -95,46 +95,38 @@ var workspaceRepository = 'ai-unlimited-workspaces'
 var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 var workspaceUIRepository = 'ai-unlimited-workspaces-ui'
 
-var cloudInitData = base64(
-  format(
-    loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
-    base64(
-      format(
-        loadTextContent('../../../scripts/ai-unlimited.service'),
-        registry,
-        workspaceRepository,
-        AiUnlimitedVersion,
-        AiUnlimitedHttpPort,
-        AiUnlimitedGrpcPort,
-        subscription().subscriptionId,
-        subscription().tenantId,
-        '--network-alias ai-unlimited'
-      )
-    ),
-    base64(
-      format(
-        loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
-        registry,
-        workspaceSchedulerRepository,
-        AiUnlimitedSchedulerVersion,
-        // AiUnlimitedSchedulerGrpcPort,
-        AiUnlimitedSchedulerHttpPort
-      )
-    ),
-    base64(
-      format(
-        loadTextContent('../../../scripts/ai-unlimited-ui.service'),
-        registry,
-        workspaceUIRepository,
-        AiUnlimitedUIVersion,
-        AiUnlimitedUIHttpPort,
-        AiUnlimitedHttpPort,
-        AiUnlimitedGrpcPort,
-        '--network-alias ai-unlimited'
-      )
-    )
-  )
-)
+var cloudInitData = base64(format(
+  loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
+  base64(format(
+    loadTextContent('../../../scripts/ai-unlimited.service'),
+    registry,
+    workspaceRepository,
+    AiUnlimitedVersion,
+    AiUnlimitedHttpPort,
+    AiUnlimitedGrpcPort,
+    subscription().subscriptionId,
+    subscription().tenantId,
+    '--network-alias ai-unlimited'
+  )),
+  base64(format(
+    loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
+    registry,
+    workspaceSchedulerRepository,
+    AiUnlimitedSchedulerVersion,
+    // AiUnlimitedSchedulerGrpcPort,
+    AiUnlimitedSchedulerHttpPort
+  )),
+  base64(format(
+    loadTextContent('../../../scripts/ai-unlimited-ui.service'),
+    registry,
+    workspaceUIRepository,
+    AiUnlimitedUIVersion,
+    AiUnlimitedUIHttpPort,
+    AiUnlimitedHttpPort,
+    AiUnlimitedGrpcPort,
+    '--network-alias ai-unlimited'
+  ))
+))
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' existing = {
   name: ResourceGroupName
