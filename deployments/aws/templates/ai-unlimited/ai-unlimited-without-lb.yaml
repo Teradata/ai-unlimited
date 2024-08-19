@@ -910,10 +910,6 @@ Outputs:
       - ', '
       - - !GetAtt AiUnlimitedSecurityGroup.GroupId
         - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
-        - !If
-          - HASKEYANDCIDRORPREFIXLISTORSECGROUP
-          - !GetAtt SecurityGroupIngress.GroupId
-          - !Ref AWS::NoValue
 
   PublicSSHConeection:
     Description: AI Unlimited ssh connnection string

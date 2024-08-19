@@ -1314,10 +1314,6 @@ Outputs:
       - - !GetAtt AiUnlimitedSecurityGroup.GroupId
         - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
         - !GetAtt JupyterSecurityGroup.GroupId
-        - !If
-          - HASKEYANDCIDRORPREFIXLISTORSECGROUP
-          - !GetAtt SecurityGroupIngress.GroupId
-          - !Ref AWS::NoValue
 
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
