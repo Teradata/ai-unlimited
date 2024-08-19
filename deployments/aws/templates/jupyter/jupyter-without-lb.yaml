@@ -481,10 +481,6 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !GetAtt JupyterSecurityGroup.GroupId
-            - !If
-              - HASKEYANDCIDRORPREFIXLISTORSECGROUP
-              - !GetAtt SecurityGroupIngress.GroupId
-              - !Ref AWS::NoValue
           AssociatePublicIpAddress: !If
             - HASPUBLICIP
             - true
