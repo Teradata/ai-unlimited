@@ -568,10 +568,6 @@ Resources:
           GroupSet:
             - !GetAtt AiUnlimitedSecurityGroup.GroupId
             - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
-            - !If
-              - HASKEYANDCIDRORPREFIXLISTORSECGROUP
-              - !GetAtt SecurityGroupIngress.GroupId
-              - !Ref AWS::NoValue
           AssociatePublicIpAddress: !If
             - HASPUBLICIP
             - true
