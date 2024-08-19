@@ -22,6 +22,6 @@ param UseKeyVault = 'New'
 param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
-param AiUnlimitedVersion = 'latest'
+param AiUnlimitedVersion = 'v0.2.23'
 // param AiUnlimitedSchedulerVersion = 'latest'
 param Tags = {}
