@@ -85,7 +85,7 @@
   },
   {
     "ParameterKey": "AiUnlimitedVersion",
-    "ParameterValue": "latest"
+    "ParameterValue": "v0.2.23"
   },
   {
     "ParameterKey": "UsePersistentVolume",

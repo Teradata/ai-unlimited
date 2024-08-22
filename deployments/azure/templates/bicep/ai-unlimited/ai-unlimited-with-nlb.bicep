@@ -72,7 +72,7 @@ param PersistentVolumeSize int = 100
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the AI Unlimited service')
-param AiUnlimitedVersion string = 'latest'
+param AiUnlimitedVersion string = 'v0.2.23'
 
 // @description('Container Version of the AI Unlimited scheduler service')
 var AiUnlimitedSchedulerVersion = 'latest'

@@ -496,10 +496,6 @@ Resources:
           SubnetId: !Ref Subnet
           GroupSet:
             - !GetAtt JupyterSecurityGroup.GroupId
-            - !If
-              - HASKEYANDCIDRORPREFIXLISTORSECGROUP
-              - !GetAtt SecurityGroupIngress.GroupId
-              - !Ref AWS::NoValue
           AssociatePublicIpAddress: !If
             - HASPUBLICIP
             - true
@@ -755,13 +751,8 @@ Outputs:
 
   InstanceSecurityGroups:
     Description: AI Unlimited Security Group
-    Value: !Join
-      - ', '
-      - - !GetAtt JupyterSecurityGroup.GroupId
-        - !If
-          - HASKEYANDCIDRORPREFIXLISTORSECGROUP
-          - !GetAtt SecurityGroupIngress.GroupId
-          - !Ref AWS::NoValue
+    Value: !GetAtt JupyterSecurityGroup.GroupId
+
 
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
