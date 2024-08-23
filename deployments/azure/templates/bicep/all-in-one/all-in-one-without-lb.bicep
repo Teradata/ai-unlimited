@@ -36,8 +36,8 @@ param AccessCIDRs array = ['0.0.0.0/0']
 @description('port to access the Jupyter Labs UI.')
 param JupyterHttpPort int = 8888
 
-@description('port to access the AI Unlimited service UI.')
-param AiUnlimitedHttpPort int = 3000
+@description('port to access the AI Unlimited auth service.')
+param AiUnlimitedAuthPort int = 3000
 
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
@@ -113,7 +113,7 @@ var cloudInitData = base64(format(
     registry,
     workspaceRepository,
     AiUnlimitedVersion,
-    AiUnlimitedHttpPort,
+    AiUnlimitedAuthPort,
     AiUnlimitedGrpcPort,
     subscription().subscriptionId,
     subscription().tenantId,
@@ -141,7 +141,7 @@ var cloudInitData = base64(format(
     workspaceUIRepository,
     AiUnlimitedUIVersion,
     AiUnlimitedUIHttpPort,
-    AiUnlimitedHttpPort,
+    AiUnlimitedAuthPort,
     AiUnlimitedGrpcPort,
     '--network-alias ai-unlimited'
   ))
@@ -213,7 +213,7 @@ module firewall '../modules/firewall.bicep' = {
     name: SecurityGroup
     accessCidrs: AccessCIDRs
     sshAccess: AllowPublicSSH
-    aiUnlimitedHttpPort: AiUnlimitedHttpPort
+    aiUnlimitedAuthPort: AiUnlimitedAuthPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
     // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort

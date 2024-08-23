@@ -12,7 +12,7 @@ param AccessCIDRs = [
   '0.0.0.0/0'
 ]
 param JupyterHttpPort = 8888
-param AiUnlimitedHttpPort = 3000
+param AiUnlimitedAuthPort = 3000
 param AiUnlimitedGrpcPort = 3282
 // param AiUnlimitedSchedulerGrpcPort = 50051
 // param AiUnlimitedSchedulerHttpPort = 50061

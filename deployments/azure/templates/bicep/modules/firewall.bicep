@@ -5,7 +5,7 @@ param accessCidrs array = []
 param sourceAppSecGroups array = []
 param detinationAppSecGroups array = []
 param sshAccess bool = false
-param aiUnlimitedHttpPort int = 0
+param aiUnlimitedAuthPort int = 0
 param aiUnlimitedGrpcPort int = 0
 param aiUnlimitedSchedulerHttpPort int = 0
 // param aiUnlimitedSchedulerGrpcPort int = 0
@@ -74,8 +74,8 @@ resource sshAllow 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04
 //   }
 // }
 
-resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedHttpPort != 0) {
-  name: '${uniqueSecurityGroupName}-workspace-http-allow'
+resource AiUnlimitedAuth 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedAuthPort != 0) {
+  name: '${uniqueSecurityGroupName}-workspace-auth-allow'
   parent: networkSecurityGroup
 
   properties: {
@@ -88,7 +88,7 @@ resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@
         location: location
       }
     ]
-    destinationPortRange: string(aiUnlimitedHttpPort) // destinationPortRanges: []
+    destinationPortRange: string(aiUnlimitedAuthPort) // destinationPortRanges: []
     direction: 'Inbound'
     priority: 701
     protocol: 'Tcp'

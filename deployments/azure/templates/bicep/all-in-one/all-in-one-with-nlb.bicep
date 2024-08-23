@@ -36,8 +36,8 @@ param AccessCIDRs array = ['0.0.0.0/0']
 @description('port to access the Jupyter Labs UI.')
 param JupyterHttpPort int = 8888
 
-@description('port to access the AI Unlimited service UI.')
-param AiUnlimitedHttpPort int = 3000
+@description('port to access the AI Unlimited auth service.')
+param AiUnlimitedAuthPort int = 3000
 
 @description('port to access the AI Unlimited service api.')
 param AiUnlimitedGrpcPort int = 3282
@@ -115,7 +115,7 @@ var cloudInitData = base64(format(
     registry,
     workspaceRepository,
     AiUnlimitedVersion,
-    AiUnlimitedHttpPort,
+    AiUnlimitedAuthPort,
     AiUnlimitedGrpcPort,
     subscription().subscriptionId,
     subscription().tenantId,
@@ -143,7 +143,7 @@ var cloudInitData = base64(format(
     workspaceUIRepository,
     AiUnlimitedUIVersion,
     AiUnlimitedUIHttpPort,
-    AiUnlimitedHttpPort,
+    AiUnlimitedAuthPort,
     AiUnlimitedGrpcPort,
     '--network-alias ${nlb.outputs.PublicDns}'
   ))
@@ -215,7 +215,7 @@ module firewall '../modules/firewall.bicep' = {
     name: SecurityGroup
     accessCidrs: AccessCIDRs
     sshAccess: AllowPublicSSH
-    aiUnlimitedHttpPort: AiUnlimitedHttpPort
+    aiUnlimitedAuthPort: AiUnlimitedAuthPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
     // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
@@ -234,7 +234,7 @@ module nlb '../modules/nlb.bicep' = {
     name: AiUnlimitedName
     location: rg.location
     dnsPrefix: dnsLabelPrefix
-    aiUnlimitedHttpPort: AiUnlimitedHttpPort
+    aiUnlimitedAuthPort: AiUnlimitedAuthPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
     // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
@@ -280,7 +280,7 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 output PublicIP string = nlb.outputs.PublicIp
 output PrivateIP string = aiUnlimited.outputs.PrivateIP
 output AiUnlimitedPublicHttpAccess string = concat('http://${nlb.outputs.PublicDns}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
-output AiUnlimitedPrivateHttpAccess string = concat('http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedHttpPort}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
+output AiUnlimitedPrivateHttpAccess string = concat('http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedAuthPort}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
 output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${AiUnlimitedGrpcPort}'
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
 output JupyterLabPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${JupyterHttpPort}?token=${JupyterToken}'
