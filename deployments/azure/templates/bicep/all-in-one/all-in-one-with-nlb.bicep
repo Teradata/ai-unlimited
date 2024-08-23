@@ -280,7 +280,7 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 output PublicIP string = nlb.outputs.PublicIp
 output PrivateIP string = aiUnlimited.outputs.PrivateIP
 output AiUnlimitedPublicHttpAccess string = concat('http://${nlb.outputs.PublicDns}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
-output AiUnlimitedPrivateHttpAccess string = concat('http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedAuthPort}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
+output AiUnlimitedPrivateHttpAccess string = concat('http://${aiUnlimited.outputs.PrivateIP}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
 output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${AiUnlimitedGrpcPort}'
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
 output JupyterLabPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${JupyterHttpPort}?token=${JupyterToken}'
