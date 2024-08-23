@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "11310516888194693121"
+      "templateHash": "17471393245353229631"
     }
   },
   "parameters": {
@@ -75,11 +75,11 @@
         "description": "The CIDR ranges that can be used to communicate with the AI Unlimited service instance."
       }
     },
-    "AiUnlimitedHttpPort": {
+    "AiUnlimitedAuthPort": {
       "type": "int",
       "defaultValue": 3000,
       "metadata": {
-        "description": "port to access the AI Unlimited service UI."
+        "description": "port to access the AI Unlimited auth service."
       }
     },
     "AiUnlimitedGrpcPort": {
@@ -194,7 +194,7 @@
     "workspaceRepository": "ai-unlimited-workspaces",
     "workspaceSchedulerRepository": "ai-unlimited-scheduler",
     "workspaceUIRepository": "ai-unlimited-workspaces-ui",
-    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, '--network-alias ai-unlimited')), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), variables('AiUnlimitedSchedulerVersion'), variables('AiUnlimitedSchedulerHttpPort'))), base64(format(variables('$fxv#3'), variables('registry'), variables('workspaceUIRepository'), parameters('AiUnlimitedUIVersion'), parameters('AiUnlimitedUIHttpPort'), parameters('AiUnlimitedHttpPort'), parameters('AiUnlimitedGrpcPort'), '--network-alias ai-unlimited'))))]"
+    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, '--network-alias ai-unlimited')), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), variables('AiUnlimitedSchedulerVersion'), variables('AiUnlimitedSchedulerHttpPort'))), base64(format(variables('$fxv#3'), variables('registry'), variables('workspaceUIRepository'), parameters('AiUnlimitedUIVersion'), parameters('AiUnlimitedUIHttpPort'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), '--network-alias ai-unlimited'))))]"
   },
   "resources": [
     {
@@ -413,8 +413,8 @@
           "sshAccess": {
             "value": "[parameters('AllowPublicSSH')]"
           },
-          "aiUnlimitedHttpPort": {
-            "value": "[parameters('AiUnlimitedHttpPort')]"
+          "aiUnlimitedAuthPort": {
+            "value": "[parameters('AiUnlimitedAuthPort')]"
           },
           "aiUnlimitedGrpcPort": {
             "value": "[parameters('AiUnlimitedGrpcPort')]"
@@ -442,7 +442,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.29.47.4906",
-              "templateHash": "14464115164304997192"
+              "templateHash": "17204210556751390284"
             }
           },
           "parameters": {
@@ -468,7 +468,7 @@
               "type": "bool",
               "defaultValue": false
             },
-            "aiUnlimitedHttpPort": {
+            "aiUnlimitedAuthPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -549,10 +549,10 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 0))]",
+              "condition": "[not(equals(parameters('aiUnlimitedAuthPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
-              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-http-allow', variables('uniqueSecurityGroupName')))]",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-auth-allow', variables('uniqueSecurityGroupName')))]",
               "properties": {
                 "copy": [
                   {
@@ -575,7 +575,7 @@
                 "access": "Allow",
                 "description": "allow http to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[string(parameters('aiUnlimitedHttpPort'))]",
+                "destinationPortRange": "[string(parameters('aiUnlimitedAuthPort'))]",
                 "direction": "Inbound",
                 "priority": 701,
                 "protocol": "Tcp",
