@@ -1,7 +1,7 @@
 param name string
 param location string
 param dnsPrefix string
-param aiUnlimitedHttpPort int = 0
+param aiUnlimitedAuthPort int = 0
 param aiUnlimitedGrpcPort int = 0
 param aiUnlimitedSchedulerHttpPort int = 0
 // param aiUnlimitedSchedulerGrpcPort int = 0
@@ -63,10 +63,10 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
       }
     ]
     loadBalancingRules: flatten([
-      aiUnlimitedHttpPort != 0
+      aiUnlimitedAuthPort != 0
         ? [
             {
-              name: 'AiUnlimitedHTTP'
+              name: 'AiUnlimitedAuth'
               properties: {
                 frontendIPConfiguration: {
                   id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', name, '${name}Inbound')
@@ -78,8 +78,8 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
                     '${name}OutboundBackendPool'
                   )
                 }
-                frontendPort: aiUnlimitedHttpPort
-                backendPort: aiUnlimitedHttpPort
+                frontendPort: aiUnlimitedAuthPort
+                backendPort: aiUnlimitedAuthPort
                 enableFloatingIP: false
                 idleTimeoutInMinutes: 15
                 protocol: 'Tcp'
@@ -87,7 +87,7 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
                 loadDistribution: 'Default'
                 disableOutboundSnat: true
                 probe: {
-                  id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}HTTPLbProbe')
+                  id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}AuthLbProbe')
                 }
               }
             }
@@ -245,13 +245,14 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
         : []
     ])
     probes: flatten([
-      aiUnlimitedHttpPort != 0
+      aiUnlimitedAuthPort != 0
         ? [
             {
-              name: '${name}HTTPLbProbe'
+              name: '${name}AuthLbProbe'
               properties: {
-                protocol: 'Tcp'
-                port: aiUnlimitedHttpPort
+                protocol: 'Http'
+                port: aiUnlimitedAuthPort
+                requestPath: '/healthcheck'
                 intervalInSeconds: 5
                 numberOfProbes: 2
               }

@@ -11,7 +11,7 @@ param SecurityGroup = 'AiUnlimitedSecurityGroup'
 param AccessCIDRs = [
   '0.0.0.0/0'
 ]
-param AiUnlimitedHttpPort = 3000
+param AiUnlimitedAuthPort = 3000
 param AiUnlimitedGrpcPort = 3282
 // param AiUnlimitedSchedulerHttpPort = 50061
 // param AiUnlimitedSchedulerGrpcPort = 50051
