@@ -505,7 +505,7 @@ Resources:
                 EnvironmentFile=/tmp/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-ui:${ AiUnlimitedUiVersion }
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
                 ExecStart=/usr/bin/docker run \
                   -e accept_license=Y \
                   -e PLATFORM=aws \
@@ -515,7 +515,7 @@ Resources:
                   -e TD_VCD_INIT_API_KEY \
                   -p ${ AiUnlimitedUiPort }:80 \
                   --network ai_unlimited \
-                  --rm --name %n teradata/ai-unlimited-ui:${ AiUnlimitedUiVersion }
+                  --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
                 [Install]
                 WantedBy=multi-user.target
               group: root
