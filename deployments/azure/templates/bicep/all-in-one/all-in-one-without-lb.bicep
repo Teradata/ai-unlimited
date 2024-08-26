@@ -81,7 +81,7 @@ param ExistingPersistentVolume string = 'NONE'
 param AiUnlimitedVersion string = 'v0.3.0'
 
 @description('Container Version of the AI Unlimited UI service')
-param AiUnlimitedUIVersion string = 'v0.0.3'
+param AiUnlimitedUIVersion string = 'v0.0.5'
 
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
