@@ -489,10 +489,10 @@ Resources:
                 ensureRunning: "true"
         configure_ai_unlimited_ui_service:
           files:
-            /usr/lib/systemd/system/workspaces-ui.service:
+            /usr/lib/systemd/system/ai-unlimited-ui.service:
               content: !Sub |
                 [Unit]
-                Description=workspaces-ui
+                Description=ai-unlimited-ui
                 After=docker.service
                 Requires=docker.service
                 StartLimitInterval=200
