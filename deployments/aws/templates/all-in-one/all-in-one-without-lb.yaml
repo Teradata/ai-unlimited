@@ -27,7 +27,7 @@ Metadata:
           - AccessCIDR
           - PrefixList
           - SecurityGroup
-          - AiUnlimitedHttpPort
+          - AiUnlimitedAuthPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
           - AiUnlimitedSchedulerVersion
@@ -102,8 +102,8 @@ Parameters:
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of a existing subnet.
 
-  AiUnlimitedHttpPort:
-    Description: port to access the AI Unlimited UI.
+  AiUnlimitedAuthPort:
+    Description: port to access the AI Unlimited Authentication Service.
     Type: Number
     Default: 3000
     ConstraintDescription: must be a valid ununsed port between 0 and 65535.
@@ -437,9 +437,9 @@ Resources:
             - create_init_api_key
             - mount_storage
             - install_docker
-            - configure_workspaces_ui_service
+            - configure_ai_unlimited_ui_service
             - configure_ai_unlimited_service
-            - start_workspaces_ui_service
+            - start_ai_unlimited_ui_service
             - start_ai_unlimited_service
             - configure_jupyter_service
             - configure_ai_unlimited_scheduler_service
@@ -501,12 +501,12 @@ Resources:
               docker:
                 enabled: "true"
                 ensureRunning: "true"
-        configure_workspaces_ui_service:
+        configure_ai_unlimited_ui_service:
           files:
-            /usr/lib/systemd/system/workspaces-ui.service:
+            /usr/lib/systemd/system/ai-unlimited-ui.service:
               content: !Sub |
                 [Unit]
-                Description=workspaces-ui
+                Description=ai-unlimited-ui
                 After=docker.service
                 Requires=docker.service
                 StartLimitInterval=200
@@ -518,30 +518,30 @@ Resources:
                 RestartSec=2
                 
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
-                ExecStartPre=-/usr/bin/mkdir -p /etc/td/workspaces-ui
+                ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
                 EnvironmentFile=/tmp/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-ui:${ AiUnlimitedUiVersion }
                 ExecStart=/usr/bin/docker run \
                   -e accept_license=Y \
                   -e PLATFORM=aws \
                   -e TD_VCD_UI_PORT=${ AiUnlimitedUiPort } \
-                  -e TD_VCD_API_PORT=3282 \
-                  -e TD_VCD_AUTH_PORT=3000 \
+                  -e TD_VCD_API_PORT=${ AiUnlimitedGrpcPort } \
+                  -e TD_VCD_AUTH_PORT=${ AiUnlimitedAuthPort } \
                   -e TD_VCD_INIT_API_KEY \
                   -p ${ AiUnlimitedUiPort }:80 \
                   --network ai_unlimited \
-                  --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
+                  --rm --name %n teradata/ai-unlimited-ui:${ AiUnlimitedUiVersion }
                 [Install]
                 WantedBy=multi-user.target
               group: root
               mode: "000400"
               owner: root
-        start_workspaces_ui_service:
+        start_ai_unlimited_ui_service:
           services:
             systemd:
-              workspaces-ui:
+              ai-unlimited-ui:
                 enabled: "true"
                 ensureRunning: "true"
         configure_ai_unlimited_service:
@@ -569,7 +569,7 @@ Resources:
                     -e PLATFORM=aws \
                     -e TD_VCD_INIT_API_KEY \
                     -v /etc/td/ai-unlimited:/etc/td \
-                    -p ${ AiUnlimitedHttpPort }:3000 \
+                    -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
                     --network ai_unlimited \
                     --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
@@ -722,9 +722,9 @@ Resources:
       VpcId: !Ref Vpc
       GroupDescription: Enable access to AI Unlimited server over http and grpc
       SecurityGroupIngress:
-        - FromPort: !Ref AiUnlimitedHttpPort
+        - FromPort: !Ref AiUnlimitedAuthPort
           IpProtocol: tcp
-          ToPort: !Ref AiUnlimitedHttpPort
+          ToPort: !Ref AiUnlimitedAuthPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -1068,7 +1068,7 @@ Outputs:
   AiUnlimitedPublicUIAccess:
     Description: Teradata AI Unlimited public UI Access
     Value: !If [ PortIsNotEightyAndHasPublicIp,
-                 !Sub "http://${AiUnlimitedServer.PublicDnsName}:${AiUnlimitedUiPort}/landing",
+                 !Sub "http://${AiUnlimitedServer.PublicDnsName}:${AiUnlimitedUiPort}/healthcheck",
                  !Sub "http://${AiUnlimitedServer.PublicDnsName}" ]
     Condition: HASPUBLICIP
 
@@ -1076,7 +1076,7 @@ Outputs:
     Description: Teradata AI Unlimited private UI Access
     Value: !If
       - PortIsNotEighty
-      - !Sub "http://${AiUnlimitedServer.PrivateDnsName}:${AiUnlimitedUiPort}/landing"
+      - !Sub "http://${AiUnlimitedServer.PrivateDnsName}:${AiUnlimitedUiPort}/healthcheck"
       - !Sub "http://${AiUnlimitedServer.PrivateDnsName}"
 
   AiUnlimitedPublicAPIAccess:

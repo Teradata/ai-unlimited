@@ -29,7 +29,7 @@ Metadata:
           - AccessCIDR
           - PrefixList
           - SecurityGroup
-          - AiUnlimitedHttpPort
+          - AiUnlimitedAuthPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
           - AiUnlimitedSchedulerVersion
@@ -117,7 +117,7 @@ Parameters:
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of a existing subnet.
 
-  AiUnlimitedHttpPort:
+  AiUnlimitedAuthPort:
     Description: port to access the AI Unlimited UI.
     Type: Number
     Default: 3000
@@ -441,10 +441,10 @@ Resources:
             - create_init_api_key
             - mount_storage
             - install_docker
-            - configure_workspaces_ui_service
+            - configure_ai_unlimited_ui_service
             - configure_ai_unlimited_service
             - configure_jupyter_service
-            - start_workspaces_ui_service
+            - start_ai_unlimited_ui_service
             - start_ai_unlimited_service
             - configure_ai_unlimited_scheduler_service
             - start_ai_unlimited_scheduler_service
@@ -505,12 +505,12 @@ Resources:
               docker:
                 enabled: "true"
                 ensureRunning: "true"
-        configure_workspaces_ui_service:
+        configure_ai_unlimited_ui_service:
           files:
-            /usr/lib/systemd/system/workspaces-ui.service:
+            /usr/lib/systemd/system/ai-unlimited-ui.service:
               content: !Sub |
                 [Unit]
-                Description=workspaces-ui
+                Description=ai-unlimited-ui
                 After=docker.service
                 Requires=docker.service
                 StartLimitInterval=200
@@ -522,11 +522,11 @@ Resources:
                 RestartSec=2
                 
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
-                ExecStartPre=-/usr/bin/mkdir -p /etc/td/workspaces-ui
+                ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
                 EnvironmentFile=/tmp/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-ui:${ AiUnlimitedUiVersion }
                 ExecStart=/usr/bin/docker run \
                   -e accept_license=Y \
                   -e PLATFORM=aws \
@@ -536,16 +536,16 @@ Resources:
                   -e TD_VCD_INIT_API_KEY \
                   -p ${ AiUnlimitedUiPort }:80 \
                   --network ai_unlimited \
-                  --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
+                  --rm --name %n teradata/ai-unlimited-ui:${ AiUnlimitedUiVersion }
                 [Install]
                 WantedBy=multi-user.target
               group: root
               mode: "000400"
               owner: root
-        start_workspaces_ui_service:
+        start_ai_unlimited_ui_service:
           services:
             systemd:
-              workspaces-ui:
+              ai-unlimited-ui:
                 enabled: "true"
                 ensureRunning: "true"
         configure_ai_unlimited_service:
@@ -573,7 +573,7 @@ Resources:
                     -e PLATFORM=aws \
                     -e TD_VCD_INIT_API_KEY \
                     -v /etc/td/ai-unlimited:/etc/td \
-                    -p ${ AiUnlimitedHttpPort }:3000 \
+                    -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
                     --network ai_unlimited \
                     --net-alias ${ LoadBalancer.DNSName } \
@@ -728,9 +728,9 @@ Resources:
       VpcId: !Ref Vpc
       GroupDescription: Enable access to AI Unlimited server from LoadBalancer over http, grpc, and ssh
       SecurityGroupIngress:
-        - FromPort: !Ref AiUnlimitedHttpPort
+        - FromPort: !Ref AiUnlimitedAuthPort
           IpProtocol: tcp
-          ToPort: !Ref AiUnlimitedHttpPort
+          ToPort: !Ref AiUnlimitedAuthPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -847,7 +847,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref AiUnlimitedHTTPTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: !Ref AiUnlimitedHttpPort
+      Port: !Ref AiUnlimitedAuthPort
       Protocol: TCP
 
   AiUnlimitedUIListener:
@@ -920,7 +920,7 @@ Resources:
           - td-aiu
           - ui
           - http
-      Port: !Ref AiUnlimitedHttpPort
+      Port: !Ref AiUnlimitedAuthPort
       Protocol: TCP
       TargetGroupAttributes:
         - Key: stickiness.enabled
@@ -931,7 +931,7 @@ Resources:
           Value: "20"
       Targets:
         - Id: !Ref AiUnlimitedServer
-          Port: !Ref AiUnlimitedHttpPort
+          Port: !Ref AiUnlimitedAuthPort
       VpcId: !Ref Vpc
 
   AiUnlimitedUITargetGroup:
@@ -1115,8 +1115,8 @@ Resources:
       GroupDescription: Enable access to AI Unlimited server over http and grpc
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: !Ref AiUnlimitedHttpPort
-          ToPort: !Ref AiUnlimitedHttpPort
+          FromPort: !Ref AiUnlimitedAuthPort
+          ToPort: !Ref AiUnlimitedAuthPort
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - IpProtocol: tcp
           FromPort: !Ref AiUnlimitedGrpcPort
@@ -1129,8 +1129,8 @@ Resources:
         - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
-            FromPort: !Ref AiUnlimitedHttpPort
-            ToPort: !Ref AiUnlimitedHttpPort
+            FromPort: !Ref AiUnlimitedAuthPort
+            ToPort: !Ref AiUnlimitedAuthPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
         - !If
@@ -1444,7 +1444,7 @@ Outputs:
     Description: Loadbalancer access endpoint for AI Unlimited UI Access
     Value: !If
       - PortIsNotEighty
-      - !Sub "http://${ LoadBalancer.DNSName }:${ AiUnlimitedUiPort }/landing"
+      - !Sub "http://${ LoadBalancer.DNSName }:${ AiUnlimitedUiPort }/healthcheck"
       - !Sub "http://${ LoadBalancer.DNSName }"
 
   AiUnlimitedApiAccess:
