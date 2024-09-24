@@ -14,7 +14,8 @@ services:
     volumes:
       - ${JUPYTER_HOME:-./volumes/jupyter}:/home/jovyan/JupyterLabRoot/userdata
     networks:
-      - ai-unlimited
+      - ai-unlimited-network
 
 networks:
-  ai-unlimited:
+  ai-unlimited-network:
+    name: ai-unlimited-network

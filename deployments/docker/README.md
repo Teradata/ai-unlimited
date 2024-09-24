@@ -2,6 +2,20 @@
 
 ## AI Unlimited
 
+### Pre-requisite Steps
+An initial API Key Environment Variable is required to start the Docker Compose Stack. You can generate one by doing the following:
+
+#### On OSX/Linux
+
+```
+source generate_api_key.sh
+```
+#### On Windows
+
+```
+./generate_api_key.ps1
+```
+Follow the instructions from the scripts output.
 ### With AWS
 
 ```
