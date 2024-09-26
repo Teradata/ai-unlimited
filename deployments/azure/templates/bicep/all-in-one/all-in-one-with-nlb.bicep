@@ -77,7 +77,7 @@ param AiUnlimitedVersion string = 'v0.3.0'
 param AiUnlimitedUIVersion string = 'v0.0.2'
 
 @description('Container Version of the Jupyter Labs service')
-param JupyterVersion string = 'latest'
+param JupyterVersion string = 'v0.0.43'
 
 // @description('Container Version of the AI Unlimited scheduler service')
 var AiUnlimitedSchedulerVersion = 'latest'
