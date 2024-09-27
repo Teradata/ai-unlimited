@@ -6,10 +6,6 @@ param ResourceGroupName string = 'ai-unlimited-workspace'
 @description('Name for the AI Unlimited service\'s virtual machine.')
 param AiUnlimitedName string
 
-@description('SSH public key value')
-@secure()
-param PublicKey string
-
 @description('The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version.')
 @allowed([
   'Ubuntu-1804'
@@ -57,9 +53,6 @@ param detinationAppSecGroups array = []
 @description('GUID of the AI Unlimited Role')
 param RoleDefinitionId string
 
-@description('allow access the AI Unlimited ssh port from the access cidr.')
-param AllowPublicSSH bool = true
-
 @description('should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes.')
 @allowed(['New', 'None'])
 param UseKeyVault string = 'New'
@@ -78,7 +71,7 @@ param ExistingPersistentVolume string = 'NONE'
 param AiUnlimitedVersion string = 'v0.3.0'
 
 @description('Container Version of the AI Unlimited UI service')
-param AiUnlimitedUIVersion string = 'v0.0.5'
+param AiUnlimitedUIVersion string = 'v0.0.2'
 
 // @description('Container Version of the AI Unlimited scheduler service')
 var AiUnlimitedSchedulerVersion = 'latest'
@@ -193,7 +186,7 @@ module firewall '../modules/firewall.bicep' = {
     location: rg.location
     name: SecurityGroup
     accessCidrs: AccessCIDRs
-    sshAccess: AllowPublicSSH
+    sshAccess: false
     aiUnlimitedAuthPort: AiUnlimitedAuthPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
@@ -212,7 +205,7 @@ module aiUnlimited '../modules/instance.bicep' = {
     location: rg.location
     name: AiUnlimitedName
     adminUsername: 'azureuser'
-    sshPublicKey: PublicKey
+    sshPublicKey: PublicKey.outputs.PublicKey
     dnsLabelPrefix: dnsLabelPrefix
     vmSize: InstanceType
     subnetId: subnet.id
@@ -224,6 +217,17 @@ module aiUnlimited '../modules/instance.bicep' = {
     existingPersistentVolume: ExistingPersistentVolume
     usePublicIp: true
     tags: Tags
+  }
+}
+
+module PublicKey '../modules/public-key.bicep' = {
+  scope: rg
+  name: 'Public-Key'
+  params: {
+    Name: AiUnlimitedName
+    Location: deployment().location
+    VaultName: vault.outputs.name
+    RoleID: RoleDefinitionId
   }
 }
 
@@ -242,6 +246,5 @@ output AiUnlimitedPublicHttpAccess string = concat('http://${aiUnlimited.outputs
 output AiUnlimitedPrivateHttpAccess string = concat('http://${aiUnlimited.outputs.PrivateIP}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
 output AiUnlimitedPublicGrpcAccess string = 'http://${aiUnlimited.outputs.PublicIP}:${AiUnlimitedGrpcPort}'
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
-output sshCommand string = 'ssh azureuser@${aiUnlimited.outputs.PublicIP}'
 output KeyVaultName string = (UseKeyVault == 'New') ? vault.outputs.name : ''
 output NetworkSecurityGroupId string = firewall.outputs.Id

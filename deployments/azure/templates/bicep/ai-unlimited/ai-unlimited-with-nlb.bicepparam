@@ -2,7 +2,6 @@ using './ai-unlimited-with-nlb.bicep'
 
 param ResourceGroupName = 'ai-unlimited-workspace'
 param AiUnlimitedName = ''
-param PublicKey = ''
 param OSVersion = 'Ubuntu-2004'
 param InstanceType = 'Standard_D2s_v3'
 param Network = ''
@@ -24,6 +23,6 @@ param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
 param AiUnlimitedVersion = 'v0.3.0'
-param AiUnlimitedUIVersion = 'v0.0.5'
+param AiUnlimitedUIVersion = 'v0.0.2'
 // param AiUnlimitedSchedulerVersion = 'latest'
 param Tags = {}
