@@ -6,10 +6,6 @@ param ResourceGroupName string = 'ai-unlimited-workspace'
 @description('Name for the Workspace service\'s virtual machine.')
 param AiUnlimitedName string
 
-@description('SSH public key value')
-@secure()
-param PublicKey string
-
 @description('The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version.')
 @allowed([
   'Ubuntu-1804'
@@ -60,9 +56,6 @@ param detinationAppSecGroups array = []
 @description('GUID of the AI Unlimited Role')
 param RoleDefinitionId string
 
-@description('allow access the AI Unlimited ssh port from the access cidr.')
-param AllowPublicSSH bool = false
-
 @description('should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes.')
 @allowed(['New', 'None'])
 param UseKeyVault string = 'New'
@@ -81,10 +74,10 @@ param ExistingPersistentVolume string = 'NONE'
 param AiUnlimitedVersion string = 'v0.3.0'
 
 @description('Container Version of the AI Unlimited UI service')
-param AiUnlimitedUIVersion string = 'v0.0.5'
+param AiUnlimitedUIVersion string = 'v0.0.2'
 
 @description('Container Version of the Jupyter Labs service')
-param JupyterVersion string = 'latest'
+param JupyterVersion string = 'v0.0.43'
 
 // @description('Container Version of the AI Unlimited scheduler service')
 var AiUnlimitedSchedulerVersion = 'latest'
@@ -214,7 +207,7 @@ module firewall '../modules/firewall.bicep' = {
     location: rg.location
     name: SecurityGroup
     accessCidrs: AccessCIDRs
-    sshAccess: AllowPublicSSH
+    sshAccess: false
     aiUnlimitedAuthPort: AiUnlimitedAuthPort
     aiUnlimitedGrpcPort: AiUnlimitedGrpcPort
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
@@ -251,7 +244,7 @@ module aiUnlimited '../modules/instance.bicep' = {
     location: rg.location
     name: AiUnlimitedName
     adminUsername: 'azureuser'
-    sshPublicKey: PublicKey
+    sshPublicKey: PublicKey.outputs.PublicKey
     dnsLabelPrefix: dnsLabelPrefix
     vmSize: InstanceType
     subnetId: subnet.id
@@ -265,6 +258,17 @@ module aiUnlimited '../modules/instance.bicep' = {
     nlbPoolNames: nlb.outputs.nlbPools
     usePublicIp: false
     tags: Tags
+  }
+}
+
+module PublicKey '../modules/public-key.bicep' = {
+  scope: rg
+  name: 'Public-Key'
+  params: {
+    Name: AiUnlimitedName
+    Location: deployment().location
+    VaultName: vault.outputs.name
+    RoleID: RoleDefinitionId
   }
 }
 
@@ -285,5 +289,4 @@ output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${A
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
 output JupyterLabPublicHttpAccess string = 'http://${nlb.outputs.PublicDns}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output sshCommand string = 'ssh azureuser@${aiUnlimited.outputs.PrivateIP}'
 output SecurityGroup string = firewall.outputs.Id
