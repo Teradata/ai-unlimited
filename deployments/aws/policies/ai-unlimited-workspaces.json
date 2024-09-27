@@ -68,6 +68,7 @@
                 "s3:DeleteBucket",
                 "s3:PutObject",
                 "s3:GetObject",
+                "s3:DeleteObject",
                 "cloudformation:CreateStack",
                 "cloudformation:DeleteStack",
                 "cloudformation:DescribeStacks",
