@@ -1041,6 +1041,9 @@ Resources:
               - ec2:CreateRoute
               - ec2:DisassociateRouteTable
               - ec2:DeleteRoute
+              - ec2:DescribeAddresses
+              - ec2:AssociateAddress
+              - ec2:DisassociateAddress
             Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
