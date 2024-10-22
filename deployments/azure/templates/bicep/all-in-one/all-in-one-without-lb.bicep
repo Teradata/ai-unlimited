@@ -45,8 +45,8 @@ param AiUnlimitedGrpcPort int = 3282
 // @description('port to access the AI Unlimited scheduler service grpc api.')
 // var AiUnlimitedSchedulerGrpcPort = 50051
 
-// @description('port to access the AI Unlimited scheduler service http api.')
-var AiUnlimitedSchedulerHttpPort = 50061
+@description('port to access the AI Unlimited scheduler service http api.')
+param AiUnlimitedSchedulerHttpPort int = 50061
 
 @description('port to access the AI Unlimited service UI.')
 param AiUnlimitedUIHttpPort int = 80
@@ -86,8 +86,8 @@ param AiUnlimitedUIVersion string = 'v0.0.5'
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
 
-// @description('Container Version of the AI Unlimited scheduler service')
-var AiUnlimitedSchedulerVersion = 'latest'
+@description('Container Version of the AI Unlimited scheduler service')
+param AiUnlimitedSchedulerVersion string = 'latest'
 
 @description('Join token for the Jupyter Labs service')
 @secure()
@@ -125,7 +125,8 @@ var cloudInitData = base64(format(
     jupyterRepository,
     JupyterVersion,
     JupyterHttpPort,
-    JupyterToken
+    JupyterToken,
+    AiUnlimitedSchedulerHttpPort
   )),
   base64(format(
     loadTextContent('../../../scripts/ai-unlimited-scheduler.service'),
@@ -133,7 +134,8 @@ var cloudInitData = base64(format(
     workspaceSchedulerRepository,
     AiUnlimitedSchedulerVersion,
     // AiUnlimitedSchedulerGrpcPort,
-    AiUnlimitedSchedulerHttpPort
+    AiUnlimitedSchedulerHttpPort,
+    AiUnlimitedGrpcPort
   )),
   base64(format(
     loadTextContent('../../../scripts/ai-unlimited-ui.service'),

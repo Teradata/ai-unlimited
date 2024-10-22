@@ -55,6 +55,9 @@ param PersistentVolumeSize int = 100
 @description('Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the Jupyter Labs server.')
 param ExistingPersistentVolume string = 'NONE'
 
+@description('Port to access the AI Unlimited Scheduler API')
+param AiUnlimitedSchedulerHttpPort int = 50061 
+
 @description('Container Version of the Jupyter Labs service')
 param JupyterVersion string = 'latest'
 
@@ -79,7 +82,8 @@ var cloudInitData = base64(format(
     jupyterRepository,
     JupyterVersion,
     JupyterHttpPort,
-    JupyterToken
+    JupyterToken,
+    AiUnlimitedSchedulerHttpPort
   ))
 ))
 

@@ -16,6 +16,7 @@ ExecStart=/usr/bin/docker run \
     --network ai_unlimited \
     -p {3}:50061 \
     -v /etc/td/ai-unlimited:/etc/td \
+    -e TD_WS_SERVER_PORT={4}
     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
     -e TD_WSSCHED_POL_INTERVAL=2 \
