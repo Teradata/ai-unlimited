@@ -29,7 +29,8 @@ runcmd:
     /usr/bin/echo "LABEL=WORKSPACES /etc/td ext4 defaults 0 2" >> /etc/fstab
     /usr/bin/mount -a
 - while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
-- echo "TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)" > /tmp/init_api_key.txt
+- mkdir -p /etc/td/ai-unlimited
+- echo "TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)" > /etc/td/ai-unlimited/init_api_key.txt
 - sleep 60
 - systemctl enable ai-unlimited.service
 - systemctl start ai-unlimited.service
