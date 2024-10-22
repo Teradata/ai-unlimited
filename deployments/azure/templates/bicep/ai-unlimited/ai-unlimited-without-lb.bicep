@@ -42,8 +42,8 @@ param AiUnlimitedGrpcPort int = 3282
 // @description('port to access the AI Unlimited scheduler service api.')
 // var AiUnlimitedSchedulerGrpcPort = 50051
 
-// @description('port to access the AI Unlimited scheduler service api.')
-var AiUnlimitedSchedulerHttpPort = 50061
+@description('port to access the AI Unlimited scheduler service api.')
+param AiUnlimitedSchedulerHttpPort int = 50061
 
 @description('port to access the AI Unlimited service UI.')
 param AiUnlimitedUIHttpPort int = 80
@@ -80,8 +80,8 @@ param AiUnlimitedVersion string = 'v0.3.0'
 @description('Container Version of the AI Unlimited UI service')
 param AiUnlimitedUIVersion string = 'v0.0.5'
 
-// @description('Container Version of the AI Unlimited scheduler service')
-var AiUnlimitedSchedulerVersion = 'latest'
+@description('Container Version of the AI Unlimited scheduler service')
+param AiUnlimitedSchedulerVersion string = 'latest'
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
@@ -114,7 +114,8 @@ var cloudInitData = base64(format(
     workspaceSchedulerRepository,
     AiUnlimitedSchedulerVersion,
     // AiUnlimitedSchedulerGrpcPort,
-    AiUnlimitedSchedulerHttpPort
+    AiUnlimitedSchedulerHttpPort,
+    AiUnlimitedGrpcPort
   )),
   base64(format(
     loadTextContent('../../../scripts/ai-unlimited-ui.service'),

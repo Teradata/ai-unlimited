@@ -18,6 +18,7 @@ ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
 ExecStart=/usr/bin/docker run \
     -e accept_license=Y \
     -e JUPYTER_TOKEN={4} \
+    -e TD_WS_HTTP_SERVER_PORT={5} \
     -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \
     -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \
     -p {3}:8888 \
