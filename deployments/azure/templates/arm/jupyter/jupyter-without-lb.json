@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "11024397819019437861"
+      "templateHash": "14764247261672430214"
     }
   },
   "parameters": {
@@ -128,6 +128,13 @@
         "description": "Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the Jupyter Labs server."
       }
     },
+    "AiUnlimitedSchedulerHttpPort": {
+      "type": "int",
+      "defaultValue": 50061,
+      "metadata": {
+        "description": "Port to access the AI Unlimited Scheduler API"
+      }
+    },
     "JupyterVersion": {
       "type": "string",
       "defaultValue": "latest",
@@ -151,11 +158,11 @@
   },
   "variables": {
     "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable jupyter.service\n- systemctl start jupyter.service\n",
-    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
+    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -e TD_WS_HTTP_SERVER_PORT={5}\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
     "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('JupyterName')))]",
     "registry": "teradata",
     "jupyterRepository": "ai-unlimited-jupyter",
-    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('jupyterRepository'), parameters('JupyterVersion'), parameters('JupyterHttpPort'), parameters('JupyterToken')))))]"
+    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('jupyterRepository'), parameters('JupyterVersion'), parameters('JupyterHttpPort'), parameters('JupyterToken'), parameters('AiUnlimitedSchedulerHttpPort')))))]"
   },
   "resources": [
     {
@@ -201,7 +208,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.29.47.4906",
-              "templateHash": "14464115164304997192"
+              "templateHash": "17204210556751390284"
             }
           },
           "parameters": {
@@ -227,7 +234,7 @@
               "type": "bool",
               "defaultValue": false
             },
-            "aiUnlimitedHttpPort": {
+            "aiUnlimitedAuthPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -308,10 +315,10 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 0))]",
+              "condition": "[not(equals(parameters('aiUnlimitedAuthPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
-              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-http-allow', variables('uniqueSecurityGroupName')))]",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-auth-allow', variables('uniqueSecurityGroupName')))]",
               "properties": {
                 "copy": [
                   {
@@ -334,7 +341,7 @@
                 "access": "Allow",
                 "description": "allow http to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[string(parameters('aiUnlimitedHttpPort'))]",
+                "destinationPortRange": "[string(parameters('aiUnlimitedAuthPort'))]",
                 "direction": "Inbound",
                 "priority": 701,
                 "protocol": "Tcp",
