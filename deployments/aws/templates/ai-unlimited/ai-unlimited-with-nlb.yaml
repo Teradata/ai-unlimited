@@ -422,8 +422,9 @@ Resources:
               - prepare_new_storage
               - !Ref AWS::NoValue
             - bind_storage
-            - create_init_api_key
             - mount_storage
+            - create_ai_unlimited_folder
+            - create_init_api_key
             - install_docker
             - configure_ai_unlimited_ui_service
             - configure_ai_unlimited_service
@@ -443,12 +444,6 @@ Resources:
               command: !Sub |
                 #!/bin/bash -xe
                 /usr/sbin/mkfs -t ext4 /dev/nvme1n1
-        create_init_api_key:
-          commands:
-            run_command:
-              command: !Sub |
-                #!/bin/bash -xe
-                echo "TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)" > /tmp/init_api_key.txt
         bind_storage:
           commands:
             fstab:
@@ -461,6 +456,18 @@ Resources:
               command: !Sub |
                 #!/bin/bash -xe
                 /usr/bin/mount -a
+        create_ai_unlimited_folder:
+          commands:
+            run_command:
+              command: !Sub |
+                #!/bin/bash -xe
+                /usr/bin/mkdir -p /etc/td/ai-unlimited
+        create_init_api_key:
+          commands:
+            run_command:
+              command: !Sub |
+                #!/bin/bash -xe
+                echo "TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)" > /etc/td/ai-unlimited/init_api_key.txt
         install_docker:
           files:
             /usr/lib/systemd/system/docker-install.service:
@@ -505,7 +512,7 @@ Resources:
                 
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
-                EnvironmentFile=/tmp/init_api_key.txt
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
@@ -546,7 +553,7 @@ Resources:
                 Restart=always
                 RestartSec=2
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
-                EnvironmentFile=/tmp/init_api_key.txt
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
