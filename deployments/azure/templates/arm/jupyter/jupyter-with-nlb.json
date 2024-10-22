@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "16397218265156052316"
+      "templateHash": "6340075730253605112"
     }
   },
   "parameters": {
@@ -158,7 +158,7 @@
   },
   "variables": {
     "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable jupyter.service\n- systemctl start jupyter.service\n",
-    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -e TD_WS_HTTP_SERVER_PORT={5}\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
+    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -e TD_WS_HTTP_SERVER_PORT={5} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
     "dnsId": "[uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('JupyterName'))]",
     "dnsLabelPrefix": "[format('td{0}', variables('dnsId'))]",
     "nlbDnsLabelPrefix": "[format('td{0}-nlb', variables('dnsId'))]",
