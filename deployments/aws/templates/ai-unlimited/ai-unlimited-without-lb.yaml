@@ -451,7 +451,7 @@ Resources:
             /usr/lib/systemd/system/ai-unlimited.service:
               content: !Sub |
                 [Unit]
-                Description=AI Unlimited Scheduler
+                Description=AI Unlimited
                 After=docker.service
                 Requires=docker.service
                 StartLimitInterval=200
@@ -461,22 +461,20 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
+                ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
                 ExecStart=/usr/bin/docker run \
-                    --network ai_unlimited \
-                    -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
-                    -p ${ AiUnlimitedSchedulerHttpPort }:50061 \
+                    -e accept_license=Y \
+                    -e PLATFORM=aws \
                     -v /etc/td/ai-unlimited:/etc/td \
-                    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
-                    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
-                    -e TD_WSSCHED_POL_INTERVAL=60 \
-                    -e TD_WSSCHED_DEV_LOC_OVR=ignore \
-                    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    -e TD_WS_SERVER_PORT=${ AiUnlimitedGrpcPort } \
-                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
-
+                    -p ${ AiUnlimitedHttpPort }:3000 \
+                    -p ${ AiUnlimitedGrpcPort }:3282 \
+                    --network ai_unlimited \
+                    --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v                [Install]
+ 
                 [Install]
                 WantedBy=multi-user.target
               group: root
@@ -505,7 +503,7 @@ Resources:
                 RestartSec=2
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
                     -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
@@ -514,8 +512,10 @@ Resources:
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
                     -e TD_WSSCHED_POL_INTERVAL=60 \
+                    -e TD_WSSCHED_DEV_LOC_OVR=ignore \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                    -e TD_WS_SERVER_PORT=${ AiUnlimitedGrpcPort } \
+                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
 
                 [Install]
                 WantedBy=multi-user.target
