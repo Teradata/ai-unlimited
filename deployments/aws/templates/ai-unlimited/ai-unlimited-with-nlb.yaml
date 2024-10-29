@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
+Description: "AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template."
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -29,12 +29,14 @@ Metadata:
           - AccessCIDR
           - PrefixList
           - SecurityGroup
-          - AiUnlimitedHttpPort
+          - AiUnlimitedAuthPort
           - AiUnlimitedGrpcPort
           - AiUnlimitedVersion
           - AiUnlimitedSchedulerVersion
           - AiUnlimitedSchedulerHttpPort
           - AiUnlimitedSchedulerGrpcPort
+          - AiUnlimitedUiPort
+          - AiUnlimitedUiVersion
       - Label:
           default: Persistent volume
         Parameters:
@@ -101,7 +103,7 @@ Parameters:
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be the name of a existing subnet.
 
-  AiUnlimitedHttpPort:
+  AiUnlimitedAuthPort:
     Description: port to access the AI Unlimited UI.
     Type: Number
     Default: 3000
@@ -125,6 +127,14 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
+  AiUnlimitedUiPort:
+    Description: port to access the AI Unlimited UI.
+    Type: Number
+    Default: 80
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
   AiUnlimitedGrpcPort:
     Description: port to access the AI Unlimited API.
     Type: Number
@@ -136,7 +146,12 @@ Parameters:
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.2.23
+    Default: v0.3.0
+
+  AiUnlimitedUiVersion:
+    Description: Which version of AI Unlimited UI to deploy, uses container version tags, defaults to "latest"
+    Type: String
+    Default: v0.0.5
 
   AiUnlimitedSchedulerVersion:
     Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
@@ -364,6 +379,8 @@ Conditions:
       - !Ref IamRoleName
       - ""
 
+  PortIsNotEighty: !Not [!Equals [!Ref AiUnlimitedUiPort, 80]]
+
 Resources:
   AiUnlimitedVolume:
     DeletionPolicy: !Ref PersistentVolumeDeletionPolicy
@@ -375,12 +392,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -405,9 +422,12 @@ Resources:
               - prepare_new_storage
               - !Ref AWS::NoValue
             - bind_storage
+            - create_init_api_key
             - mount_storage
             - install_docker
+            - configure_ai_unlimited_ui_service
             - configure_ai_unlimited_service
+            - start_ai_unlimited_ui_service
             - start_ai_unlimited_service
             - configure_ai_unlimited_scheduler_service
             - start_ai_unlimited_scheduler_service
@@ -423,6 +443,12 @@ Resources:
               command: !Sub |
                 #!/bin/bash -xe
                 /usr/sbin/mkfs -t ext4 /dev/nvme1n1
+        create_init_api_key:
+          commands:
+            run_command:
+              command: !Sub |
+                #!/bin/bash -xe
+                echo "TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)" > /tmp/init_api_key.txt
         bind_storage:
           commands:
             fstab:
@@ -461,6 +487,49 @@ Resources:
               docker:
                 enabled: "true"
                 ensureRunning: "true"
+        configure_ai_unlimited_ui_service:
+          files:
+            /usr/lib/systemd/system/ai-unlimited-ui.service:
+              content: !Sub |
+                [Unit]
+                Description=ai-unlimited-ui
+                After=docker.service
+                Requires=docker.service
+                StartLimitInterval=200
+                StartLimitBurst=10
+
+                [Service]
+                TimeoutStartSec=0
+                Restart=always
+                RestartSec=2
+
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
+                ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
+                EnvironmentFile=/tmp/init_api_key.txt
+                ExecStartPre=-/usr/bin/docker stop %n || true
+                ExecStartPre=-/usr/bin/docker rm %n || true
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
+                ExecStart=/usr/bin/docker run \
+                  -e accept_license=Y \
+                  -e PLATFORM=aws \
+                  -e TD_VCD_UI_PORT=${ AiUnlimitedUiPort } \
+                  -e TD_VCD_API_PORT=${ AiUnlimitedGrpcPort } \
+                  -e TD_VCD_AUTH_PORT=${ AiUnlimitedAuthPort } \
+                  -e TD_VCD_INIT_API_KEY \
+                  -p ${ AiUnlimitedUiPort }:80 \
+                  --network ai_unlimited \
+                  --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
+                [Install]
+                WantedBy=multi-user.target
+              group: root
+              mode: "000400"
+              owner: root
+        start_ai_unlimited_ui_service:
+          services:
+            systemd:
+              ai-unlimited-ui:
+                enabled: "true"
+                ensureRunning: "true"
         configure_ai_unlimited_service:
           files:
             /usr/lib/systemd/system/ai-unlimited.service:
@@ -477,15 +546,16 @@ Resources:
                 Restart=always
                 RestartSec=2
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
-                ExecStartPre=-/usr/bin/docker exec %n stop || true
+                EnvironmentFile=/tmp/init_api_key.txt
+                ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
                 ExecStart=/usr/bin/docker run \
                     -e accept_license=Y \
                     -e PLATFORM=aws \
+                    -e TD_VCD_INIT_API_KEY \
                     -v /etc/td/ai-unlimited:/etc/td \
-                    -p ${ AiUnlimitedHttpPort }:3000 \
+                    -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
                     --network ai_unlimited \
                     --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
@@ -516,7 +586,7 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
-                ExecStartPre=-/usr/bin/docker exec %n stop || true
+                ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
                 ExecStart=/usr/bin/docker run \
@@ -528,6 +598,7 @@ Resources:
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
                     -e TD_WSSCHED_POL_INTERVAL=60 \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
+                    -e TD_WS_SERVER_PORT=${ AiUnlimitedGrpcPort } \
                     --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
                 [Install]
                 WantedBy=multi-user.target
@@ -574,12 +645,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -599,9 +670,9 @@ Resources:
       VpcId: !Ref Vpc
       GroupDescription: Enable access to AI Unlimited server from LoadBalancer over http, grpc, and ssh
       SecurityGroupIngress:
-        - FromPort: !Ref AiUnlimitedHttpPort
+        - FromPort: !Ref AiUnlimitedAuthPort
           IpProtocol: tcp
-          ToPort: !Ref AiUnlimitedHttpPort
+          ToPort: !Ref AiUnlimitedAuthPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -613,6 +684,21 @@ Resources:
         - FromPort: !Ref AiUnlimitedGrpcPort
           IpProtocol: tcp
           ToPort: !Ref AiUnlimitedGrpcPort
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+        - FromPort: !Ref AiUnlimitedUiPort
+          IpProtocol: tcp
+          ToPort: !Ref AiUnlimitedUiPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -679,7 +765,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref AiUnlimitedHTTPTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: !Ref AiUnlimitedHttpPort
+      Port: !Ref AiUnlimitedAuthPort
       Protocol: TCP
 
   AiUnlimitedGRPCListener:
@@ -690,6 +776,16 @@ Resources:
           TargetGroupArn: !Ref AiUnlimitedGRPCTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
       Port: !Ref AiUnlimitedGrpcPort
+      Protocol: TCP
+
+  AiUnlimitedUIListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AiUnlimitedUITargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: !Ref AiUnlimitedUiPort
       Protocol: TCP
 
   AiUnlimitedSchedulerHTTPListener:
@@ -719,11 +815,11 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -732,7 +828,7 @@ Resources:
           - td-aiu
           - ui
           - http
-      Port: !Ref AiUnlimitedHttpPort
+      Port: !Ref AiUnlimitedAuthPort
       Protocol: TCP
       TargetGroupAttributes:
         - Key: stickiness.enabled
@@ -743,7 +839,41 @@ Resources:
           Value: "20"
       Targets:
         - Id: !Ref AiUnlimitedServer
-          Port: !Ref AiUnlimitedHttpPort
+          Port: !Ref AiUnlimitedAuthPort
+      VpcId: !Ref Vpc
+
+  AiUnlimitedUITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      Name: !Join
+        - "-"
+        - - !Select
+            - 4
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
+          - td-aiu
+          - ui
+          - api
+      Port: !Ref AiUnlimitedUiPort
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref AiUnlimitedServer
+          Port: !Ref AiUnlimitedUiPort
       VpcId: !Ref Vpc
 
   AiUnlimitedGRPCTargetGroup:
@@ -754,11 +884,11 @@ Resources:
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -791,11 +921,11 @@ Resources:
       Matcher:
         HttpCode: "200"
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -825,11 +955,11 @@ Resources:
       HealthCheckProtocol: TCP
       HealthCheckTimeoutSeconds: 15
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -859,18 +989,22 @@ Resources:
       GroupDescription: Enable access to AI Unlimited server over http and grpc
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: !Ref AiUnlimitedHttpPort
-          ToPort: !Ref AiUnlimitedHttpPort
+          FromPort: !Ref AiUnlimitedAuthPort
+          ToPort: !Ref AiUnlimitedAuthPort
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - IpProtocol: tcp
           FromPort: !Ref AiUnlimitedGrpcPort
           ToPort: !Ref AiUnlimitedGrpcPort
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: !Ref AiUnlimitedUiPort
+          ToPort: !Ref AiUnlimitedUiPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
-            FromPort: !Ref AiUnlimitedHttpPort
-            ToPort: !Ref AiUnlimitedHttpPort
+            FromPort: !Ref AiUnlimitedAuthPort
+            ToPort: !Ref AiUnlimitedAuthPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
         - !If
@@ -878,6 +1012,13 @@ Resources:
           - IpProtocol: tcp
             FromPort: !Ref AiUnlimitedGrpcPort
             ToPort: !Ref AiUnlimitedGrpcPort
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - !If
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: !Ref AiUnlimitedUiPort
+            ToPort: !Ref AiUnlimitedUiPort
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
 
@@ -958,13 +1099,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - ai-unlimited
           - session
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -988,14 +1129,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -1004,7 +1145,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -1013,13 +1154,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - ai-unlimited
           - deploy
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -1123,7 +1264,7 @@ Resources:
               - ec2:CreateRoute
               - ec2:DisassociateRouteTable
               - ec2:DeleteRoute
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLE
@@ -1149,7 +1290,10 @@ Outputs:
 
   AiUnlimitedUiAccess:
     Description: Loadbalancer access endpoint for AI Unlimited UI Access
-    Value: !Sub http://${ LoadBalancer.DNSName }:${ AiUnlimitedHttpPort }
+    Value: !If
+      - PortIsNotEighty
+      - !Sub "http://${ LoadBalancer.DNSName }:${ AiUnlimitedUiPort }/healthcheck"
+      - !Sub "http://${ LoadBalancer.DNSName }"
 
   AiUnlimitedApiAccess:
     Description: Loadbalancer access endpoint for AI Unlimited API Access
@@ -1158,14 +1302,14 @@ Outputs:
   InstanceSecurityGroups:
     Description: AI Unlimited Security Groups
     Value: !Join
-      - ', '
+      - ", "
       - - !GetAtt AiUnlimitedSecurityGroup.GroupId
         - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
 
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
     Value: !Join
-      - ', '
+      - ", "
       - - !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId
 
