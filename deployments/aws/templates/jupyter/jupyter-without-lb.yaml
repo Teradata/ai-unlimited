@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
+Description: "AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template."
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -30,6 +30,7 @@ Metadata:
           - SecurityGroup
           - JupyterToken
           - JupyterHttpPort
+          - AiUnlimitedSchedulerHttpPort
           - JupyterVersion
       - Label:
           default: Persistent volume
@@ -98,6 +99,14 @@ Parameters:
     Description: port to access the jupyter service ui.
     Type: Number
     Default: 8888
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
+  AiUnlimitedSchedulerHttpPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50061
     ConstraintDescription: must be a valid ununsed port between 0 and 65535.
     MinValue: 0
     MaxValue: 65535
@@ -345,12 +354,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref JupyterName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -452,6 +461,7 @@ Resources:
                 ExecStart=/usr/bin/docker run \
                     -e accept_license=Y \
                     -e JUPYTER_TOKEN=${ JupyterToken } \
+                    -e TD_WS_HTTP_SERVER_PORT=${ AiUnlimitedSchedulerHttpPort } \
                     -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \
                     -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \
                     -p ${ JupyterHttpPort }:8888 \
@@ -505,12 +515,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref JupyterName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -587,13 +597,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - jupyter
           - session
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -617,14 +627,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -633,7 +643,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref JupyterRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -670,7 +680,6 @@ Outputs:
   InstanceSecurityGroups:
     Description: AI Unlimited Security Group
     Value: !GetAtt JupyterSecurityGroup.GroupId
-
 
   PublicSSHConeection:
     Description: Jupyter ssh connnection string

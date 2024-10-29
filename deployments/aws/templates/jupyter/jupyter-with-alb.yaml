@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: 'AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template.'
+Description: "AWS CloudFormation Template jupyter: a jupyter instance configured with the ai-unlimited kernel. Note: You will be billed for the AWS resources used if you create a stack from this template."
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -33,6 +33,13 @@ Metadata:
           - SecurityGroup
           - JupyterToken
           - JupyterHttpPort
+          - AiUnlimitedSchedulerHttpPort
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50061
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
           - JupyterVersion
       - Label:
           default: Persistent volume
@@ -71,6 +78,14 @@ Parameters:
       - true
       - false
     Default: false
+
+  AiUnlimitedSchedulerHttpPort:
+    Description: port to access the AI Unlimited Scheduler API.
+    Type: Number
+    Default: 50061
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
 
   LoadBalancerScheme:
     Description: "If using a LoadBalancer, will it be internal or internet-facing? \nThe DNS name of an Internet-facing load balancer is publicly resolvable to the public IP addresses of the nodes.\nTherefore, Internet-facing load balancers can route requests from clients over the internet. The nodes of an \ninternal load balancer have only private IP addresses. The DNS name of an internal load balancer is publicly\nresolvable to the private IP addresses of the nodes. Therefore, internal load balancers can route requests only\nfrom clients with access to the VPC for the load balancer.\n"
@@ -372,12 +387,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref JupyterName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -479,6 +494,7 @@ Resources:
                 ExecStart=/usr/bin/docker run \
                     -e accept_license=Y \
                     -e JUPYTER_TOKEN=${ JupyterToken } \
+                    -e TD_WS_HTTP_SERVER_PORT=${ AiUnlimitedSchedulerHttpPort } 
                     -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \
                     -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \
                     -p ${ JupyterHttpPort }:8888 \
@@ -532,12 +548,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref JupyterName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -606,11 +622,11 @@ Resources:
       Matcher:
         HttpCode: "200"
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -693,13 +709,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - jupyter
           - session
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -723,14 +739,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -739,7 +755,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref JupyterRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -792,11 +808,10 @@ Outputs:
     Description: AI Unlimited Security Group
     Value: !GetAtt JupyterSecurityGroup.GroupId
 
-
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
     Value: !Join
-      - ', '
+      - ", "
       - - !GetAtt LoadBalancerJupyterSecurityGroup.GroupId
 
   PublicSSHConeection:
