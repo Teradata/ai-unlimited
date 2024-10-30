@@ -828,3 +828,4 @@ Outputs:
     Description: Id of the new persistent volume created for Jupyter
     Value: !Ref JupyterVolume
     Condition: USENEWPERSISTENTVOLUME
+

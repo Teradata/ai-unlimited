@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.28.1.47646",
-      "templateHash": "13407002185802552800"
+      "version": "0.29.47.4906",
+      "templateHash": "12586694840490067753"
     }
   },
   "parameters": {
@@ -130,7 +130,7 @@
     },
     "JupyterVersion": {
       "type": "string",
-      "defaultValue": "latest",
+      "defaultValue": "v0.0.49",
       "metadata": {
         "description": "Container Version of the Jupyter Labs service"
       }
@@ -151,7 +151,7 @@
   },
   "variables": {
     "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable jupyter.service\n- systemctl start jupyter.service\n",
-    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker exec %n stop || true\nExecStartPre=-/usr/bin/docker rm %n || true\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
+    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
     "dnsId": "[uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('JupyterName'))]",
     "dnsLabelPrefix": "[format('td{0}', variables('dnsId'))]",
     "nlbDnsLabelPrefix": "[format('td{0}-nlb', variables('dnsId'))]",
@@ -202,8 +202,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.28.1.47646",
-              "templateHash": "4929926268271391774"
+              "version": "0.29.47.4906",
+              "templateHash": "17204210556751390284"
             }
           },
           "parameters": {
@@ -229,7 +229,7 @@
               "type": "bool",
               "defaultValue": false
             },
-            "aiUnlimitedHttpPort": {
+            "aiUnlimitedAuthPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -238,6 +238,10 @@
               "defaultValue": 0
             },
             "aiUnlimitedSchedulerHttpPort": {
+              "type": "int",
+              "defaultValue": 0
+            },
+            "aiUnlimitedUIHttpPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -306,10 +310,10 @@
               ]
             },
             {
-              "condition": "[not(equals(parameters('aiUnlimitedHttpPort'), 0))]",
+              "condition": "[not(equals(parameters('aiUnlimitedAuthPort'), 0))]",
               "type": "Microsoft.Network/networkSecurityGroups/securityRules",
               "apiVersion": "2023-04-01",
-              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-http-allow', variables('uniqueSecurityGroupName')))]",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-auth-allow', variables('uniqueSecurityGroupName')))]",
               "properties": {
                 "copy": [
                   {
@@ -332,7 +336,7 @@
                 "access": "Allow",
                 "description": "allow http to the workspace instance",
                 "destinationAddressPrefix": "*",
-                "destinationPortRange": "[string(parameters('aiUnlimitedHttpPort'))]",
+                "destinationPortRange": "[string(parameters('aiUnlimitedAuthPort'))]",
                 "direction": "Inbound",
                 "priority": 701,
                 "protocol": "Tcp",
@@ -456,6 +460,44 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
               ]
+            },
+            {
+              "condition": "[not(equals(parameters('aiUnlimitedUIHttpPort'), 0))]",
+              "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', variables('uniqueSecurityGroupName'), format('{0}-workspace-ui-http-allow', parameters('name')))]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "destinationApplicationSecurityGroups",
+                    "count": "[length(parameters('detinationAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('detinationAppSecGroups')[copyIndex('destinationApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  },
+                  {
+                    "name": "sourceApplicationSecurityGroups",
+                    "count": "[length(parameters('sourceAppSecGroups'))]",
+                    "input": {
+                      "id": "[parameters('sourceAppSecGroups')[copyIndex('sourceApplicationSecurityGroups')]]",
+                      "location": "[parameters('location')]"
+                    }
+                  }
+                ],
+                "access": "Allow",
+                "description": "allow http to the workspace ui instance",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "[string(parameters('aiUnlimitedUIHttpPort'))]",
+                "direction": "Inbound",
+                "priority": 705,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('accessCidrs')]",
+                "sourcePortRange": "*"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('uniqueSecurityGroupName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -500,8 +542,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.28.1.47646",
-              "templateHash": "9026566997103330654"
+              "version": "0.29.47.4906",
+              "templateHash": "1616678944691212739"
             }
           },
           "parameters": {
@@ -514,7 +556,7 @@
             "dnsPrefix": {
               "type": "string"
             },
-            "aiUnlimitedHttpPort": {
+            "aiUnlimitedAuthPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -527,6 +569,10 @@
               "defaultValue": 0
             },
             "jupyterHttpPort": {
+              "type": "int",
+              "defaultValue": 0
+            },
+            "aiUnlimitedUIHttpPort": {
               "type": "int",
               "defaultValue": 0
             },
@@ -571,8 +617,8 @@
                     "name": "[format('{0}OutboundBackendPool', parameters('name'))]"
                   }
                 ],
-                "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedHttpPort'), 'backendPort', parameters('aiUnlimitedHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', 'AiUnlimitedAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedGrpcPort'), 'backendPort', parameters('aiUnlimitedGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedSchedulerHttp', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'backendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}SchedulerHttpLbProbe', parameters('name'))))))), createArray())))]",
-                "probes": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedHttpPort'), 0)), createArray(createObject('name', format('{0}UILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', format('{0}SchedulerHttpLbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedSchedulerHttpPort'), 'requestPath', '/healthcheck', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
+                "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedAuthPort'), 0)), createArray(createObject('name', 'AiUnlimitedAuth', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedAuthPort'), 'backendPort', parameters('aiUnlimitedAuthPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}AuthLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', 'AiUnlimitedAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedGrpcPort'), 'backendPort', parameters('aiUnlimitedGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedSchedulerHttp', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'backendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}SchedulerHttpLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedUIHttpPort'), 'backendPort', parameters('aiUnlimitedUIHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UILbProbe', parameters('name'))))))), createArray())))]",
+                "probes": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedAuthPort'), 0)), createArray(createObject('name', format('{0}AuthLbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedAuthPort'), 'requestPath', '/healthcheck', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', format('{0}SchedulerHttpLbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedSchedulerHttpPort'), 'requestPath', '/healthcheck', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpPort'), 0)), createArray(createObject('name', format('{0}UILbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedUIHttpPort'), 'requestPath', '/', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
                 "outboundRules": [
                   {
                     "name": "myOutboundRule",
@@ -628,8 +674,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.28.1.47646",
-                      "templateHash": "6759154498137298299"
+                      "version": "0.29.47.4906",
+                      "templateHash": "11278674213062453956"
                     }
                   },
                   "parameters": {
@@ -710,8 +756,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.28.1.47646",
-                      "templateHash": "6759154498137298299"
+                      "version": "0.29.47.4906",
+                      "templateHash": "11278674213062453956"
                     }
                   },
                   "parameters": {
@@ -853,8 +899,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.28.1.47646",
-              "templateHash": "14119123377490335719"
+              "version": "0.29.47.4906",
+              "templateHash": "13207593080095673481"
             }
           },
           "parameters": {
@@ -1134,8 +1180,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.28.1.47646",
-                      "templateHash": "6759154498137298299"
+                      "version": "0.29.47.4906",
+                      "templateHash": "11278674213062453956"
                     }
                   },
                   "parameters": {
