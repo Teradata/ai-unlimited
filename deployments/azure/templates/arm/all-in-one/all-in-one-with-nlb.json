@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "1860230839229358162"
+      "templateHash": "8915778081204530415"
     }
   },
   "parameters": {
@@ -162,14 +162,14 @@
     },
     "AiUnlimitedUIVersion": {
       "type": "string",
-      "defaultValue": "v0.0.5",
+      "defaultValue": "v0.0.6",
       "metadata": {
         "description": "Container Version of the AI Unlimited UI service"
       }
     },
     "JupyterVersion": {
       "type": "string",
-      "defaultValue": "v0.0.43",
+      "defaultValue": "v0.0.49",
       "metadata": {
         "description": "Container Version of the Jupyter Labs service"
       }
