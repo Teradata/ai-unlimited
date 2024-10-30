@@ -5,10 +5,11 @@ param accessCidrs array = []
 param sourceAppSecGroups array = []
 param detinationAppSecGroups array = []
 param sshAccess bool = false
-param aiUnlimitedHttpPort int = 0
+param aiUnlimitedAuthPort int = 0
 param aiUnlimitedGrpcPort int = 0
 param aiUnlimitedSchedulerHttpPort int = 0
 // param aiUnlimitedSchedulerGrpcPort int = 0
+param aiUnlimitedUIHttpPort int = 0
 param jupyterHttpPort int = 0
 param tags object = {}
 param uuid string = newGuid()
@@ -73,8 +74,8 @@ resource sshAllow 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04
 //   }
 // }
 
-resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedHttpPort != 0) {
-  name: '${uniqueSecurityGroupName}-workspace-http-allow'
+resource AiUnlimitedAuth 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedAuthPort != 0) {
+  name: '${uniqueSecurityGroupName}-workspace-auth-allow'
   parent: networkSecurityGroup
 
   properties: {
@@ -87,7 +88,7 @@ resource AiUnlimitedHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@
         location: location
       }
     ]
-    destinationPortRange: string(aiUnlimitedHttpPort) // destinationPortRanges: []
+    destinationPortRange: string(aiUnlimitedAuthPort) // destinationPortRanges: []
     direction: 'Inbound'
     priority: 701
     protocol: 'Tcp'
@@ -184,6 +185,33 @@ resource AiUnlimitedSchedulerHTTP 'Microsoft.Network/networkSecurityGroups/secur
         id: secgroup
         location: location
       }
+    ]
+    sourcePortRange: '*' // sourcePortRanges: []
+  }
+}
+
+resource AiUnlimitedUIHTTP 'Microsoft.Network/networkSecurityGroups/securityRules@2023-04-01' = if (aiUnlimitedUIHttpPort != 0) {
+  name: '${name}-workspace-ui-http-allow'
+  parent: networkSecurityGroup
+
+  properties: {
+    access: 'Allow'
+    description: 'allow http to the workspace ui instance'
+    destinationAddressPrefix: '*' // destinationAddressPrefixes: []
+    destinationApplicationSecurityGroups: [for secgroup in detinationAppSecGroups: {
+      id: secgroup
+      location: location
+    }
+    ]
+    destinationPortRange: string(aiUnlimitedUIHttpPort) // destinationPortRanges: []
+    direction: 'Inbound'
+    priority: 705
+    protocol: 'Tcp'
+    sourceAddressPrefixes: accessCidrs // sourceAddressPrefix: 'string'
+    sourceApplicationSecurityGroups: [for secgroup in sourceAppSecGroups: {
+      id: secgroup
+      location: location
+    }
     ]
     sourcePortRange: '*' // sourcePortRanges: []
   }
