@@ -10,17 +10,26 @@ write_files:
   owner: root:root
   path: /usr/lib/systemd/system/ai-unlimited-scheduler.service
   permissions: '0640'
+- encoding: b64
+  content: "{2}"
+  owner: root:root
+  path: /usr/lib/systemd/system/ai-unlimited-ui.service
+  permissions: '0640'
 
 runcmd:
-- mkdir -p /etc/td 
+- mkdir -p /etc/td
 - |
     export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');
     if [ -n "${{PERMDISK}}" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi
     /usr/bin/echo "LABEL=WORKSPACES /etc/td ext4 defaults 0 2" >> /etc/fstab
     /usr/bin/mount -a
 - while [ $(systemctl status docker | grep "active (running)" | wc -l) -lt 1 ]; do sleep 5; done
+- mkdir -p /etc/td/ai-unlimited
+- echo "TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)" > /etc/td/ai-unlimited/init_api_key.txt
 - sleep 60
 - systemctl enable ai-unlimited.service
 - systemctl start ai-unlimited.service
 - systemctl enable ai-unlimited-scheduler.service
 - systemctl start ai-unlimited-scheduler.service
+- systemctl enable ai-unlimited-ui.service
+- systemctl start ai-unlimited-ui.service
