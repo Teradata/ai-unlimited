@@ -671,7 +671,6 @@ Outputs:
     Description: AI Unlimited Security Group
     Value: !GetAtt JupyterSecurityGroup.GroupId
 
-
   PublicSSHConeection:
     Description: Jupyter ssh connnection string
     Value: !Sub ssh ec2-user@${ JupyterServer.PublicIp }

@@ -753,7 +753,6 @@ Outputs:
     Description: AI Unlimited Security Group
     Value: !GetAtt JupyterSecurityGroup.GroupId
 
-
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
     Value: !Join

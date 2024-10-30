@@ -379,7 +379,10 @@ Conditions:
       - !Ref IamRoleName
       - ""
 
-  PortIsNotEighty: !Not [!Equals [!Ref AiUnlimitedUiPort, 80]]
+  PortIsNotEighty: !Not
+    - !Equals
+      - !Ref AiUnlimitedUiPort
+      - 80
 
 Resources:
   AiUnlimitedVolume:
@@ -509,7 +512,7 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
-                
+
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
                 EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
@@ -1301,8 +1304,8 @@ Outputs:
     Description: Loadbalancer access endpoint for AI Unlimited UI Access
     Value: !If
       - PortIsNotEighty
-      - !Sub "http://${ LoadBalancer.DNSName }:${ AiUnlimitedUiPort }/healthcheck"
-      - !Sub "http://${ LoadBalancer.DNSName }"
+      - !Sub http://${ LoadBalancer.DNSName }:${ AiUnlimitedUiPort }/healthcheck
+      - !Sub http://${ LoadBalancer.DNSName }
 
   AiUnlimitedApiAccess:
     Description: Loadbalancer access endpoint for AI Unlimited API Access
