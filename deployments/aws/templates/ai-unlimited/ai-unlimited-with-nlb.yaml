@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: 'AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template.'
+Description: "AWS CloudFormation Template AI Unlimited: AI Unlimited is a instance based service for deploying and suspending clusters of AI Unlimited compute engines, and managing project lifecycles.  Note: You will be billed for the AWS resources used if you create a stack from this template."
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -395,12 +395,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -596,9 +596,9 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
-                ExecStartPre=-/usr/bin/docker stop %n || true
+                ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
                     -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
@@ -607,8 +607,10 @@ Resources:
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
                     -e TD_WSSCHED_POL_INTERVAL=60 \
+                    -e TD_WSSCHED_DEV_LOC_OVR=ignore \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                    -e TD_WS_SERVER_PORT=${ AiUnlimitedGrpcPort } \
+                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
                 [Install]
                 WantedBy=multi-user.target
               group: root
@@ -654,12 +656,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Join
-            - '-'
+            - "-"
             - - !Ref AiUnlimitedName
               - !Select
                 - 4
                 - !Split
-                  - '-'
+                  - "-"
                   - !Select
                     - 2
                     - !Split
@@ -824,11 +826,11 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -858,11 +860,11 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -893,11 +895,11 @@ Resources:
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -930,11 +932,11 @@ Resources:
       Matcher:
         HttpCode: "200"
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -964,11 +966,11 @@ Resources:
       HealthCheckProtocol: TCP
       HealthCheckTimeoutSeconds: 15
       Name: !Join
-        - '-'
+        - "-"
         - - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -1108,13 +1110,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - ai-unlimited
           - session
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -1138,14 +1140,14 @@ Resources:
               - ssm:UpdateAssociationStatus
               - ssm:UpdateInstanceAssociationStatus
               - ssm:UpdateInstanceInformation
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ssmmessages:CreateControlChannel
               - ssmmessages:CreateDataChannel
               - ssmmessages:OpenControlChannel
               - ssmmessages:OpenDataChannel
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ec2messages:AcknowledgeMessage
@@ -1154,7 +1156,7 @@ Resources:
               - ec2messages:GetEndpoint
               - ec2messages:GetMessages
               - ec2messages:SendReply
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLEANDSESSIONMANAGER
@@ -1163,13 +1165,13 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Join
-        - '-'
+        - "-"
         - - ai-unlimited
           - deploy
           - !Select
             - 4
             - !Split
-              - '-'
+              - "-"
               - !Select
                 - 2
                 - !Split
@@ -1276,7 +1278,7 @@ Resources:
               - ec2:DescribeAddresses
               - ec2:AssociateAddress
               - ec2:DisassociateAddress
-            Resource: '*'
+            Resource: "*"
       Roles:
         - !Ref AiUnlimitedRole
     Condition: NEEDSROLE
@@ -1314,14 +1316,14 @@ Outputs:
   InstanceSecurityGroups:
     Description: AI Unlimited Security Groups
     Value: !Join
-      - ', '
+      - ", "
       - - !GetAtt AiUnlimitedSecurityGroup.GroupId
         - !GetAtt AiUnlimitedSchedulerSecurityGroup.GroupId
 
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
     Value: !Join
-      - ', '
+      - ", "
       - - !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !GetAtt LoadBalancerSchedulerSecurityGroup.GroupId
 
