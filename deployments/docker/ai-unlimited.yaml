@@ -6,7 +6,7 @@ services:
       replicas: 1
     platform: linux/amd64
     container_name: ai-unlimited-workspaces
-    image: ${AI_UNLIMITED_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${AI_UNLIMITED_IMAGE_TAG:-v0.3.0}
+    image: ${AI_UNLIMITED_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${AI_UNLIMITED_IMAGE_TAG:-v0.3.1}
     command: workspaces serve -v
     restart: unless-stopped
     ports:
