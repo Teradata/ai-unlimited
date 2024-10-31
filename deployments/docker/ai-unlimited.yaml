@@ -6,20 +6,40 @@ services:
       replicas: 1
     platform: linux/amd64
     container_name: ai-unlimited-workspaces
-    image: ${AI_UNLIMITED_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${AI_UNLIMITED_IMAGE_TAG:-v0.2.23}
+    image: ${AI_UNLIMITED_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${AI_UNLIMITED_IMAGE_TAG:-v0.3.0}
     command: workspaces serve -v
     restart: unless-stopped
     ports:
-      - "443:443/tcp"
-      - "3000:3000/tcp"
-      - "3282:3282/tcp"
+      - "${TD_VCD_AUTH_PORT:-3000}:${TD_VCD_AUTH_PORT:-3000}/tcp"
+      - "${TD_VCD_API_PORT:-3282}:${TD_VCD_API_PORT:-3282}/tcp"
     environment:
       accept_license: "Y"
       TZ: ${AI_UNLIMITED_TZ:-UTC}
+      TD_VCD_API_PORT: "${TD_VCD_API_PORT:-3282}"
+      TD_VCD_AUTH_PORT: "${TD_VCD_AUTH_PORT:-3000}"
+      TD_VCD_INIT_API_KEY: "${AI_UNLIMITED_INIT_API_KEY:?Initial API key is required, please run the generate api key script.}"
     volumes:
       - ${AI_UNLIMITED_HOME:-./volumes/ai-unlimited-workspaces}:/etc/td
     networks:
-      - ai-unlimited
+      - ai-unlimited-network
+
+  ai-unlimited-ui:
+    deploy:
+      replicas: 1
+    platform: linux/amd64
+    container_name: workspaces-ui
+    image: ${AI_UNLIMITED_UI_IMAGE_NAME:-teradata/ai-unlimited-workspaces-ui}:${AI_UNLIMITED_UI_IMAGE_TAG:-v0.0.6}
+    ports:
+      - "443:443/tcp"
+      - "${TD_VCD_UI_PORT:-80}:80/tcp"
+    environment:
+      TD_VCD_UI_PORT: "${TD_VCD_UI_PORT:-80}"
+      TD_VCD_API_PORT: "${TD_VCD_API_PORT:-3282}"
+      TD_VCD_AUTH_PORT: "${TD_VCD_AUTH_PORT:-3000}"
+      TD_VCD_INIT_API_KEY: "${AI_UNLIMITED_INIT_API_KEY:?Initial API key is required, please run the generate api key script.}"
+    networks:
+      - ai-unlimited-network
 
 networks:
-  ai-unlimited:
+  ai-unlimited-network:
+    name: ai-unlimited-network

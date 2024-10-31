@@ -6,7 +6,7 @@ services:
       replicas: 1
     platform: linux/amd64
     container_name: jupyter
-    image: ${JUPYTER_IMAGE_NAME:-teradata/ai-unlimited-jupyter}:${JUPYTER_IMAGE_TAG:-latest}
+    image: ${JUPYTER_IMAGE_NAME:-teradata/ai-unlimited-jupyter}:${JUPYTER_IMAGE_TAG:-v0.0.51}
     environment:
       accept_license: "Y"
     ports:
@@ -14,7 +14,8 @@ services:
     volumes:
       - ${JUPYTER_HOME:-./volumes/jupyter}:/home/jovyan/JupyterLabRoot/userdata
     networks:
-      - ai-unlimited
+      - ai-unlimited-network
 
 networks:
-  ai-unlimited:
+  ai-unlimited-network:
+    name: ai-unlimited-network
