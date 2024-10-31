@@ -23,6 +23,6 @@ param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
 param AiUnlimitedVersion = 'v0.3.0'
-param AiUnlimitedUIVersion = 'v0.0.5'
+param AiUnlimitedUIVersion = 'v0.0.6'
 // param AiUnlimitedSchedulerVersion = 'latest'
 param Tags = {}
