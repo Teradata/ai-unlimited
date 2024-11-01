@@ -35,7 +35,6 @@ Metadata:
           - AiUnlimitedSchedulerVersion
           - AiUnlimitedSchedulerHttpPort
           - AiUnlimitedSchedulerGrpcPort
-          - AiUnlimitedUiPort
           - AiUnlimitedUiVersion
       - Label:
           default: Persistent volume
@@ -145,14 +144,6 @@ Parameters:
     Description: port to access the AI Unlimited Scheduler API.
     Type: Number
     Default: 50051
-    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
-    MinValue: 0
-    MaxValue: 65535
-
-  AiUnlimitedUiPort:
-    Description: port to access the AI Unlimited UI.
-    Type: Number
-    Default: 80
     ConstraintDescription: must be a valid ununsed port between 0 and 65535.
     MinValue: 0
     MaxValue: 65535
@@ -395,11 +386,6 @@ Conditions:
       - !Ref IamRoleName
       - ""
 
-  PortIsNotEighty: !Not
-    - !Equals
-      - !Ref AiUnlimitedUiPort
-      - 80
-
 Resources:
   AiUnlimitedVolume:
     DeletionPolicy: !Ref PersistentVolumeDeletionPolicy
@@ -585,7 +571,6 @@ Resources:
                     -e accept_license=Y \
                     -e PLATFORM=aws \
                     -e TD_VCD_INIT_API_KEY \
-                    -v /etc/td/ai-unlimited:/etc/td \
                     -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
                     -v /etc/td/ai-unlimited:/etc/td \
@@ -769,9 +754,9 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: !Ref AiUnlimitedUiPort
+        - FromPort: 80
           IpProtocol: tcp
-          ToPort: !Ref AiUnlimitedUiPort
+          ToPort: 80
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -872,7 +857,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref AiUnlimitedUITargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: !Ref AiUnlimitedUiPort
+      Port: 80
       Protocol: TCP
 
   JupyterHTTPListener:
@@ -969,7 +954,7 @@ Resources:
           - td-aiu
           - ui
           - api
-      Port: !Ref AiUnlimitedUiPort
+      Port: 80
       Protocol: TCP
       TargetGroupAttributes:
         - Key: stickiness.enabled
@@ -980,7 +965,7 @@ Resources:
           Value: "20"
       Targets:
         - Id: !Ref AiUnlimitedServer
-          Port: !Ref AiUnlimitedUiPort
+          Port: 80
       VpcId: !Ref Vpc
 
   JupyterHTTPTargetGroup:
@@ -1138,8 +1123,8 @@ Resources:
           ToPort: !Ref AiUnlimitedGrpcPort
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - IpProtocol: tcp
-          FromPort: !Ref AiUnlimitedUiPort
-          ToPort: !Ref AiUnlimitedUiPort
+          FromPort: 80
+          ToPort: 80
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !If
           - HASSECURITYGROUP
@@ -1158,8 +1143,8 @@ Resources:
         - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
-            FromPort: !Ref AiUnlimitedUiPort
-            ToPort: !Ref AiUnlimitedUiPort
+            FromPort: 80
+            ToPort: 80
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
 
@@ -1460,10 +1445,7 @@ Outputs:
 
   AiUnlimitedUiAccess:
     Description: Loadbalancer access endpoint for AI Unlimited UI Access
-    Value: !If
-      - PortIsNotEighty
-      - !Sub http://${ LoadBalancer.DNSName }:${ AiUnlimitedUiPort }/healthcheck
-      - !Sub http://${ LoadBalancer.DNSName }
+    Value: !Sub http://${ LoadBalancer.DNSName }
 
   AiUnlimitedApiAccess:
     Description: Loadbalancer access endpoint for AI Unlimited API Access
