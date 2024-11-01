@@ -526,6 +526,7 @@ Resources:
                 Restart=always
                 RestartSec=2
 
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker volume create ssl_certs || true'
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
                 EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
@@ -535,11 +536,13 @@ Resources:
                 ExecStart=/usr/bin/docker run \
                   -e accept_license=Y \
                   -e PLATFORM=aws \
-                  -e TD_VCD_UI_PORT=${ AiUnlimitedUiPort } \
+                  -e TD_VCD_USE_TLS=false \
                   -e TD_VCD_API_PORT=${ AiUnlimitedGrpcPort } \
                   -e TD_VCD_AUTH_PORT=${ AiUnlimitedAuthPort } \
                   -e TD_VCD_INIT_API_KEY \
-                  -p ${ AiUnlimitedUiPort }:80 \
+                  -p 80:80 \
+                  -p 443:443 \
+                  -v ssl_certs:/etc/ssl/td \
                   --network ai_unlimited \
                   --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
                 [Install]
@@ -580,6 +583,8 @@ Resources:
                     -v /etc/td/ai-unlimited:/etc/td \
                     -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
+                    -v /etc/td/ai-unlimited:/etc/td \
+                    -v ssl_certs:/etc/td/ssl \
                     --network ai_unlimited \
                     --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
                 [Install]
