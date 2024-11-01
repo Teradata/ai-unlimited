@@ -15,14 +15,15 @@ ExecStartPre=-/usr/bin/docker rm %n
 ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
 
 ExecStart=/usr/bin/docker run \
-    -e TD_VCD_UI_PORT={3} \
+    -e TD_VCD_USE_TLS=false \
     -e TD_VCD_AUTH_PORT={4}\
     -e TD_VCD_API_PORT={5}\
     -e TD_VCD_INIT_API_KEY \
-    -v /etc/td/ai-unlimited:/etc/td \
-    -p {3}:80 \
+    -p 80:80 \
+    -p 443:443 \
+    -v ssl_certs:/etc/ssl/td \
     --network ai_unlimited {6} \
-    --rm --name %n {0}/{1}:{2}
+    --rm --name %n {0}/{1}:{2}   
 
 [Install]
 WantedBy=multi-user.target
