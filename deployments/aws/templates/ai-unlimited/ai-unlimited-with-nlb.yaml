@@ -805,7 +805,7 @@ Resources:
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref AiUnlimitedUITargetGroup
+          TargetGroupArn: !Ref AiUnlimitedUIHTTPSTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
       Port: 443
       Protocol: TCP
@@ -883,6 +883,7 @@ Resources:
                   - !Ref AWS::StackId
           - td-aiu
           - ui
+          - http
           - api
       Port: 80
       Protocol: TCP
@@ -896,6 +897,41 @@ Resources:
       Targets:
         - Id: !Ref AiUnlimitedServer
           Port: 80
+      VpcId: !Ref Vpc
+
+  AiUnlimitedUIHTTPSTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTPS
+      HealthCheckTimeoutSeconds: 15
+      Name: !Join
+        - '-'
+        - - !Select
+            - 4
+            - !Split
+              - '-'
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
+          - td-aiu
+          - ui
+          - https
+          - api
+      Port: 443
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref AiUnlimitedServer
+          Port: 443
       VpcId: !Ref Vpc
 
   AiUnlimitedGRPCTargetGroup:
@@ -1045,6 +1081,13 @@ Resources:
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - !If
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
 

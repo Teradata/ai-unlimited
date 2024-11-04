@@ -174,7 +174,7 @@ Parameters:
   JupyterVersion:
     Description: Which version of Jupyter to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.49
+    Default: v0.0.51
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
@@ -769,6 +769,21 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
+        - FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
     Condition: HASCIDRORPREFIXLISTORSECGROUP
 
   LoadBalancerSchedulerSecurityGroup:
@@ -858,6 +873,16 @@ Resources:
           TargetGroupArn: !Ref AiUnlimitedUITargetGroup
       LoadBalancerArn: !Ref LoadBalancer
       Port: 80
+      Protocol: TCP
+
+  AiUnlimitedUISSLListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AiUnlimitedUIHTTPSTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
       Protocol: TCP
 
   JupyterHTTPListener:
@@ -953,6 +978,7 @@ Resources:
                   - !Ref AWS::StackId
           - td-aiu
           - ui
+          - http
           - api
       Port: 80
       Protocol: TCP
@@ -966,6 +992,41 @@ Resources:
       Targets:
         - Id: !Ref AiUnlimitedServer
           Port: 80
+      VpcId: !Ref Vpc
+
+  AiUnlimitedUIHTTPSTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTPS
+      HealthCheckTimeoutSeconds: 15
+      Name: !Join
+        - '-'
+        - - !Select
+            - 4
+            - !Split
+              - '-'
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
+          - td-aiu
+          - ui
+          - https
+          - api
+      Port: 443
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref AiUnlimitedServer
+          Port: 443
       VpcId: !Ref Vpc
 
   JupyterHTTPTargetGroup:
@@ -1126,6 +1187,10 @@ Resources:
           FromPort: 80
           ToPort: 80
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
@@ -1145,6 +1210,13 @@ Resources:
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - !If
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
 
