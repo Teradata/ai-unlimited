@@ -715,6 +715,7 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
+
   AiUnlimitedSchedulerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
