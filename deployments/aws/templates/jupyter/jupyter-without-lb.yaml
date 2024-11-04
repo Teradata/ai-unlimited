@@ -12,7 +12,6 @@ Metadata:
           - InstanceType
           - RootVolumeSize
           - TerminationProtection
-          - JupyterToken
           - IamRole
           - IamRoleName
           - IamPermissionsBoundary
