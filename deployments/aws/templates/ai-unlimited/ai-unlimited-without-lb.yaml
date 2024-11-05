@@ -33,7 +33,6 @@ Metadata:
           - AiUnlimitedSchedulerVersion
           - AiUnlimitedSchedulerHttpPort
           - AiUnlimitedSchedulerGrpcPort
-          - AiUnlimitedUiPort
           - AiUnlimitedUiVersion
       - Label:
           default: Persistent volume
@@ -120,18 +119,10 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
-  AiUnlimitedUiPort:
-    Description: port to access the AI Unlimited UI.
-    Type: Number
-    Default: 80
-    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
-    MinValue: 0
-    MaxValue: 65535
-
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.3.0
+    Default: v0.3.2
 
   AiUnlimitedSchedulerVersion:
     Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
@@ -141,7 +132,7 @@ Parameters:
   AiUnlimitedUiVersion:
     Description: Which version of AI Unlimited UI to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.6
+    Default: v0.0.7
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
@@ -364,21 +355,6 @@ Conditions:
       - !Ref IamRoleName
       - ""
 
-  PortIsNotEightyAndHasPublicIp: !And
-    - !Not
-      - !Equals
-        - !Ref Private
-        - "true"
-    - !Not
-      - !Equals
-        - !Ref AiUnlimitedUiPort
-        - 80
-
-  PortIsNotEighty: !Not
-    - !Equals
-      - !Ref AiUnlimitedUiPort
-      - 80
-
 Resources:
   AiUnlimitedVolume:
     DeletionPolicy: !Ref PersistentVolumeDeletionPolicy
@@ -508,6 +484,7 @@ Resources:
                 Restart=always
                 RestartSec=2
 
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker volume create ssl_certs || true'
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
                 EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
@@ -517,11 +494,13 @@ Resources:
                 ExecStart=/usr/bin/docker run \
                   -e accept_license=Y \
                   -e PLATFORM=aws \
-                  -e TD_VCD_UI_PORT=${ AiUnlimitedUiPort } \
+                  -e TD_VCD_USE_TLS=false \
                   -e TD_VCD_API_PORT=${ AiUnlimitedGrpcPort } \
                   -e TD_VCD_AUTH_PORT=${ AiUnlimitedAuthPort } \
                   -e TD_VCD_INIT_API_KEY \
-                  -p ${ AiUnlimitedUiPort }:80 \
+                  -p 80:80 \
+                  -p 443:443 \
+                  -v ssl_certs:/etc/ssl/td \
                   --network ai_unlimited \
                   --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
                 [Install]
@@ -559,9 +538,10 @@ Resources:
                     -e accept_license=Y \
                     -e PLATFORM=aws \
                     -e TD_VCD_INIT_API_KEY \
-                    -v /etc/td/ai-unlimited:/etc/td \
                     -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
+                    -v /etc/td/ai-unlimited:/etc/td \
+                    -v ssl_certs:/etc/td/ssl \
                     --network ai_unlimited \
                     --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
 
@@ -705,9 +685,24 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: !Ref AiUnlimitedUiPort
+        - FromPort: 80
           IpProtocol: tcp
-          ToPort: !Ref AiUnlimitedUiPort
+          ToPort: 80
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+        - FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -997,18 +992,12 @@ Outputs:
 
   AiUnlimitedPublicUIAccess:
     Description: Teradata AI Unlimited public UI Access
-    Value: !If
-      - PortIsNotEightyAndHasPublicIp
-      - !Sub http://${AiUnlimitedServer.PublicDnsName}:${AiUnlimitedUiPort}/healthcheck
-      - !Sub http://${AiUnlimitedServer.PublicDnsName}
+    Value: !Sub http://${AiUnlimitedServer.PublicDnsName}
     Condition: HASPUBLICIP
 
   AiUnlimitedPrivateUIAccess:
     Description: Teradata AI Unlimited private UI Access
-    Value: !If
-      - PortIsNotEighty
-      - !Sub http://${AiUnlimitedServer.PrivateDnsName}:${AiUnlimitedUiPort}/healthcheck
-      - !Sub http://${AiUnlimitedServer.PrivateDnsName}
+    Value: !Sub http://${AiUnlimitedServer.PrivateDnsName}
 
   AiUnlimitedPublicAPIAccess:
     Description: Teradata AI Unlimited public API Access

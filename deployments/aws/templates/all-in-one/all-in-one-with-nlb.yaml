@@ -35,7 +35,6 @@ Metadata:
           - AiUnlimitedSchedulerVersion
           - AiUnlimitedSchedulerHttpPort
           - AiUnlimitedSchedulerGrpcPort
-          - AiUnlimitedUiPort
           - AiUnlimitedUiVersion
       - Label:
           default: Persistent volume
@@ -149,23 +148,15 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
-  AiUnlimitedUiPort:
-    Description: port to access the AI Unlimited UI.
-    Type: Number
-    Default: 80
-    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
-    MinValue: 0
-    MaxValue: 65535
-
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.3.0
+    Default: v0.3.2
 
   AiUnlimitedUiVersion:
     Description: Which version of AI Unlimited UI to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.6
+    Default: v0.0.7
 
   AiUnlimitedSchedulerVersion:
     Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
@@ -183,7 +174,7 @@ Parameters:
   JupyterVersion:
     Description: Which version of Jupyter to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.49
+    Default: v0.0.51
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
@@ -395,11 +386,6 @@ Conditions:
       - !Ref IamRoleName
       - ""
 
-  PortIsNotEighty: !Not
-    - !Equals
-      - !Ref AiUnlimitedUiPort
-      - 80
-
 Resources:
   AiUnlimitedVolume:
     DeletionPolicy: !Ref PersistentVolumeDeletionPolicy
@@ -531,6 +517,7 @@ Resources:
                 Restart=always
                 RestartSec=2
 
+                ExecStartPre=-/bin/bash -c '/usr/bin/docker volume create ssl_certs || true'
                 ExecStartPre=-/bin/bash -c '/usr/bin/docker network create -d bridge ai_unlimited || true'
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited-ui
                 EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
@@ -540,11 +527,13 @@ Resources:
                 ExecStart=/usr/bin/docker run \
                   -e accept_license=Y \
                   -e PLATFORM=aws \
-                  -e TD_VCD_UI_PORT=${ AiUnlimitedUiPort } \
+                  -e TD_VCD_USE_TLS=false \
                   -e TD_VCD_API_PORT=3282 \
                   -e TD_VCD_AUTH_PORT=3000 \
                   -e TD_VCD_INIT_API_KEY \
-                  -p ${ AiUnlimitedUiPort }:80 \
+                  -p 80:80 \
+                  -p 443:443 \
+                  -v ssl_certs:/etc/ssl/td \
                   --network ai_unlimited \
                   --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
                 [Install]
@@ -582,9 +571,10 @@ Resources:
                     -e accept_license=Y \
                     -e PLATFORM=aws \
                     -e TD_VCD_INIT_API_KEY \
-                    -v /etc/td/ai-unlimited:/etc/td \
                     -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
+                    -v /etc/td/ai-unlimited:/etc/td \
+                    -v ssl_certs:/etc/td/ssl \
                     --network ai_unlimited \
                     --net-alias ${ LoadBalancer.DNSName } \
                     --rm --name %n teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion } workspaces serve -v
@@ -764,9 +754,24 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: !Ref AiUnlimitedUiPort
+        - FromPort: 80
           IpProtocol: tcp
-          ToPort: !Ref AiUnlimitedUiPort
+          ToPort: 80
+          CidrIp: !If
+            - HASCIDR
+            - !Ref AccessCIDR
+            - !Ref AWS::NoValue
+          SourcePrefixListId: !If
+            - HASPREFIXLIST
+            - !Ref PrefixList
+            - !Ref AWS::NoValue
+          SourceSecurityGroupId: !If
+            - HASSECURITYGROUP
+            - !Ref SecurityGroup
+            - !Ref AWS::NoValue
+        - FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -867,7 +872,17 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref AiUnlimitedUITargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: !Ref AiUnlimitedUiPort
+      Port: 80
+      Protocol: TCP
+
+  AiUnlimitedUISSLListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AiUnlimitedUIHTTPSTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
       Protocol: TCP
 
   JupyterHTTPListener:
@@ -963,8 +978,9 @@ Resources:
                   - !Ref AWS::StackId
           - td-aiu
           - ui
+          - http
           - api
-      Port: !Ref AiUnlimitedUiPort
+      Port: 80
       Protocol: TCP
       TargetGroupAttributes:
         - Key: stickiness.enabled
@@ -975,7 +991,42 @@ Resources:
           Value: "20"
       Targets:
         - Id: !Ref AiUnlimitedServer
-          Port: !Ref AiUnlimitedUiPort
+          Port: 80
+      VpcId: !Ref Vpc
+
+  AiUnlimitedUIHTTPSTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTPS
+      HealthCheckTimeoutSeconds: 15
+      Name: !Join
+        - '-'
+        - - !Select
+            - 4
+            - !Split
+              - '-'
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
+          - td-aiu
+          - ui
+          - https
+          - api
+      Port: 443
+      Protocol: TCP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: source_ip
+        - Key: deregistration_delay.timeout_seconds
+          Value: "20"
+      Targets:
+        - Id: !Ref AiUnlimitedServer
+          Port: 443
       VpcId: !Ref Vpc
 
   JupyterHTTPTargetGroup:
@@ -1133,8 +1184,12 @@ Resources:
           ToPort: !Ref AiUnlimitedGrpcPort
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - IpProtocol: tcp
-          FromPort: !Ref AiUnlimitedUiPort
-          ToPort: !Ref AiUnlimitedUiPort
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
           SourceSecurityGroupId: !GetAtt LoadBalancerAiUnlimitedSecurityGroup.GroupId
         - !If
           - HASSECURITYGROUP
@@ -1153,8 +1208,15 @@ Resources:
         - !If
           - HASSECURITYGROUP
           - IpProtocol: tcp
-            FromPort: !Ref AiUnlimitedUiPort
-            ToPort: !Ref AiUnlimitedUiPort
+            FromPort: 80
+            ToPort: 80
+            SourceSecurityGroupId: !Ref SecurityGroup
+          - !Ref AWS::NoValue
+        - !If
+          - HASSECURITYGROUP
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
             SourceSecurityGroupId: !Ref SecurityGroup
           - !Ref AWS::NoValue
 
@@ -1455,10 +1517,7 @@ Outputs:
 
   AiUnlimitedUiAccess:
     Description: Loadbalancer access endpoint for AI Unlimited UI Access
-    Value: !If
-      - PortIsNotEighty
-      - !Sub http://${ LoadBalancer.DNSName }:${ AiUnlimitedUiPort }/healthcheck
-      - !Sub http://${ LoadBalancer.DNSName }
+    Value: !Sub http://${ LoadBalancer.DNSName }
 
   AiUnlimitedApiAccess:
     Description: Loadbalancer access endpoint for AI Unlimited API Access
