@@ -122,7 +122,7 @@ Parameters:
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.3.0
+    Default: v0.3.2
 
   AiUnlimitedSchedulerVersion:
     Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
@@ -132,7 +132,7 @@ Parameters:
   AiUnlimitedUiVersion:
     Description: Which version of AI Unlimited UI to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.6
+    Default: v0.0.7
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
