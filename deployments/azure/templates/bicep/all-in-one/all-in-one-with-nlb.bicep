@@ -44,8 +44,11 @@ param AiUnlimitedGrpcPort int = 3282
 // @description('port to access the AI Unlimited scheduler service http api.')
 var AiUnlimitedSchedulerHttpPort = 50061
 
-@description('port to access the AI Unlimited service UI.')
+@description('port to access the AI Unlimited service UI http.')
 param AiUnlimitedUIHttpPort int = 80
+
+@description('port to access the AI Unlimited service UI https.')
+param AiUnlimitedUIHttpsPort int = 443
 
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
@@ -71,13 +74,13 @@ param PersistentVolumeSize int = 100
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the AI Unlimited service')
-param AiUnlimitedVersion string = 'v0.3.0'
+param AiUnlimitedVersion string = 'v0.3.2'
 
 @description('Container Version of the AI Unlimited UI service')
-param AiUnlimitedUIVersion string = 'v0.0.6'
+param AiUnlimitedUIVersion string = 'v0.0.7'
 
 @description('Container Version of the Jupyter Labs service')
-param JupyterVersion string = 'v0.0.49'
+param JupyterVersion string = 'v0.0.52'
 
 // @description('Container Version of the AI Unlimited scheduler service')
 var AiUnlimitedSchedulerVersion = 'latest'
@@ -213,6 +216,7 @@ module firewall '../modules/firewall.bicep' = {
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
     // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     aiUnlimitedUIHttpPort: AiUnlimitedUIHttpPort
+    aiUnlimitedUIHttpsPort: AiUnlimitedUIHttpsPort
     jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
@@ -232,6 +236,7 @@ module nlb '../modules/nlb.bicep' = {
     aiUnlimitedSchedulerHttpPort: AiUnlimitedSchedulerHttpPort
     // aiUnlimitedSchedulerGrpcPort: AiUnlimitedSchedulerGrpcPort
     aiUnlimitedUIHttpPort: AiUnlimitedUIHttpPort
+    aiUnlimitedUIHttpsPort: AiUnlimitedUIHttpsPort
     jupyterHttpPort: JupyterHttpPort
     tags: Tags
   }
