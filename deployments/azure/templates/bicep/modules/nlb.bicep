@@ -7,6 +7,7 @@ param aiUnlimitedSchedulerHttpPort int = 0
 // param aiUnlimitedSchedulerGrpcPort int = 0
 param jupyterHttpPort int = 0
 param aiUnlimitedUIHttpPort int = 0
+param aiUnlimitedUIHttpsPort int = 0
 param tags object = {}
 
 module lbPublicIPAddress 'public-ip.bicep' = {
@@ -216,7 +217,7 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
       aiUnlimitedUIHttpPort != 0
         ? [
             {
-              name: 'AiUnlimitedUI'
+              name: 'AiUnlimitedUIHttp'
               properties: {
                 frontendIPConfiguration: {
                   id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', name, '${name}Inbound')
@@ -237,7 +238,37 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
                 loadDistribution: 'Default'
                 disableOutboundSnat: true
                 probe: {
-                  id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}UILbProbe')
+                  id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}UIHttpLbProbe')
+                }
+              }
+            }
+          ]
+        : []
+      aiUnlimitedUIHttpsPort != 0
+        ? [
+            {
+              name: 'AiUnlimitedUIHttps'
+              properties: {
+                frontendIPConfiguration: {
+                  id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', name, '${name}Inbound')
+                }
+                backendAddressPool: {
+                  id: resourceId(
+                    'Microsoft.Network/loadBalancers/backendAddressPools',
+                    name,
+                    '${name}OutboundBackendPool'
+                  )
+                }
+                frontendPort: aiUnlimitedUIHttpsPort
+                backendPort: aiUnlimitedUIHttpsPort
+                enableFloatingIP: false
+                idleTimeoutInMinutes: 15
+                protocol: 'Tcp'
+                enableTcpReset: true
+                loadDistribution: 'Default'
+                disableOutboundSnat: true
+                probe: {
+                  id: resourceId('Microsoft.Network/loadBalancers/probes', name, '${name}UIHttpsLbProbe')
                 }
               }
             }
@@ -250,9 +281,8 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             {
               name: '${name}AuthLbProbe'
               properties: {
-                protocol: 'Http'
+                protocol: 'Tcp'
                 port: aiUnlimitedAuthPort
-                requestPath: '/healthcheck'
                 intervalInSeconds: 5
                 numberOfProbes: 2
               }
@@ -316,10 +346,24 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
       aiUnlimitedUIHttpPort != 0
         ? [
             {
-              name: '${name}UILbProbe'
+              name: '${name}UIHttpLbProbe'
               properties: {
                 protocol: 'Http'
                 port: aiUnlimitedUIHttpPort
+                requestPath: '/'
+                intervalInSeconds: 5
+                numberOfProbes: 2
+              }
+            }
+          ]
+        : []
+      aiUnlimitedUIHttpsPort != 0
+        ? [
+            {
+              name: '${name}UIHttpsLbProbe'
+              properties: {
+                protocol: 'Https'
+                port: aiUnlimitedUIHttpsPort
                 requestPath: '/'
                 intervalInSeconds: 5
                 numberOfProbes: 2
