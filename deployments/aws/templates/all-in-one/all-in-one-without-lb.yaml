@@ -33,6 +33,8 @@ Metadata:
           - AiUnlimitedSchedulerVersion
           - AiUnlimitedSchedulerHttpPort
           - AiUnlimitedSchedulerGrpcPort
+          - AiUnlimitedUiPort
+          - AiUnlimitedUiHttpsPort
           - AiUnlimitedUiVersion
       - Label:
           default: Persistent volume
@@ -133,6 +135,22 @@ Parameters:
     MinValue: 0
     MaxValue: 65535
 
+  AiUnlimitedUiPort:
+    Description: port to access the AI Unlimited UI.
+    Type: Number
+    Default: 80
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
+  AiUnlimitedUiHttpsPort:
+    Description: port to allow https access the AI Unlimited UI.
+    Type: Number
+    Default: 443
+    ConstraintDescription: must be a valid ununsed port between 0 and 65535.
+    MinValue: 0
+    MaxValue: 65535
+
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
@@ -159,7 +177,7 @@ Parameters:
   JupyterVersion:
     Description: Which version of Jupyter to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.51
+    Default: v0.0.52
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
@@ -371,6 +389,21 @@ Conditions:
       - !Ref IamRoleName
       - ""
 
+  PortIsNotEightyAndHasPublicIp: !And
+    - !Not
+      - !Equals
+        - !Ref Private
+        - "true"
+    - !Not
+      - !Equals
+        - !Ref AiUnlimitedUiPort
+        - 80
+
+  PortIsNotEighty: !Not
+    - !Equals
+      - !Ref AiUnlimitedUiPort
+      - 80
+
 Resources:
   AiUnlimitedVolume:
     DeletionPolicy: !Ref PersistentVolumeDeletionPolicy
@@ -516,8 +549,8 @@ Resources:
                   -e TD_VCD_API_PORT=${ AiUnlimitedGrpcPort } \
                   -e TD_VCD_AUTH_PORT=${ AiUnlimitedAuthPort } \
                   -e TD_VCD_INIT_API_KEY \
-                  -p 80:80 \
-                  -p 443:443 \
+                  -p ${ AiUnlimitedUiPort }:80 \
+                  -p ${ AiUnlimitedUiHttpsPort }:443 \
                   -v ssl_certs:/etc/ssl/td \
                   --network ai_unlimited \
                   --rm --name %n teradata/ai-unlimited-workspaces-ui:${ AiUnlimitedUiVersion }
@@ -741,9 +774,9 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: 80
+        - FromPort: !Ref AiUnlimitedUiPort
           IpProtocol: tcp
-          ToPort: 80
+          ToPort: !Ref AiUnlimitedUiPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
@@ -756,9 +789,9 @@ Resources:
             - HASSECURITYGROUP
             - !Ref SecurityGroup
             - !Ref AWS::NoValue
-        - FromPort: 443
+        - FromPort: !Ref AiUnlimitedUiHttpsPort
           IpProtocol: tcp
-          ToPort: 443
+          ToPort: !Ref AiUnlimitedUiHttpsPort
           CidrIp: !If
             - HASCIDR
             - !Ref AccessCIDR
