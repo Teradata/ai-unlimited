@@ -44,11 +44,11 @@ param AiUnlimitedGrpcPort int = 3282
 // @description('port to access the AI Unlimited scheduler service http api.')
 var AiUnlimitedSchedulerHttpPort = 50061
 
-@description('port to access the AI Unlimited service UI http.')
-param AiUnlimitedUIHttpPort int = 80
+// @description('port to access the AI Unlimited service UI http.')
+var AiUnlimitedUIHttpPort = 80
 
-@description('port to access the AI Unlimited service UI https.')
-param AiUnlimitedUIHttpsPort int = 443
+// @description('port to access the AI Unlimited service UI https.')
+var AiUnlimitedUIHttpsPort = 443
 
 @description('Source Application Security Groups to access the AI Unlimited service api.')
 param SourceAppSecGroups array = []
@@ -74,7 +74,7 @@ param PersistentVolumeSize int = 100
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the AI Unlimited service')
-param AiUnlimitedVersion string = 'v0.3.2'
+param AiUnlimitedVersion string = 'v0.3.4'
 
 @description('Container Version of the AI Unlimited UI service')
 param AiUnlimitedUIVersion string = 'v0.0.7'
