@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "18411899321530490967"
+      "templateHash": "2333729599339256313"
     }
   },
   "parameters": {
@@ -83,20 +83,6 @@
         "description": "port to access the AI Unlimited service api."
       }
     },
-    "AiUnlimitedUIHttpPort": {
-      "type": "int",
-      "defaultValue": 80,
-      "metadata": {
-        "description": "port to access the AI Unlimited service UI http."
-      }
-    },
-    "AiUnlimitedUIHttpsPort": {
-      "type": "int",
-      "defaultValue": 443,
-      "metadata": {
-        "description": "port to access the AI Unlimited service UI https."
-      }
-    },
     "SourceAppSecGroups": {
       "type": "array",
       "defaultValue": [],
@@ -155,7 +141,7 @@
     },
     "AiUnlimitedVersion": {
       "type": "string",
-      "defaultValue": "v0.3.2",
+      "defaultValue": "v0.3.4",
       "metadata": {
         "description": "Container Version of the AI Unlimited service"
       }
@@ -181,6 +167,8 @@
     "$fxv#2": "[Unit]\nDescription=AI Unlimited Scheduler\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\nExecStart=/usr/bin/docker run \\\n    --network ai_unlimited \\\n    -p {3}:50061 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \\\n    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \\\n    -e TD_WSSCHED_POL_INTERVAL=2 \\\n    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \\\n    --rm --name %n {0}/{1}:{2} workspace-event-scheduler serve\n[Install]\nWantedBy=multi-user.target",
     "$fxv#3": "[Unit]\nDescription=AI Unlimited UI\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nEnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e TD_VCD_USE_TLS=false \\\n    -e TD_VCD_AUTH_PORT={4}\\\n    -e TD_VCD_API_PORT={5}\\\n    -e TD_VCD_INIT_API_KEY \\\n    -p 80:80 \\\n    -p 443:443 \\\n    -v ssl_certs:/etc/ssl/td \\\n    --network ai_unlimited {6} \\\n    --rm --name %n {0}/{1}:{2}   \n\n[Install]\nWantedBy=multi-user.target",
     "AiUnlimitedSchedulerHttpPort": 50061,
+    "AiUnlimitedUIHttpPort": 80,
+    "AiUnlimitedUIHttpsPort": 443,
     "AiUnlimitedSchedulerVersion": "latest",
     "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
     "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName')))]",
@@ -188,7 +176,7 @@
     "workspaceRepository": "ai-unlimited-workspaces",
     "workspaceSchedulerRepository": "ai-unlimited-scheduler",
     "workspaceUIRepository": "ai-unlimited-workspaces-ui",
-    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, '--network-alias ai-unlimited')), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), variables('AiUnlimitedSchedulerVersion'), variables('AiUnlimitedSchedulerHttpPort'))), base64(format(variables('$fxv#3'), variables('registry'), variables('workspaceUIRepository'), parameters('AiUnlimitedUIVersion'), parameters('AiUnlimitedUIHttpPort'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), '--network-alias ai-unlimited'))))]"
+    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, '--network-alias ai-unlimited')), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), variables('AiUnlimitedSchedulerVersion'), variables('AiUnlimitedSchedulerHttpPort'))), base64(format(variables('$fxv#3'), variables('registry'), variables('workspaceUIRepository'), parameters('AiUnlimitedUIVersion'), variables('AiUnlimitedUIHttpPort'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), '--network-alias ai-unlimited'))))]"
   },
   "resources": [
     {
@@ -417,10 +405,10 @@
             "value": "[variables('AiUnlimitedSchedulerHttpPort')]"
           },
           "aiUnlimitedUIHttpPort": {
-            "value": "[parameters('AiUnlimitedUIHttpPort')]"
+            "value": "[variables('AiUnlimitedUIHttpPort')]"
           },
           "aiUnlimitedUIHttpsPort": {
-            "value": "[parameters('AiUnlimitedUIHttpsPort')]"
+            "value": "[variables('AiUnlimitedUIHttpsPort')]"
           },
           "sourceAppSecGroups": {
             "value": "[parameters('SourceAppSecGroups')]"
@@ -1350,11 +1338,11 @@
     },
     "AiUnlimitedPublicHttpAccess": {
       "type": "string",
-      "value": "[concat(format('http://{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value), if(not(equals(parameters('AiUnlimitedUIHttpPort'), 80)), concat(':', string(parameters('AiUnlimitedUIHttpPort'))), ''))]"
+      "value": "[concat(format('http://{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PublicIP.value), if(not(equals(variables('AiUnlimitedUIHttpPort'), 80)), concat(':', string(variables('AiUnlimitedUIHttpPort'))), ''))]"
     },
     "AiUnlimitedPrivateHttpAccess": {
       "type": "string",
-      "value": "[concat(format('http://{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value), if(not(equals(parameters('AiUnlimitedUIHttpPort'), 80)), concat(':', string(parameters('AiUnlimitedUIHttpPort'))), ''))]"
+      "value": "[concat(format('http://{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value), if(not(equals(variables('AiUnlimitedUIHttpPort'), 80)), concat(':', string(variables('AiUnlimitedUIHttpPort'))), ''))]"
     },
     "AiUnlimitedPublicGrpcAccess": {
       "type": "string",
