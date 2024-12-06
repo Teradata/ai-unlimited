@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.31.92.45157",
-      "templateHash": "4228928801039699434"
+      "templateHash": "17623174102781456375"
     }
   },
   "parameters": {
@@ -162,7 +162,7 @@
     },
     "JupyterVersion": {
       "type": "string",
-      "defaultValue": "v0.0.52",
+      "defaultValue": "v0.1.0",
       "metadata": {
         "description": "Container Version of the Jupyter Labs service"
       }

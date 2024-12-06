@@ -18,7 +18,7 @@ param AllowPublicSSH = true
 param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
-param JupyterVersion = 'v0.0.52'
+param JupyterVersion = 'v0.1.0'
 param JupyterToken = 'USE_A_SECURE_TOKEN'
 param Tags = {}
 

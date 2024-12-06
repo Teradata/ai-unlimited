@@ -177,7 +177,7 @@ Parameters:
   JupyterVersion:
     Description: Which version of Jupyter to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.52
+    Default: v0.1.0
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
