@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.29.47.4906",
-      "templateHash": "15682003766962519140"
+      "version": "0.31.92.45157",
+      "templateHash": "2742666112813260424"
     }
   },
   "parameters": {
@@ -130,7 +130,7 @@
     },
     "JupyterVersion": {
       "type": "string",
-      "defaultValue": "v0.0.52",
+      "defaultValue": "v0.1.0",
       "metadata": {
         "description": "Container Version of the Jupyter Labs service"
       }
@@ -200,8 +200,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.29.47.4906",
-              "templateHash": "11675442112517489951"
+              "version": "0.31.92.45157",
+              "templateHash": "392354314460473239"
             }
           },
           "parameters": {
@@ -612,8 +612,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.29.47.4906",
-              "templateHash": "13207593080095673481"
+              "version": "0.31.92.45157",
+              "templateHash": "11687747621230861550"
             }
           },
           "parameters": {
@@ -893,8 +893,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.29.47.4906",
-                      "templateHash": "11278674213062453956"
+                      "version": "0.31.92.45157",
+                      "templateHash": "4325662974998231491"
                     }
                   },
                   "parameters": {
