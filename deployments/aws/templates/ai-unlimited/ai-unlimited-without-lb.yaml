@@ -520,6 +520,7 @@ Resources:
                   -e TD_VCD_UI_PORT=${ AiUnlimitedUiPort } \
                   -e TD_VCD_API_PORT=${ AiUnlimitedGrpcPort } \
                   -e TD_VCD_AUTH_PORT=${ AiUnlimitedAuthPort } \
+                  -e TD_WS_HTTP_SERVER_PORT=${ AiUnlimitedSchedulerHttpPort } \
                   -e TD_VCD_INIT_API_KEY \
                   -p ${ AiUnlimitedUiPort }:80 \
                   --network ai_unlimited \
@@ -591,6 +592,7 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
@@ -605,6 +607,7 @@ Resources:
                     -e TD_WSSCHED_DEV_LOC_OVR=ignore \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
                     -e TD_WS_SERVER_PORT=${ AiUnlimitedGrpcPort } \
+                    -e TD_VCD_INIT_API_KEY \
                     --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
 
                 [Install]
