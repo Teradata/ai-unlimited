@@ -53,6 +53,7 @@ resource roleDef 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
           'Microsoft.KeyVault/vaults/read'
           'Microsoft.KeyVault/vaults/write'
           'Microsoft.KeyVault/vaults/delete'
+          'Microsoft.KeyVault/vaults/secrets/write'
           'Microsoft.KeyVault/vaults/accessPolicies/write'
           'Microsoft.KeyVault/locations/operationResults/read'
           'Microsoft.KeyVault/locations/deletedVaults/purge/action'

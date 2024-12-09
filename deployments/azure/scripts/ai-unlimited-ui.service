@@ -1,0 +1,29 @@
+[Unit]
+Description=AI Unlimited UI
+After=ai-unlimited.service
+Requires=ai-unlimited.service
+StartLimitInterval=200
+StartLimitBurst=10
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=2
+EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
+ExecStartPre=-/usr/bin/docker stop %n
+ExecStartPre=-/usr/bin/docker rm %n
+ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
+
+ExecStart=/usr/bin/docker run \
+    -e TD_VCD_USE_TLS=false \
+    -e TD_VCD_AUTH_PORT={4}\
+    -e TD_VCD_API_PORT={5}\
+    -e TD_VCD_INIT_API_KEY \
+    -p 80:80 \
+    -p 443:443 \
+    -v ssl_certs:/etc/ssl/td \
+    --network ai_unlimited {6} \
+    --rm --name %n {0}/{1}:{2}   
+
+[Install]
+WantedBy=multi-user.target
