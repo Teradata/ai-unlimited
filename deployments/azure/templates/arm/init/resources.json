@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.28.1.47646",
-      "templateHash": "3755223610480160492"
+      "version": "0.29.47.4906",
+      "templateHash": "11746473283873690149"
     }
   },
   "parameters": {
@@ -74,6 +74,7 @@
               "Microsoft.KeyVault/vaults/read",
               "Microsoft.KeyVault/vaults/write",
               "Microsoft.KeyVault/vaults/delete",
+              "Microsoft.KeyVault/vaults/secrets/write",
               "Microsoft.KeyVault/vaults/accessPolicies/write",
               "Microsoft.KeyVault/locations/operationResults/read",
               "Microsoft.KeyVault/locations/deletedVaults/purge/action",
@@ -163,8 +164,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.28.1.47646",
-              "templateHash": "3893635077912970094"
+              "version": "0.29.47.4906",
+              "templateHash": "10026202347308594610"
             }
           },
           "parameters": {

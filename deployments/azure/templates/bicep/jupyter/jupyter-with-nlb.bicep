@@ -56,7 +56,7 @@ param PersistentVolumeSize int = 100
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the Jupyter Labs service')
-param JupyterVersion string = 'latest'
+param JupyterVersion string = 'v0.0.49'
 
 @description('Join token for the Jupyter Labs service')
 @secure()

@@ -9,10 +9,11 @@ StartLimitBurst=10
 TimeoutStartSec=0
 Restart=always
 RestartSec=2
+EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
 ExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited
 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
-ExecStartPre=-/usr/bin/docker exec %n stop || true
-ExecStartPre=-/usr/bin/docker rm %n || true
+ExecStartPre=-/usr/bin/docker stop %n
+ExecStartPre=-/usr/bin/docker rm %n
 ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
 
 ExecStart=/usr/bin/docker run \
@@ -21,6 +22,7 @@ ExecStart=/usr/bin/docker run \
     -e ARM_USE_MSI=true \
     -e ARM_SUBSCRIPTION_ID={5} \
     -e ARM_TENANT_ID={6} \
+    -e TD_VCD_INIT_API_KEY \
     -v /etc/td/ai-unlimited:/etc/td \
     -p {3}:3000 \
     -p {4}:3282 \
