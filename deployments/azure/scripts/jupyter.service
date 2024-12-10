@@ -11,8 +11,8 @@ Restart=always
 RestartSec=2
 ExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited
 ExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}
-ExecStartPre=-/usr/bin/docker exec %n stop || true
-ExecStartPre=-/usr/bin/docker rm %n || true
+ExecStartPre=-/usr/bin/docker stop %n
+ExecStartPre=-/usr/bin/docker rm %n
 ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
 
 ExecStart=/usr/bin/docker run \

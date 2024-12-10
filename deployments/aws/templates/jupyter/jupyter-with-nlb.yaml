@@ -12,7 +12,6 @@ Metadata:
           - InstanceType
           - RootVolumeSize
           - TerminationProtection
-          - JupyterToken
           - IamRole
           - IamRoleName
           - IamPermissionsBoundary
@@ -120,7 +119,7 @@ Parameters:
   JupyterVersion:
     Description: Which version of jupyter to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: latest
+    Default: v0.1.0
 
   RootVolumeSize:
     Description: size of the root disk to the jupyter server.
@@ -752,7 +751,6 @@ Outputs:
   InstanceSecurityGroups:
     Description: AI Unlimited Security Group
     Value: !GetAtt JupyterSecurityGroup.GroupId
-
 
   LoadBalancerSecurityGroups:
     Description: AI Unlimited Load Balancer Security Group
