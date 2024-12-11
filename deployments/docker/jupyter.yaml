@@ -4,7 +4,7 @@ services:
       replicas: 1
     platform: linux/amd64
     container_name: jupyter
-    image: ${JUPYTER_IMAGE_NAME:-teradata/ai-unlimited-jupyter}:${JUPYTER_IMAGE_TAG:-v0.0.51}
+    image: ${JUPYTER_IMAGE_NAME:-teradata/ai-unlimited-jupyter}:${JUPYTER_IMAGE_TAG:-v0.1.01}
     environment:
       accept_license: "Y"
     ports:
