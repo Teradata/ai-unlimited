@@ -42,6 +42,27 @@ services:
     networks:
       - ai-unlimited-network
 
+  scheduler:
+    deploy:
+      replicas: 1
+    container_name: workspace-event-scheduler
+    image: ${AI_UNLIMITED_SCHEDULER_IMAGE_NAME:-teradata/ai-unlimited-scheduler}:${AI_UNLIMITED_SCHEDULER_IMAGE_TAG:-v0.01.65}
+    command: workspace-event-scheduler serve
+    restart: unless-stopped
+    ports:
+      - "${TD_WSSCHED_SCHED_SERVER_PORT:-50051}:50051/tcp"
+      - "${TD_WS_HTTP_SERVER_PORT:-50061}:50061/tcp"
+    depends_on:
+      - ai-unlimited
+    environment:
+      TD_WS_SERVER_PORT: "${TD_VCD_API_PORT:-3282}"
+      TD_VCD_INIT_API_KEY: "${AI_UNLIMITED_INIT_API_KEY}"
+      TD_WSSCHED_POL_INTERVAL: "${TD_WSSCHED_POL_INTERVAL:-60}"
+      TD_WS_CONTAINER_NAME: "${TD_WS_CONTAINER_NAME:-ai-unlimited-workspaces}"
+    volumes:
+      - ${AI_UNLIMITED_HOME:-./volumes/ai-unlimited-workspaces}:/etc/td
+    networks:
+      - ai-unlimited-network
 volumes:
   ssl_certs:
     # external: true

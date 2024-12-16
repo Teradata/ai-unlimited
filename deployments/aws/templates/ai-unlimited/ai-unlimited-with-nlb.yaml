@@ -611,7 +611,8 @@ Resources:
                 RestartSec=2
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
                     -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
@@ -621,7 +622,8 @@ Resources:
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
                     -e TD_WSSCHED_POL_INTERVAL=60 \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                    -e TD_VCD_INIT_API_KEY \
+                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
                 [Install]
                 WantedBy=multi-user.target
               group: root
