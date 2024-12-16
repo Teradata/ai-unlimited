@@ -95,7 +95,10 @@
                 "ec2:DeleteRoute",
                 "ec2:DescribeAddresses",
                 "ec2:AssociateAddress",
-                "ec2:DisassociateAddress"
+                "ec2:DisassociateAddress",
+                "route53:GetHostedZone",
+                "route53:ChangeResourceRecordSets",
+                "route53:GetChange"
             ],
             "Resource": "*",
             "Effect": "Allow"
