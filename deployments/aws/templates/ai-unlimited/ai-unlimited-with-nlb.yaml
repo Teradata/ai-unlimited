@@ -1363,6 +1363,9 @@ Resources:
               - ec2:DescribeAddresses
               - ec2:AssociateAddress
               - ec2:DisassociateAddress
+              - route53:GetHostedZone
+              - route53:ChangeResourceRecordSets
+              - route53:GetChange
             Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
