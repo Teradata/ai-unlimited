@@ -53,7 +53,7 @@ The all in one template deploys a single instance with AI Unlimited running in a
 ![arm_visualization](images/900_ai_unlimited_arm_visualization.png?raw=true)
 
 ### Jupyter Template
-The all in one template deploys a single instance with Jupyter Lab running in a container controlled by systemd.
+The all-in-one template deploys a single instance with Jupyter Lab running in a container controlled by systemd.
 - [jupyter.json](templates/arm/jupyter/jupyter-without-lb.json) ARM template 
 - [jupyter.json](parameters/jupyter.parameters.json) parameter file
 
