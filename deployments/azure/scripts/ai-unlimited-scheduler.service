@@ -9,6 +9,7 @@ StartLimitBurst=10
 TimeoutStartSec=0
 Restart=always
 RestartSec=2
+EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
 ExecStartPre=-/usr/bin/docker stop %n
 ExecStartPre=-/usr/bin/docker rm %n
 ExecStartPre=/usr/bin/docker pull {0}/{1}:{2}
@@ -18,8 +19,11 @@ ExecStart=/usr/bin/docker run \
     -v /etc/td/ai-unlimited:/etc/td \
     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
-    -e TD_WSSCHED_POL_INTERVAL=2 \
+    -e TD_WSSCHED_POL_INTERVAL=60 \
     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
+    -e TD_WSSCHED_DEV_LOC_OVR=ignore \
+    -e TD_WS_SERVER_PORT={4} \
+    -e TD_VCD_INIT_API_KEY \
     --rm --name %n {0}/{1}:{2} workspace-event-scheduler serve
 [Install]
 WantedBy=multi-user.target

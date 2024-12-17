@@ -320,9 +320,8 @@ resource lb 'Microsoft.Network/loadBalancers@2021-08-01' = {
             {
               name: '${name}SchedulerHttpLbProbe'
               properties: {
-                protocol: 'Http'
+                protocol: 'Tcp'
                 port: aiUnlimitedSchedulerHttpPort
-                requestPath: '/healthcheck'
                 intervalInSeconds: 5
                 numberOfProbes: 2
               }

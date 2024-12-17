@@ -140,7 +140,7 @@ Parameters:
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.3.2
+    Default: v0.3.0
 
   AiUnlimitedSchedulerVersion:
     Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
@@ -150,7 +150,7 @@ Parameters:
   AiUnlimitedUiVersion:
     Description: Which version of AI Unlimited UI to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.0.7
+    Default: v0.1.0
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
@@ -559,11 +559,11 @@ Resources:
                 StartLimitBurst=10
 
                 [Service]
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
-                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
@@ -604,9 +604,10 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
                     -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
@@ -615,8 +616,11 @@ Resources:
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
                     -e TD_WSSCHED_POL_INTERVAL=60 \
+                    -e TD_WSSCHED_DEV_LOC_OVR=ignore \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                    -e TD_WS_SERVER_PORT=${ AiUnlimitedGrpcPort } \
+                    -e TD_VCD_INIT_API_KEY \
+                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
 
                 [Install]
                 WantedBy=multi-user.target
@@ -999,6 +1003,9 @@ Resources:
               - ec2:DescribeAddresses
               - ec2:AssociateAddress
               - ec2:DisassociateAddress
+              - route53:GetHostedZone
+              - route53:ChangeResourceRecordSets
+              - route53:GetChange
             Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole
