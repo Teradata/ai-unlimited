@@ -17,6 +17,7 @@ services:
       TD_VCD_AUTH_PORT: "${TD_VCD_AUTH_PORT:-3000}"
       TD_VCD_INIT_API_KEY: "${AI_UNLIMITED_INIT_API_KEY:?Initial API key is required, please run the generate api key script.}"
       TD_VCD_LOG_LEVEL: "${AI_UNLIMITED_LOG_LEVEL:-INFO}"
+      TD_VCD_AWS_S3_TEMP_STORAGE: "${TD_VCD_AWS_S3_TEMP_STORAGE}"
     volumes:
       - ssl_certs:/etc/td/ssl
       - ${AI_UNLIMITED_HOME:-./volumes/ai-unlimited-workspaces}:/etc/td

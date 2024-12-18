@@ -419,6 +419,22 @@ Resources:
           Value: persistent storage
     Condition: USENEWPERSISTENTVOLUME
 
+  TempStorage:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - ai-unlimited-${RandomSuffix}
+        - RandomSuffix: !Select
+            - 0
+            - !Split
+              - '-'
+              - !Select
+                - 2
+                - !Split [ '/', !Ref AWS::StackId ]
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+
   AiUnlimitedServer:
     CreationPolicy:
       ResourceSignal:
@@ -576,6 +592,7 @@ Resources:
                     -e accept_license=Y \
                     -e PLATFORM=aws \
                     -e TD_VCD_INIT_API_KEY \
+                    -e TD_VCD_AWS_S3_TEMP_STORAGE=${ TempStorage } \
                     -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
                     -v /etc/td/ai-unlimited:/etc/td \
