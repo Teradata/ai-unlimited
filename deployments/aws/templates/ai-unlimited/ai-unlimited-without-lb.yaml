@@ -425,7 +425,9 @@ Resources:
               - '-'
               - !Select
                 - 2
-                - !Split [ '/', !Ref AWS::StackId ]
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
       AccessControl: Private
       VersioningConfiguration:
         Status: Enabled
