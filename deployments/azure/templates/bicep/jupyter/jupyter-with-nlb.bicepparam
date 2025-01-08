@@ -2,7 +2,7 @@ using './jupyter-with-nlb.bicep'
 
 param ResourceGroupName = 'ai-unlimited-jupyter'
 param JupyterName = ''
-param PublicKey = ''
+param RoleDefinitionId = ''
 param OSVersion = 'Ubuntu-2004'
 param InstanceType = 'Standard_D2s_v3'
 param Network = ''
