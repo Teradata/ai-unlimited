@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.31.92.45157",
-      "templateHash": "1520819731474419291"
+      "templateHash": "16506857177396326344"
     }
   },
   "parameters": {
@@ -22,10 +22,10 @@
         "description": "Name for the Jupyter Labs service's virtual machine."
       }
     },
-    "PublicKey": {
-      "type": "securestring",
+    "RoleDefinitionId": {
+      "type": "string",
       "metadata": {
-        "description": "SSH public key value"
+        "description": "GUID of the AI Unlimited Role"
       }
     },
     "OSVersion": {
@@ -96,13 +96,6 @@
         "description": "Destination Application Security Groups to give access to Jupyter Labs service instance."
       }
     },
-    "AllowPublicSSH": {
-      "type": "bool",
-      "defaultValue": false,
-      "metadata": {
-        "description": "allow access the AI Unlimited ssh port from the access cidr."
-      }
-    },
     "UsePersistentVolume": {
       "type": "string",
       "defaultValue": "New",
@@ -163,6 +156,185 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
+      "name": "vault",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "encryptVolumes": {
+            "value": true
+          },
+          "keyVaultName": {
+            "value": "[parameters('JupyterName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.31.92.45157",
+              "templateHash": "29287785012335710"
+            }
+          },
+          "parameters": {
+            "encryptVolumes": {
+              "type": "bool"
+            },
+            "keyVaultName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "uuid": {
+              "type": "string",
+              "defaultValue": "[newGuid()]"
+            }
+          },
+          "variables": {
+            "nameCharLimit": 24,
+            "uniqueName": "[format('{0}-{1}', parameters('keyVaultName'), uniqueString(parameters('uuid')))]",
+            "uniqueKeyVaultName": "[substring(format('{0}', variables('uniqueName')), 0, if(less(length(variables('uniqueName')), variables('nameCharLimit')), length(variables('uniqueName')), variables('nameCharLimit')))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-02-01",
+              "name": "[variables('uniqueKeyVaultName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "softDeleteRetentionInDays": 7,
+                "enableSoftDelete": true,
+                "enablePurgeProtection": "[if(parameters('encryptVolumes'), true(), null())]",
+                "enabledForDiskEncryption": "[parameters('encryptVolumes')]",
+                "accessPolicies": []
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueKeyVaultName'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[variables('uniqueKeyVaultName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vault-access-policy",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vaultName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault'), '2022-09-01').outputs.name.value]"
+          },
+          "accessPolicy": {
+            "value": {
+              "tenantId": "[subscription().tenantId]",
+              "objectId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrincipleId.value]",
+              "permissions": {
+                "keys": [
+                  "Create",
+                  "Delete",
+                  "Get",
+                  "List",
+                  "Update",
+                  "Purge",
+                  "Recover",
+                  "Decrypt",
+                  "Encrypt",
+                  "Sign",
+                  "UnwrapKey",
+                  "Verify",
+                  "WrapKey",
+                  "GetRotationPolicy",
+                  "SetRotationPolicy"
+                ],
+                "secrets": [
+                  "Get",
+                  "Set",
+                  "Delete",
+                  "List",
+                  "Purge"
+                ],
+                "storage": [
+                  "Get"
+                ]
+              }
+            }
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.31.92.45157",
+              "templateHash": "16095084913002426133"
+            }
+          },
+          "parameters": {
+            "vaultName": {
+              "type": "string"
+            },
+            "accessPolicy": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults/accessPolicies",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/add', parameters('vaultName'))]",
+              "properties": {
+                "accessPolicies": [
+                  "[parameters('accessPolicy')]"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
       "name": "firewall",
       "resourceGroup": "[parameters('ResourceGroupName')]",
       "properties": {
@@ -190,7 +362,7 @@
             "value": "[parameters('detinationAppSecGroups')]"
           },
           "sshAccess": {
-            "value": "[parameters('AllowPublicSSH')]"
+            "value": false
           },
           "tags": {
             "value": "[parameters('Tags')]"
@@ -585,7 +757,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.31.92.45157",
-              "templateHash": "370499549708602593"
+              "templateHash": "10558013139047714145"
             }
           },
           "parameters": {
@@ -664,7 +836,7 @@
                   }
                 ],
                 "loadBalancingRules": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedAuthPort'), 0)), createArray(createObject('name', 'AiUnlimitedAuth', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedAuthPort'), 'backendPort', parameters('aiUnlimitedAuthPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}AuthLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', 'AiUnlimitedAPI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedGrpcPort'), 'backendPort', parameters('aiUnlimitedGrpcPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}APILbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', 'JupyterUI', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('jupyterHttpPort'), 'backendPort', parameters('jupyterHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}JupyterLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedSchedulerHttp', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'backendPort', parameters('aiUnlimitedSchedulerHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}SchedulerHttpLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpPort'), 0)), createArray(createObject('name', 'AiUnlimitedUIHttp', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedUIHttpPort'), 'backendPort', parameters('aiUnlimitedUIHttpPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UIHttpLbProbe', parameters('name'))))))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpsPort'), 0)), createArray(createObject('name', 'AiUnlimitedUIHttps', 'properties', createObject('frontendIPConfiguration', createObject('id', resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), format('{0}Inbound', parameters('name')))), 'backendAddressPool', createObject('id', resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), format('{0}OutboundBackendPool', parameters('name')))), 'frontendPort', parameters('aiUnlimitedUIHttpsPort'), 'backendPort', parameters('aiUnlimitedUIHttpsPort'), 'enableFloatingIP', false(), 'idleTimeoutInMinutes', 15, 'protocol', 'Tcp', 'enableTcpReset', true(), 'loadDistribution', 'Default', 'disableOutboundSnat', true(), 'probe', createObject('id', resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), format('{0}UIHttpsLbProbe', parameters('name'))))))), createArray())))]",
-                "probes": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedAuthPort'), 0)), createArray(createObject('name', format('{0}AuthLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedAuthPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', format('{0}SchedulerHttpLbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedSchedulerHttpPort'), 'requestPath', '/healthcheck', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpPort'), 0)), createArray(createObject('name', format('{0}UIHttpLbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedUIHttpPort'), 'requestPath', '/', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpsPort'), 0)), createArray(createObject('name', format('{0}UIHttpsLbProbe', parameters('name')), 'properties', createObject('protocol', 'Https', 'port', parameters('aiUnlimitedUIHttpsPort'), 'requestPath', '/', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
+                "probes": "[flatten(createArray(if(not(equals(parameters('aiUnlimitedAuthPort'), 0)), createArray(createObject('name', format('{0}AuthLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedAuthPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedGrpcPort'), 0)), createArray(createObject('name', format('{0}APILbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedGrpcPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('jupyterHttpPort'), 0)), createArray(createObject('name', format('{0}JupyterLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('jupyterHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedSchedulerHttpPort'), 0)), createArray(createObject('name', format('{0}SchedulerHttpLbProbe', parameters('name')), 'properties', createObject('protocol', 'Tcp', 'port', parameters('aiUnlimitedSchedulerHttpPort'), 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpPort'), 0)), createArray(createObject('name', format('{0}UIHttpLbProbe', parameters('name')), 'properties', createObject('protocol', 'Http', 'port', parameters('aiUnlimitedUIHttpPort'), 'requestPath', '/', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray()), if(not(equals(parameters('aiUnlimitedUIHttpsPort'), 0)), createArray(createObject('name', format('{0}UIHttpsLbProbe', parameters('name')), 'properties', createObject('protocol', 'Https', 'port', parameters('aiUnlimitedUIHttpsPort'), 'requestPath', '/', 'intervalInSeconds', 5, 'numberOfProbes', 2))), createArray())))]",
                 "outboundRules": [
                   {
                     "name": "myOutboundRule",
@@ -897,7 +1069,7 @@
             "value": "azureuser"
           },
           "sshPublicKey": {
-            "value": "[parameters('PublicKey')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'Public-Key'), '2022-09-01').outputs.PublicKey.value]"
           },
           "dnsLabelPrefix": {
             "value": "[variables('dnsLabelPrefix')]"
@@ -1298,7 +1470,140 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'Public-Key')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "Public-Key",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "Name": {
+            "value": "[parameters('JupyterName')]"
+          },
+          "Location": {
+            "value": "[deployment().location]"
+          },
+          "VaultName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault'), '2022-09-01').outputs.name.value]"
+          },
+          "RoleID": {
+            "value": "[parameters('RoleDefinitionId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.31.92.45157",
+              "templateHash": "9690061458974637253"
+            }
+          },
+          "parameters": {
+            "Location": {
+              "type": "string"
+            },
+            "Name": {
+              "type": "string"
+            },
+            "VaultName": {
+              "type": "string"
+            },
+            "RoleID": {
+              "type": "string"
+            },
+            "Uuid": {
+              "type": "string",
+              "defaultValue": "[newGuid()]"
+            }
+          },
+          "variables": {
+            "SecretName": "[format('{0}-PrivateKey', parameters('Name'))]",
+            "ScriptName": "[format('{0}-createKeys', parameters('Name'))]",
+            "IdentityName": "[format('{0}-scratch', parameters('Name'))]",
+            "RoleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('RoleID'))]",
+            "RoleDefinitionName": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName')), variables('RoleDefinitionId'), resourceGroup().id)]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[variables('IdentityName')]",
+              "location": "[parameters('Location')]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[variables('RoleDefinitionName')]",
+              "properties": {
+                "roleDefinitionId": "[variables('RoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2023-08-01",
+              "name": "[variables('ScriptName')]",
+              "location": "[parameters('Location')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName')))]": {}
+                }
+              },
+              "kind": "AzureCLI",
+              "properties": {
+                "forceUpdateTag": "[parameters('Uuid')]",
+                "azCliVersion": "2.0.80",
+                "timeout": "PT30M",
+                "retentionInterval": "P1D",
+                "cleanupPreference": "OnSuccess",
+                "scriptContent": "      #/bin/bash -e\n\n      echo -e 'y' | ssh-keygen -f scratch\n\n      privateKey=$(cat scratch)\n      publicKey=$(cat 'scratch.pub')\n\n      json=\"{\\\"keyinfo\\\":{\\\"privateKey\\\":\\\"$privateKey\\\",\\\"publicKey\\\":\\\"$publicKey\\\"}}\"\n\n      echo \"$json\" > $AZ_SCRIPTS_OUTPUT_PATH\n    "
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName'))]",
+                "[resourceId('Microsoft.Authorization/roleAssignments', variables('RoleDefinitionName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('VaultName'), variables('SecretName'))]",
+              "properties": {
+                "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName')), '2023-08-01').outputs.keyinfo.privateKey]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "PublicKey": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName')), '2023-08-01').outputs.keyinfo.publicKey]"
+            },
+            "Status": {
+              "type": "object",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName')), '2023-08-01').status]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault')]"
       ]
     }
   ],
@@ -1318,10 +1623,6 @@
     "JupyterLabPrivateHttpAccess": {
       "type": "string",
       "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrivateIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
-    },
-    "sshCommand": {
-      "type": "string",
-      "value": "[format('ssh azureuser@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrivateIP.value)]"
     },
     "NetworkSecurityGroupId": {
       "type": "string",

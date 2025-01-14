@@ -2,7 +2,7 @@ using './jupyter-without-lb.bicep'
 
 param ResourceGroupName = 'ai-unlimited-jupyter'
 param JupyterName = ''
-param PublicKey = ''
+param RoleDefinitionId = ''
 param OSVersion = 'Ubuntu-2004'
 param InstanceType = 'Standard_D2s_v3'
 param Network = ''
@@ -14,7 +14,6 @@ param AccessCIDRs = [
 param JupyterHttpPort = 8888
 param SourceAppSecGroups = []
 param detinationAppSecGroups = []
-param AllowPublicSSH = true
 param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
