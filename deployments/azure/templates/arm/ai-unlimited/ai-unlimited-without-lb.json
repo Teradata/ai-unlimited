@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.33.93.31351",
-      "templateHash": "4829976453101372962"
+      "templateHash": "4913906213223940968"
     }
   },
   "parameters": {
@@ -155,7 +155,7 @@
     },
     "AiUnlimitedUIVersion": {
       "type": "string",
-      "defaultValue": "v0.1.0",
+      "defaultValue": "v0.1.1",
       "metadata": {
         "description": "Container Version of the AI Unlimited UI service"
       }

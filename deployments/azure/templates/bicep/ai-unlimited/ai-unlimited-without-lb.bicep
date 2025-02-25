@@ -77,7 +77,7 @@ param ExistingPersistentVolume string = 'NONE'
 param AiUnlimitedVersion string = 'v0.3.6'
 
 @description('Container Version of the AI Unlimited UI service')
-param AiUnlimitedUIVersion string = 'v0.1.0'
+param AiUnlimitedUIVersion string = 'v0.1.1'
 
 @description('Container Version of the AI Unlimited scheduler service')
 param AiUnlimitedSchedulerVersion string = 'v0.01.70'
