@@ -80,7 +80,7 @@ param AiUnlimitedVersion string = 'v0.3.6'
 param AiUnlimitedUIVersion string = 'v0.1.2'
 
 @description('Container Version of the AI Unlimited scheduler service')
-param AiUnlimitedSchedulerVersion string = 'v0.01.70'
+param AiUnlimitedSchedulerVersion string = 'v0.1.77'
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}

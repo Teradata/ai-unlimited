@@ -47,7 +47,7 @@ services:
     deploy:
       replicas: 1
     container_name: workspace-event-scheduler
-    image: ${AI_UNLIMITED_SCHEDULER_IMAGE_NAME:-teradata/ai-unlimited-scheduler}:${AI_UNLIMITED_SCHEDULER_IMAGE_TAG:-v0.01.70}
+    image: ${AI_UNLIMITED_SCHEDULER_IMAGE_NAME:-teradata/ai-unlimited-scheduler}:${AI_UNLIMITED_SCHEDULER_IMAGE_TAG:-v0.1.77}
     command: workspace-event-scheduler serve
     restart: unless-stopped
     ports:
