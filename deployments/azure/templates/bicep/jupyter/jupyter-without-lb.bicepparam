@@ -17,7 +17,7 @@ param detinationAppSecGroups = []
 param UsePersistentVolume = 'New'
 param PersistentVolumeSize = 100
 param ExistingPersistentVolume = 'NONE'
-param JupyterVersion = 'v0.1.5'
+param JupyterVersion = 'v0.1.7'
 param JupyterToken = 'USE_A_SECURE_TOKEN'
 param Tags = {}
 

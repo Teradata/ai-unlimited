@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.33.93.31351",
-      "templateHash": "1165202079512531345"
+      "templateHash": "5853906843316005750"
     }
   },
   "parameters": {
@@ -148,7 +148,7 @@
     },
     "AiUnlimitedVersion": {
       "type": "string",
-      "defaultValue": "v0.3.6",
+      "defaultValue": "v0.3.7",
       "metadata": {
         "description": "Container Version of the AI Unlimited service"
       }
@@ -162,7 +162,7 @@
     },
     "AiUnlimitedSchedulerVersion": {
       "type": "string",
-      "defaultValue": "v0.1.77",
+      "defaultValue": "v0.1.80",
       "metadata": {
         "description": "Container Version of the AI Unlimited scheduler service"
       }

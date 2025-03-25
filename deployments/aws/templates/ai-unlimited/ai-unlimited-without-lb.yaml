@@ -140,12 +140,12 @@ Parameters:
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.3.6
+    Default: v0.3.7
 
   AiUnlimitedSchedulerVersion:
     Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.1.77
+    Default: v0.1.80
 
   AiUnlimitedUiVersion:
     Description: Which version of AI Unlimited UI to deploy, uses container version tags, defaults to "latest"

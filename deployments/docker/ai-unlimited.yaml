@@ -4,7 +4,7 @@ services:
       replicas: 1
     platform: linux/amd64
     container_name: ai-unlimited-workspaces
-    image: ${AI_UNLIMITED_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${AI_UNLIMITED_IMAGE_TAG:-v0.3.6}
+    image: ${AI_UNLIMITED_IMAGE_NAME:-teradata/ai-unlimited-workspaces}:${AI_UNLIMITED_IMAGE_TAG:-v0.3.7}
     command: workspaces serve -v
     restart: unless-stopped
     ports:
@@ -47,7 +47,7 @@ services:
     deploy:
       replicas: 1
     container_name: workspace-event-scheduler
-    image: ${AI_UNLIMITED_SCHEDULER_IMAGE_NAME:-teradata/ai-unlimited-scheduler}:${AI_UNLIMITED_SCHEDULER_IMAGE_TAG:-v0.1.77}
+    image: ${AI_UNLIMITED_SCHEDULER_IMAGE_NAME:-teradata/ai-unlimited-scheduler}:${AI_UNLIMITED_SCHEDULER_IMAGE_TAG:-v0.1.80}
     command: workspace-event-scheduler serve
     restart: unless-stopped
     ports:
