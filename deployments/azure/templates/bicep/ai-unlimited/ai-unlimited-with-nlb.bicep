@@ -71,13 +71,13 @@ param PersistentVolumeSize int = 100
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the AI Unlimited service')
-param AiUnlimitedVersion string = 'v0.3.0'
+param AiUnlimitedVersion string = 'v0.3.8'
 
 @description('Container Version of the AI Unlimited UI service')
-param AiUnlimitedUIVersion string = 'v0.1.0'
+param AiUnlimitedUIVersion string = 'v0.1.3'
 
 @description('Container Version of the AI Unlimited scheduler service')
-param AiUnlimitedSchedulerVersion string = 'latest'
+param AiUnlimitedSchedulerVersion string = 'v0.1.80'
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
