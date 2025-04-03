@@ -140,17 +140,17 @@ Parameters:
   AiUnlimitedVersion:
     Description: Which version of AI Unlimited to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.3.0
+    Default: v0.3.8
 
   AiUnlimitedSchedulerVersion:
     Description: Which version of AI Unlimited Scheduler to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: latest
+    Default: v0.1.80
 
   AiUnlimitedUiVersion:
     Description: Which version of AI Unlimited UI to deploy, uses container version tags, defaults to "latest"
     Type: String
-    Default: v0.1.0
+    Default: v0.1.3
 
   RootVolumeSize:
     Description: size of the root disk to the AI Unlimited server.
@@ -414,6 +414,24 @@ Resources:
           Value: persistent storage
     Condition: USENEWPERSISTENTVOLUME
 
+  TempStorage:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - ai-unlimited-${RandomSuffix}
+        - RandomSuffix: !Select
+            - 0
+            - !Split
+              - '-'
+              - !Select
+                - 2
+                - !Split
+                  - /
+                  - !Ref AWS::StackId
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+
   AiUnlimitedServer:
     CreationPolicy:
       ResourceSignal:
@@ -559,11 +577,11 @@ Resources:
                 StartLimitBurst=10
 
                 [Service]
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
                 ExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited
-                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker stop %n || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
                 ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-workspaces:${ AiUnlimitedVersion }
@@ -571,6 +589,7 @@ Resources:
                     -e accept_license=Y \
                     -e PLATFORM=aws \
                     -e TD_VCD_INIT_API_KEY \
+                    -e TD_VCD_AWS_S3_TEMP_STORAGE=${ TempStorage } \
                     -p ${ AiUnlimitedAuthPort }:3000 \
                     -p ${ AiUnlimitedGrpcPort }:3282 \
                     -v /etc/td/ai-unlimited:/etc/td \
@@ -604,9 +623,10 @@ Resources:
                 TimeoutStartSec=0
                 Restart=always
                 RestartSec=2
+                EnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt
                 ExecStartPre=-/usr/bin/docker exec %n stop || true
                 ExecStartPre=-/usr/bin/docker rm %n || true
-                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:latest
+                ExecStartPre=/usr/bin/docker pull teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion }
                 ExecStart=/usr/bin/docker run \
                     --network ai_unlimited \
                     -p ${ AiUnlimitedSchedulerGrpcPort }:50051 \
@@ -615,8 +635,11 @@ Resources:
                     -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \
                     -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \
                     -e TD_WSSCHED_POL_INTERVAL=60 \
+                    -e TD_WSSCHED_DEV_LOC_OVR=ignore \
                     -e TD_WS_CONTAINER_NAME=ai-unlimited.service \
-                    --rm --name %n teradata/ai-unlimited-scheduler:latest workspace-event-scheduler serve
+                    -e TD_WS_SERVER_PORT=${ AiUnlimitedGrpcPort } \
+                    -e TD_VCD_INIT_API_KEY \
+                    --rm --name %n teradata/ai-unlimited-scheduler:${ AiUnlimitedSchedulerVersion } workspace-event-scheduler serve
 
                 [Install]
                 WantedBy=multi-user.target
@@ -999,6 +1022,9 @@ Resources:
               - ec2:DescribeAddresses
               - ec2:AssociateAddress
               - ec2:DisassociateAddress
+              - route53:GetHostedZone
+              - route53:ChangeResourceRecordSets
+              - route53:GetChange
             Resource: '*'
       Roles:
         - !Ref AiUnlimitedRole

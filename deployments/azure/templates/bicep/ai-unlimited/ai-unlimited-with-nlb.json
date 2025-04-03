@@ -4,28 +4,22 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.33.93.31351",
-      "templateHash": "5242183368251984003"
+      "version": "0.32.4.45862",
+      "templateHash": "14115047365666761920"
     }
   },
   "parameters": {
     "ResourceGroupName": {
       "type": "string",
-      "defaultValue": "ai-unlimited-jupyter",
+      "defaultValue": "ai-unlimited-workspace",
       "metadata": {
         "description": "name for the resource group."
       }
     },
-    "JupyterName": {
+    "AiUnlimitedName": {
       "type": "string",
       "metadata": {
-        "description": "Name for the Jupyter Labs service's virtual machine."
-      }
-    },
-    "RoleDefinitionId": {
-      "type": "string",
-      "metadata": {
-        "description": "GUID of the AI Unlimited Role"
+        "description": "Name for the AI Unlimited service's virtual machine."
       }
     },
     "OSVersion": {
@@ -44,24 +38,24 @@
       "type": "string",
       "defaultValue": "Standard_D2s_v3",
       "metadata": {
-        "description": "The Jupyter Labs VM type"
+        "description": "The AI Unlimited VM type"
       }
     },
     "Network": {
       "type": "string",
       "metadata": {
-        "description": "Name of the network to run the Jupyter Labs service in"
+        "description": "Name of the network to run the AI Unlimited service in"
       }
     },
     "Subnet": {
       "type": "string",
       "metadata": {
-        "description": "Name of the subnet to run the Jupyter Labs service in"
+        "description": "Name of the subnet to run the AI Unlimited service in"
       }
     },
     "SecurityGroup": {
       "type": "string",
-      "defaultValue": "JupyterSecurityGroup",
+      "defaultValue": "AiUnlimitedSecurityGroup",
       "metadata": {
         "description": "Name of the network security group"
       }
@@ -72,28 +66,59 @@
         "0.0.0.0/0"
       ],
       "metadata": {
-        "description": "The CIDR ranges that can be used to communicate with the Jupyter Labs service instance."
+        "description": "The CIDR ranges that can be used to communicate with the AI Unlimited service instance."
       }
     },
-    "JupyterHttpPort": {
+    "AiUnlimitedAuthPort": {
       "type": "int",
-      "defaultValue": 8888,
+      "defaultValue": 3000,
       "metadata": {
-        "description": "port to access the Jupyter Labs UI."
+        "description": "port to access the AI Unlimited auth service."
+      }
+    },
+    "AiUnlimitedGrpcPort": {
+      "type": "int",
+      "defaultValue": 3282,
+      "metadata": {
+        "description": "port to access the AI Unlimited service api."
+      }
+    },
+    "AiUnlimitedSchedulerHttpPort": {
+      "type": "int",
+      "defaultValue": 50061,
+      "metadata": {
+        "description": "port to access the AI Unlimited scheduler api."
       }
     },
     "SourceAppSecGroups": {
       "type": "array",
       "defaultValue": [],
       "metadata": {
-        "description": "Source Application Security Groups to access the Jupyter Labs service api."
+        "description": "Source Application Security Groups to access the AI Unlimited service api."
       }
     },
     "detinationAppSecGroups": {
       "type": "array",
       "defaultValue": [],
       "metadata": {
-        "description": "Destination Application Security Groups to give access to Jupyter Labs service instance."
+        "description": "Destination Application Security Groups to give access to AI Unlimited service instance."
+      }
+    },
+    "RoleDefinitionId": {
+      "type": "string",
+      "metadata": {
+        "description": "GUID of the AI Unlimited Role"
+      }
+    },
+    "UseKeyVault": {
+      "type": "string",
+      "defaultValue": "New",
+      "allowedValues": [
+        "New",
+        "None"
+      ],
+      "metadata": {
+        "description": "should we create a new Azure Key Vault for bootstrapping the AI Unlimited Engine nodes."
       }
     },
     "UsePersistentVolume": {
@@ -104,34 +129,42 @@
         "Existing"
       ],
       "metadata": {
-        "description": "should we use a new or existing volume for persistent data on the Jupyter server."
+        "description": "should we use a new or existing volume for persistent data on the AI Unlimited server."
       }
     },
     "PersistentVolumeSize": {
       "type": "int",
       "defaultValue": 100,
       "metadata": {
-        "description": "size of the optional persistent disk to the Jpuyter server."
+        "description": "size of the optional persistent disk to the AI Unlimited server."
       }
     },
     "ExistingPersistentVolume": {
       "type": "string",
       "defaultValue": "NONE",
       "metadata": {
-        "description": "Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the Jupyter Labs server."
+        "description": "Name of the existing persistent volume to attach. Must be in the same region and resourcegroup zone as the AI Unlimited server."
       }
     },
-    "JupyterVersion": {
+    "AiUnlimitedVersion": {
       "type": "string",
-      "defaultValue": "v0.1.7",
+      "defaultValue": "v0.3.0",
       "metadata": {
-        "description": "Container Version of the Jupyter Labs service"
+        "description": "Container Version of the AI Unlimited service"
       }
     },
-    "JupyterToken": {
-      "type": "securestring",
+    "AiUnlimitedUIVersion": {
+      "type": "string",
+      "defaultValue": "v0.1.0",
       "metadata": {
-        "description": "Join token for the Jupyter Labs service"
+        "description": "Container Version of the AI Unlimited UI service"
+      }
+    },
+    "AiUnlimitedSchedulerVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container Version of the AI Unlimited scheduler service"
       }
     },
     "Tags": {
@@ -143,17 +176,36 @@
     }
   },
   "variables": {
-    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/jupyter.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td \n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- sleep 60\n- systemctl enable jupyter.service\n- systemctl start jupyter.service\n",
-    "$fxv#1": "[Unit]\nDescription=jupyter\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/jupyter/{{userdata,ipython}}\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e JUPYTER_TOKEN={4} \\\n    -v /etc/td/jupyter/userdata:/home/jovyan/JupyterLabRoot/userdata \\\n    -v /etc/td/jupyter/ipython:/home/jovyan/.ipython \\\n    -p {3}:8888 \\\n    --network ai_unlimited \\\n    --rm --name %n {0}/{1}:{2}\n\n[Install]\nWantedBy=multi-user.target\n",
-    "dnsId": "[uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('JupyterName'))]",
+    "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{1}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited-scheduler.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{2}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited-ui.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td\n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- mkdir -p /etc/td/ai-unlimited\n- echo \"TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)\" > /etc/td/ai-unlimited/init_api_key.txt\n- sleep 60\n- systemctl enable ai-unlimited.service\n- systemctl start ai-unlimited.service\n- systemctl enable ai-unlimited-scheduler.service\n- systemctl start ai-unlimited-scheduler.service\n- systemctl enable ai-unlimited-ui.service\n- systemctl start ai-unlimited-ui.service\n",
+    "$fxv#1": "[Unit]\nDescription=AI Unlimited\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nEnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt\nExecStartPre=-/usr/bin/docker volume create ssl_certs\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -e TD_VCD_INIT_API_KEY \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -v ssl_certs:/etc/td/ssl \\\n    --network ai_unlimited {7} \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
+    "$fxv#2": "[Unit]\nDescription=AI Unlimited Scheduler\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nEnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\nExecStart=/usr/bin/docker run \\\n    --network ai_unlimited \\\n    -p {3}:50061 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \\\n    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \\\n    -e TD_WSSCHED_POL_INTERVAL=60 \\\n    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \\\n    -e TD_WSSCHED_DEV_LOC_OVR=ignore \\\n    -e TD_WS_SERVER_PORT={4} \\\n    -e TD_VCD_INIT_API_KEY \\\n    --rm --name %n {0}/{1}:{2} workspace-event-scheduler serve\n[Install]\nWantedBy=multi-user.target",
+    "$fxv#3": "[Unit]\nDescription=AI Unlimited UI\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nEnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e TD_VCD_USE_TLS=false \\\n    -e TD_VCD_AUTH_PORT={4}\\\n    -e TD_VCD_API_PORT={5}\\\n    -e TD_VCD_INIT_API_KEY \\\n    -p 80:80 \\\n    -p 443:443 \\\n    -v ssl_certs:/etc/ssl/td \\\n    --network ai_unlimited {6} \\\n    --rm --name %n {0}/{1}:{2}   \n\n[Install]\nWantedBy=multi-user.target",
+    "AiUnlimitedUIHttpPort": 80,
+    "AiUnlimitedUIHttpsPort": 443,
+    "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
+    "dnsId": "[uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName'))]",
     "dnsLabelPrefix": "[format('td{0}', variables('dnsId'))]",
     "nlbDnsLabelPrefix": "[format('td{0}-nlb', variables('dnsId'))]",
     "registry": "teradata",
-    "jupyterRepository": "ai-unlimited-jupyter",
-    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('jupyterRepository'), parameters('JupyterVersion'), parameters('JupyterHttpPort'), parameters('JupyterToken')))))]"
+    "workspaceRepository": "ai-unlimited-workspaces",
+    "workspaceSchedulerRepository": "ai-unlimited-scheduler",
+    "workspaceUIRepository": "ai-unlimited-workspaces-ui"
   },
   "resources": [
     {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[variables('roleAssignmentName')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('RoleDefinitionId'))]",
+        "principalId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrincipleId.value]"
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]"
+      ]
+    },
+    {
+      "condition": "[equals(parameters('UseKeyVault'), 'New')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "vault",
@@ -168,7 +220,7 @@
             "value": true
           },
           "keyVaultName": {
-            "value": "[parameters('JupyterName')]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "location": {
             "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
@@ -183,8 +235,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "2548779574952100617"
+              "version": "0.32.4.45862",
+              "templateHash": "18082039460890227567"
             }
           },
           "parameters": {
@@ -246,6 +298,7 @@
       }
     },
     {
+      "condition": "[equals(parameters('UseKeyVault'), 'New')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "vault-access-policy",
@@ -262,7 +315,7 @@
           "accessPolicy": {
             "value": {
               "tenantId": "[subscription().tenantId]",
-              "objectId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrincipleId.value]",
+              "objectId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrincipleId.value]",
               "permissions": {
                 "keys": [
                   "Create",
@@ -301,8 +354,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "5026010387554959122"
+              "version": "0.32.4.45862",
+              "templateHash": "4331975894596953088"
             }
           },
           "parameters": {
@@ -328,7 +381,7 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault')]"
       ]
     },
@@ -352,8 +405,20 @@
           "accessCidrs": {
             "value": "[parameters('AccessCIDRs')]"
           },
-          "jupyterHttpPort": {
-            "value": "[parameters('JupyterHttpPort')]"
+          "aiUnlimitedAuthPort": {
+            "value": "[parameters('AiUnlimitedAuthPort')]"
+          },
+          "aiUnlimitedGrpcPort": {
+            "value": "[parameters('AiUnlimitedGrpcPort')]"
+          },
+          "aiUnlimitedSchedulerHttpPort": {
+            "value": "[parameters('AiUnlimitedSchedulerHttpPort')]"
+          },
+          "aiUnlimitedUIHttpPort": {
+            "value": "[variables('AiUnlimitedUIHttpPort')]"
+          },
+          "aiUnlimitedUIHttpsPort": {
+            "value": "[variables('AiUnlimitedUIHttpsPort')]"
           },
           "sourceAppSecGroups": {
             "value": "[parameters('SourceAppSecGroups')]"
@@ -374,8 +439,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "17468668314943482639"
+              "version": "0.32.4.45862",
+              "templateHash": "16013689345643124539"
             }
           },
           "parameters": {
@@ -735,16 +800,28 @@
         "mode": "Incremental",
         "parameters": {
           "name": {
-            "value": "[parameters('JupyterName')]"
-          },
-          "location": {
-            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "dnsPrefix": {
             "value": "[variables('nlbDnsLabelPrefix')]"
           },
-          "jupyterHttpPort": {
-            "value": "[parameters('JupyterHttpPort')]"
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "aiUnlimitedAuthPort": {
+            "value": "[parameters('AiUnlimitedAuthPort')]"
+          },
+          "aiUnlimitedGrpcPort": {
+            "value": "[parameters('AiUnlimitedGrpcPort')]"
+          },
+          "aiUnlimitedSchedulerHttpPort": {
+            "value": "[parameters('AiUnlimitedSchedulerHttpPort')]"
+          },
+          "aiUnlimitedUIHttpPort": {
+            "value": "[variables('AiUnlimitedUIHttpPort')]"
+          },
+          "aiUnlimitedUIHttpsPort": {
+            "value": "[variables('AiUnlimitedUIHttpsPort')]"
           },
           "tags": {
             "value": "[parameters('Tags')]"
@@ -756,8 +833,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "6885617203567743019"
+              "version": "0.32.4.45862",
+              "templateHash": "12614640311343730358"
             }
           },
           "parameters": {
@@ -892,8 +969,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "10641070614732364786"
+                      "version": "0.32.4.45862",
+                      "templateHash": "3737753991380666295"
                     }
                   },
                   "parameters": {
@@ -974,8 +1051,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "10641070614732364786"
+                      "version": "0.32.4.45862",
+                      "templateHash": "3737753991380666295"
                     }
                   },
                   "parameters": {
@@ -1051,7 +1128,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "jupyter",
+      "name": "ai-unlimited",
       "resourceGroup": "[parameters('ResourceGroupName')]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1063,7 +1140,7 @@
             "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
           },
           "name": {
-            "value": "[parameters('JupyterName')]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "adminUsername": {
             "value": "azureuser"
@@ -1087,7 +1164,7 @@
             "value": "[parameters('OSVersion')]"
           },
           "cloudInitData": {
-            "value": "[variables('cloudInitData')]"
+            "value": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, format('--network-alias {0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value))), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), parameters('AiUnlimitedSchedulerVersion'), parameters('AiUnlimitedSchedulerHttpPort'), parameters('AiUnlimitedGrpcPort'))), base64(format(variables('$fxv#3'), variables('registry'), variables('workspaceUIRepository'), parameters('AiUnlimitedUIVersion'), variables('AiUnlimitedUIHttpPort'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), format('--network-alias {0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value)))))]"
           },
           "usePersistentVolume": {
             "value": "[parameters('UsePersistentVolume')]"
@@ -1099,7 +1176,7 @@
             "value": "[parameters('ExistingPersistentVolume')]"
           },
           "nlbName": {
-            "value": "[parameters('JupyterName')]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "nlbPoolNames": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.nlbPools.value]"
@@ -1117,8 +1194,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "3242778122595851833"
+              "version": "0.32.4.45862",
+              "templateHash": "17662981702954878393"
             }
           },
           "parameters": {
@@ -1398,8 +1475,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.93.31351",
-                      "templateHash": "10641070614732364786"
+                      "version": "0.32.4.45862",
+                      "templateHash": "3737753991380666295"
                     }
                   },
                   "parameters": {
@@ -1486,7 +1563,7 @@
         "mode": "Incremental",
         "parameters": {
           "Name": {
-            "value": "[parameters('JupyterName')]"
+            "value": "[parameters('AiUnlimitedName')]"
           },
           "Location": {
             "value": "[deployment().location]"
@@ -1504,8 +1581,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.93.31351",
-              "templateHash": "16569855712937289121"
+              "version": "0.32.4.45862",
+              "templateHash": "12388745557700980847"
             }
           },
           "parameters": {
@@ -1614,15 +1691,27 @@
     },
     "PrivateIP": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrivateIP.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value]"
     },
-    "JupyterLabPublicHttpAccess": {
+    "AiUnlimitedPublicHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+      "value": "[concat(format('http://{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value), if(not(equals(variables('AiUnlimitedUIHttpPort'), 80)), concat(':', string(variables('AiUnlimitedUIHttpPort'))), ''))]"
     },
-    "JupyterLabPrivateHttpAccess": {
+    "AiUnlimitedPrivateHttpAccess": {
       "type": "string",
-      "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrivateIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
+      "value": "[concat(format('http://{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value), if(not(equals(variables('AiUnlimitedUIHttpPort'), 80)), concat(':', string(variables('AiUnlimitedUIHttpPort'))), ''))]"
+    },
+    "AiUnlimitedPublicGrpcAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'loadbalancer'), '2022-09-01').outputs.PublicDns.value, parameters('AiUnlimitedGrpcPort'))]"
+    },
+    "AiUnlimitedPrivateGrpcAccess": {
+      "type": "string",
+      "value": "[format('http://{0}:{1}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'ai-unlimited'), '2022-09-01').outputs.PrivateIP.value, parameters('AiUnlimitedGrpcPort'))]"
+    },
+    "KeyVaultName": {
+      "type": "string",
+      "value": "[if(equals(parameters('UseKeyVault'), 'New'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault'), '2022-09-01').outputs.name.value, '')]"
     },
     "NetworkSecurityGroupId": {
       "type": "string",

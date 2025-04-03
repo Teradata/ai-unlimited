@@ -38,8 +38,8 @@ param AiUnlimitedGrpcPort int = 3282
 // @description('port to access the AI Unlimited scheduler service grpc api.')
 // var AiUnlimitedSchedulerGrpcPort = 50051
 
-// @description('port to access the AI Unlimited scheduler service grpc api.')
-var AiUnlimitedSchedulerHttpPort = 50061
+@description('port to access the AI Unlimited scheduler api.')
+param AiUnlimitedSchedulerHttpPort int = 50061
 
 // @description('port to access the AI Unlimited service UI http.')
 var AiUnlimitedUIHttpPort = 80
@@ -71,13 +71,13 @@ param PersistentVolumeSize int = 100
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the AI Unlimited service')
-param AiUnlimitedVersion string = 'v0.3.0'
+param AiUnlimitedVersion string = 'v0.3.8'
 
 @description('Container Version of the AI Unlimited UI service')
-param AiUnlimitedUIVersion string = 'v0.1.0'
+param AiUnlimitedUIVersion string = 'v0.1.3'
 
-// @description('Container Version of the AI Unlimited scheduler service')
-var AiUnlimitedSchedulerVersion = 'latest'
+@description('Container Version of the AI Unlimited scheduler service')
+param AiUnlimitedSchedulerVersion string = 'v0.1.80'
 
 @description('Tags to apply to all newly created resources, in the form of {"key_one":"value_one","key_two":"value_two"}')
 param Tags object = {}
@@ -92,7 +92,6 @@ var registry = 'teradata'
 var workspaceRepository = 'ai-unlimited-workspaces'
 var workspaceSchedulerRepository = 'ai-unlimited-scheduler'
 var workspaceUIRepository = 'ai-unlimited-workspaces-ui'
-
 
 var cloudInitData = base64(format(
   loadTextContent('../../../scripts/ai-unlimited.cloudinit.yaml'),
@@ -112,8 +111,8 @@ var cloudInitData = base64(format(
     registry,
     workspaceSchedulerRepository,
     AiUnlimitedSchedulerVersion,
-    // AiUnlimitedSchedulerGrpcPort,
-    AiUnlimitedSchedulerHttpPort
+    AiUnlimitedSchedulerHttpPort,
+    AiUnlimitedGrpcPort
   )),
   base64(format(
     loadTextContent('../../../scripts/ai-unlimited-ui.service'),
@@ -268,8 +267,14 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 output PublicIP string = nlb.outputs.PublicIp
 output PrivateIP string = aiUnlimited.outputs.PrivateIP
-output AiUnlimitedPublicHttpAccess string = concat('http://${nlb.outputs.PublicDns}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
-output AiUnlimitedPrivateHttpAccess string = concat('http://${aiUnlimited.outputs.PrivateIP}', (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : ''))
+output AiUnlimitedPublicHttpAccess string = concat(
+  'http://${nlb.outputs.PublicDns}',
+  (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : '')
+)
+output AiUnlimitedPrivateHttpAccess string = concat(
+  'http://${aiUnlimited.outputs.PrivateIP}',
+  (AiUnlimitedUIHttpPort != 80 ? concat(':', string(AiUnlimitedUIHttpPort)) : '')
+)
 output AiUnlimitedPublicGrpcAccess string = 'http://${nlb.outputs.PublicDns}:${AiUnlimitedGrpcPort}'
 output AiUnlimitedPrivateGrpcAccess string = 'http://${aiUnlimited.outputs.PrivateIP}:${AiUnlimitedGrpcPort}'
 output KeyVaultName string = (UseKeyVault == 'New') ? vault.outputs.name : ''

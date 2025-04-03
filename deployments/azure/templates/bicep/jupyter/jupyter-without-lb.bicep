@@ -6,9 +6,8 @@ param ResourceGroupName string = 'ai-unlimited-jupyter'
 @description('Name for the Jupyter Labs service\'s virtual machine.')
 param JupyterName string
 
-@description('SSH public key value')
-@secure()
-param PublicKey string
+@description('GUID of the AI Unlimited Role')
+param RoleDefinitionId string
 
 @description('The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version.')
 @allowed([
@@ -42,9 +41,6 @@ param SourceAppSecGroups array = []
 @description('Destination Application Security Groups to give access to Jupyter Labs service instance.')
 param detinationAppSecGroups array = []
 
-@description('allow access the Jupyter Labs ssh port from the access cidr.')
-param AllowPublicSSH bool = true
-
 @description('should we use a new or existing volume for persistent data on the Jupyter server.')
 @allowed(['New', 'Existing'])
 param UsePersistentVolume string = 'New'
@@ -56,7 +52,7 @@ param PersistentVolumeSize int = 100
 param ExistingPersistentVolume string = 'NONE'
 
 @description('Container Version of the Jupyter Labs service')
-param JupyterVersion string = 'v0.1.0'
+param JupyterVersion string = 'v0.1.7'
 
 @description('Join token for the Jupyter Labs service')
 @secure()
@@ -97,6 +93,50 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-11-01' existing 
   name: Subnet
 }
 
+module vault '../modules/vault/vault.bicep' = {
+  scope: rg
+  name: 'vault'
+  params: {
+    encryptVolumes: true
+    keyVaultName: JupyterName 
+    location: rg.location
+    tags: Tags
+  }
+}
+
+module vaultAccessPolicy '../modules/vault/access-policy.bicep' = {
+  scope: rg
+  name: 'vault-access-policy'
+  params: {
+    vaultName: vault.outputs.name
+    accessPolicy: {
+      tenantId: subscription().tenantId
+      objectId: jupyter.outputs.PrincipleId
+      permissions: {
+        keys: [
+          'Create'
+          'Delete'
+          'Get'
+          'List'
+          'Update'
+          'Purge'
+          'Recover'
+          'Decrypt'
+          'Encrypt'
+          'Sign'
+          'UnwrapKey'
+          'Verify'
+          'WrapKey'
+          'GetRotationPolicy'
+          'SetRotationPolicy'
+        ]
+        secrets: ['Get', 'Set', 'Delete', 'List', 'Purge']
+        storage: ['Get']
+      }
+    }
+  }
+}
+
 module firewall '../modules/firewall.bicep' = {
   scope: rg
   name: 'firewall'
@@ -104,7 +144,7 @@ module firewall '../modules/firewall.bicep' = {
     location: rg.location
     name: SecurityGroup
     accessCidrs: AccessCIDRs
-    sshAccess: AllowPublicSSH
+    sshAccess: false
     jupyterHttpPort: JupyterHttpPort
     sourceAppSecGroups: SourceAppSecGroups
     detinationAppSecGroups: detinationAppSecGroups
@@ -119,7 +159,7 @@ module jupyter '../modules/instance.bicep' = {
     location: rg.location
     name: JupyterName
     adminUsername: 'azureuser'
-    sshPublicKey: PublicKey
+    sshPublicKey: PublicKey.outputs.PublicKey
     dnsLabelPrefix: dnsLabelPrefix
     vmSize: InstanceType
     subnetId: subnet.id
@@ -134,9 +174,19 @@ module jupyter '../modules/instance.bicep' = {
   }
 }
 
+module PublicKey '../modules/public-key.bicep' = {
+  scope: rg
+  name: 'Public-Key'
+  params: {
+    Name: JupyterName
+    Location: deployment().location
+    VaultName: vault.outputs.name
+    RoleID: RoleDefinitionId
+  }
+}
+
 output PublicIP string = jupyter.outputs.PublicIP
 output PrivateIP string = jupyter.outputs.PrivateIP
 output JupyterLabPublicHttpAccess string = 'http://${jupyter.outputs.PublicIP}:${JupyterHttpPort}?token=${JupyterToken}'
 output JupyterLabPrivateHttpAccess string = 'http://${jupyter.outputs.PrivateIP}:${JupyterHttpPort}?token=${JupyterToken}'
-output sshCommand string = 'ssh azureuser@${jupyter.outputs.PublicIP}'
 output NetworkSecurityGroupId string = firewall.outputs.Id

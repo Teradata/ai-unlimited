@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.31.92.45157",
-      "templateHash": "2742666112813260424"
+      "version": "0.33.93.31351",
+      "templateHash": "10127230545963316226"
     }
   },
   "parameters": {
@@ -22,10 +22,10 @@
         "description": "Name for the Jupyter Labs service's virtual machine."
       }
     },
-    "PublicKey": {
-      "type": "securestring",
+    "RoleDefinitionId": {
+      "type": "string",
       "metadata": {
-        "description": "SSH public key value"
+        "description": "GUID of the AI Unlimited Role"
       }
     },
     "OSVersion": {
@@ -96,13 +96,6 @@
         "description": "Destination Application Security Groups to give access to Jupyter Labs service instance."
       }
     },
-    "AllowPublicSSH": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "allow access the Jupyter Labs ssh port from the access cidr."
-      }
-    },
     "UsePersistentVolume": {
       "type": "string",
       "defaultValue": "New",
@@ -130,7 +123,7 @@
     },
     "JupyterVersion": {
       "type": "string",
-      "defaultValue": "v0.1.0",
+      "defaultValue": "v0.1.7",
       "metadata": {
         "description": "Container Version of the Jupyter Labs service"
       }
@@ -161,6 +154,185 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
+      "name": "vault",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "encryptVolumes": {
+            "value": true
+          },
+          "keyVaultName": {
+            "value": "[parameters('JupyterName')]"
+          },
+          "location": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), '2022-09-01', 'full').location]"
+          },
+          "tags": {
+            "value": "[parameters('Tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.33.93.31351",
+              "templateHash": "2548779574952100617"
+            }
+          },
+          "parameters": {
+            "encryptVolumes": {
+              "type": "bool"
+            },
+            "keyVaultName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "uuid": {
+              "type": "string",
+              "defaultValue": "[newGuid()]"
+            }
+          },
+          "variables": {
+            "nameCharLimit": 24,
+            "uniqueName": "[format('{0}-{1}', parameters('keyVaultName'), uniqueString(parameters('uuid')))]",
+            "uniqueKeyVaultName": "[substring(format('{0}', variables('uniqueName')), 0, if(less(length(variables('uniqueName')), variables('nameCharLimit')), length(variables('uniqueName')), variables('nameCharLimit')))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-02-01",
+              "name": "[variables('uniqueKeyVaultName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "softDeleteRetentionInDays": 7,
+                "enableSoftDelete": true,
+                "enablePurgeProtection": "[if(parameters('encryptVolumes'), true(), null())]",
+                "enabledForDiskEncryption": "[parameters('encryptVolumes')]",
+                "accessPolicies": []
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueKeyVaultName'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[variables('uniqueKeyVaultName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vault-access-policy",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vaultName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault'), '2022-09-01').outputs.name.value]"
+          },
+          "accessPolicy": {
+            "value": {
+              "tenantId": "[subscription().tenantId]",
+              "objectId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrincipleId.value]",
+              "permissions": {
+                "keys": [
+                  "Create",
+                  "Delete",
+                  "Get",
+                  "List",
+                  "Update",
+                  "Purge",
+                  "Recover",
+                  "Decrypt",
+                  "Encrypt",
+                  "Sign",
+                  "UnwrapKey",
+                  "Verify",
+                  "WrapKey",
+                  "GetRotationPolicy",
+                  "SetRotationPolicy"
+                ],
+                "secrets": [
+                  "Get",
+                  "Set",
+                  "Delete",
+                  "List",
+                  "Purge"
+                ],
+                "storage": [
+                  "Get"
+                ]
+              }
+            }
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.33.93.31351",
+              "templateHash": "5026010387554959122"
+            }
+          },
+          "parameters": {
+            "vaultName": {
+              "type": "string"
+            },
+            "accessPolicy": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults/accessPolicies",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/add', parameters('vaultName'))]",
+              "properties": {
+                "accessPolicies": [
+                  "[parameters('accessPolicy')]"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
       "name": "firewall",
       "resourceGroup": "[parameters('ResourceGroupName')]",
       "properties": {
@@ -179,7 +351,7 @@
             "value": "[parameters('AccessCIDRs')]"
           },
           "sshAccess": {
-            "value": "[parameters('AllowPublicSSH')]"
+            "value": false
           },
           "jupyterHttpPort": {
             "value": "[parameters('JupyterHttpPort')]"
@@ -200,8 +372,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.31.92.45157",
-              "templateHash": "392354314460473239"
+              "version": "0.33.93.31351",
+              "templateHash": "17468668314943482639"
             }
           },
           "parameters": {
@@ -570,7 +742,7 @@
             "value": "azureuser"
           },
           "sshPublicKey": {
-            "value": "[parameters('PublicKey')]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'Public-Key'), '2022-09-01').outputs.PublicKey.value]"
           },
           "dnsLabelPrefix": {
             "value": "[variables('dnsLabelPrefix')]"
@@ -612,8 +784,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.31.92.45157",
-              "templateHash": "11687747621230861550"
+              "version": "0.33.93.31351",
+              "templateHash": "3242778122595851833"
             }
           },
           "parameters": {
@@ -893,8 +1065,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.31.92.45157",
-                      "templateHash": "4325662974998231491"
+                      "version": "0.33.93.31351",
+                      "templateHash": "10641070614732364786"
                     }
                   },
                   "parameters": {
@@ -964,7 +1136,140 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'firewall')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'Public-Key')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "Public-Key",
+      "resourceGroup": "[parameters('ResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "Name": {
+            "value": "[parameters('JupyterName')]"
+          },
+          "Location": {
+            "value": "[deployment().location]"
+          },
+          "VaultName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault'), '2022-09-01').outputs.name.value]"
+          },
+          "RoleID": {
+            "value": "[parameters('RoleDefinitionId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.33.93.31351",
+              "templateHash": "16569855712937289121"
+            }
+          },
+          "parameters": {
+            "Location": {
+              "type": "string"
+            },
+            "Name": {
+              "type": "string"
+            },
+            "VaultName": {
+              "type": "string"
+            },
+            "RoleID": {
+              "type": "string"
+            },
+            "Uuid": {
+              "type": "string",
+              "defaultValue": "[newGuid()]"
+            }
+          },
+          "variables": {
+            "SecretName": "[format('{0}-PrivateKey', parameters('Name'))]",
+            "ScriptName": "[format('{0}-createKeys', parameters('Name'))]",
+            "IdentityName": "[format('{0}-scratch', parameters('Name'))]",
+            "RoleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('RoleID'))]",
+            "RoleDefinitionName": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName')), variables('RoleDefinitionId'), resourceGroup().id)]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[variables('IdentityName')]",
+              "location": "[parameters('Location')]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[variables('RoleDefinitionName')]",
+              "properties": {
+                "roleDefinitionId": "[variables('RoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2023-08-01",
+              "name": "[variables('ScriptName')]",
+              "location": "[parameters('Location')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName')))]": {}
+                }
+              },
+              "kind": "AzureCLI",
+              "properties": {
+                "forceUpdateTag": "[parameters('Uuid')]",
+                "azCliVersion": "2.0.80",
+                "timeout": "PT30M",
+                "retentionInterval": "P1D",
+                "cleanupPreference": "OnSuccess",
+                "scriptContent": "      #/bin/bash -e\n\n      echo -e 'y' | ssh-keygen -f scratch\n\n      privateKey=$(cat scratch)\n      publicKey=$(cat 'scratch.pub')\n\n      json=\"{\\\"keyinfo\\\":{\\\"privateKey\\\":\\\"$privateKey\\\",\\\"publicKey\\\":\\\"$publicKey\\\"}}\"\n\n      echo \"$json\" > $AZ_SCRIPTS_OUTPUT_PATH\n    "
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('IdentityName'))]",
+                "[resourceId('Microsoft.Authorization/roleAssignments', variables('RoleDefinitionName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('VaultName'), variables('SecretName'))]",
+              "properties": {
+                "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName')), '2023-08-01').outputs.keyinfo.privateKey]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "PublicKey": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName')), '2023-08-01').outputs.keyinfo.publicKey]"
+            },
+            "Status": {
+              "type": "object",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', variables('ScriptName')), '2023-08-01').status]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'vault')]"
       ]
     }
   ],
@@ -984,10 +1289,6 @@
     "JupyterLabPrivateHttpAccess": {
       "type": "string",
       "value": "[format('http://{0}:{1}?token={2}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PrivateIP.value, parameters('JupyterHttpPort'), parameters('JupyterToken'))]"
-    },
-    "sshCommand": {
-      "type": "string",
-      "value": "[format('ssh azureuser@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('ResourceGroupName')), 'Microsoft.Resources/deployments', 'jupyter'), '2022-09-01').outputs.PublicIP.value)]"
     },
     "NetworkSecurityGroupId": {
       "type": "string",

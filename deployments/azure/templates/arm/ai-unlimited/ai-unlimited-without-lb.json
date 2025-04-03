@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.31.92.45157",
-      "templateHash": "7904991390945018605"
+      "version": "0.33.93.31351",
+      "templateHash": "4326198175710565332"
     }
   },
   "parameters": {
@@ -83,6 +83,13 @@
         "description": "port to access the AI Unlimited service api."
       }
     },
+    "AiUnlimitedSchedulerHttpPort": {
+      "type": "int",
+      "defaultValue": 50061,
+      "metadata": {
+        "description": "port to access the AI Unlimited scheduler api."
+      }
+    },
     "SourceAppSecGroups": {
       "type": "array",
       "defaultValue": [],
@@ -141,16 +148,23 @@
     },
     "AiUnlimitedVersion": {
       "type": "string",
-      "defaultValue": "v0.3.0",
+      "defaultValue": "v0.3.8",
       "metadata": {
         "description": "Container Version of the AI Unlimited service"
       }
     },
     "AiUnlimitedUIVersion": {
       "type": "string",
-      "defaultValue": "v0.1.0",
+      "defaultValue": "v0.1.3",
       "metadata": {
         "description": "Container Version of the AI Unlimited UI service"
+      }
+    },
+    "AiUnlimitedSchedulerVersion": {
+      "type": "string",
+      "defaultValue": "v0.1.80",
+      "metadata": {
+        "description": "Container Version of the AI Unlimited scheduler service"
       }
     },
     "Tags": {
@@ -164,19 +178,17 @@
   "variables": {
     "$fxv#0": "#cloud-config\nwrite_files:\n- encoding: b64\n  content: \"{0}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{1}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited-scheduler.service\n  permissions: '0640'\n- encoding: b64\n  content: \"{2}\"\n  owner: root:root\n  path: /usr/lib/systemd/system/ai-unlimited-ui.service\n  permissions: '0640'\n\nruncmd:\n- mkdir -p /etc/td\n- |\n    export PERMDISK=$(lsscsi 1:0:0:0 -b | awk '{{print $2}}');\n    if [ -n \"${{PERMDISK}}\" ]; then blkid --match-token TYPE=ext4 ${{PERMDISK}} || (mkfs.ext4 -m0 ${{PERMDISK}} && e2label ${{PERMDISK}} WORKSPACES); fi\n    /usr/bin/echo \"LABEL=WORKSPACES /etc/td ext4 defaults 0 2\" >> /etc/fstab\n    /usr/bin/mount -a\n- while [ $(systemctl status docker | grep \"active (running)\" | wc -l) -lt 1 ]; do sleep 5; done\n- mkdir -p /etc/td/ai-unlimited\n- echo \"TD_VCD_INIT_API_KEY=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 64)\" > /etc/td/ai-unlimited/init_api_key.txt\n- sleep 60\n- systemctl enable ai-unlimited.service\n- systemctl start ai-unlimited.service\n- systemctl enable ai-unlimited-scheduler.service\n- systemctl start ai-unlimited-scheduler.service\n- systemctl enable ai-unlimited-ui.service\n- systemctl start ai-unlimited-ui.service\n",
     "$fxv#1": "[Unit]\nDescription=AI Unlimited\nAfter=docker.service\nRequires=docker.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nEnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt\nExecStartPre=-/usr/bin/docker volume create ssl_certs\nExecStartPre=-/usr/bin/docker network create -d bridge ai_unlimited\nExecStartPre=-/usr/bin/mkdir -p /etc/td/ai-unlimited\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e accept_license=Y \\\n    -e PLATFORM=azure \\\n    -e ARM_USE_MSI=true \\\n    -e ARM_SUBSCRIPTION_ID={5} \\\n    -e ARM_TENANT_ID={6} \\\n    -e TD_VCD_INIT_API_KEY \\\n    -p {3}:3000 \\\n    -p {4}:3282 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -v ssl_certs:/etc/td/ssl \\\n    --network ai_unlimited {7} \\\n    --rm --name %n {0}/{1}:{2} workspaces serve -v\n\n[Install]\nWantedBy=multi-user.target",
-    "$fxv#2": "[Unit]\nDescription=AI Unlimited Scheduler\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\nExecStart=/usr/bin/docker run \\\n    --network ai_unlimited \\\n    -p {3}:50061 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \\\n    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \\\n    -e TD_WSSCHED_POL_INTERVAL=2 \\\n    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \\\n    --rm --name %n {0}/{1}:{2} workspace-event-scheduler serve\n[Install]\nWantedBy=multi-user.target",
+    "$fxv#2": "[Unit]\nDescription=AI Unlimited Scheduler\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nEnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\nExecStart=/usr/bin/docker run \\\n    --network ai_unlimited \\\n    -p {3}:50061 \\\n    -v /etc/td/ai-unlimited:/etc/td \\\n    -e TD_WSSCHED_LOG_PATH=/etc/td/workspaces/scheduler_logs \\\n    -e TD_WSSCHED_TASK_LOG_PATH=/etc/td/workspaces/scheduler_logs/projects \\\n    -e TD_WSSCHED_POL_INTERVAL=60 \\\n    -e TD_WS_CONTAINER_NAME=ai-unlimited.service \\\n    -e TD_WSSCHED_DEV_LOC_OVR=ignore \\\n    -e TD_WS_SERVER_PORT={4} \\\n    -e TD_VCD_INIT_API_KEY \\\n    --rm --name %n {0}/{1}:{2} workspace-event-scheduler serve\n[Install]\nWantedBy=multi-user.target",
     "$fxv#3": "[Unit]\nDescription=AI Unlimited UI\nAfter=ai-unlimited.service\nRequires=ai-unlimited.service\nStartLimitInterval=200\nStartLimitBurst=10\n\n[Service]\nTimeoutStartSec=0\nRestart=always\nRestartSec=2\nEnvironmentFile=/etc/td/ai-unlimited/init_api_key.txt\nExecStartPre=-/usr/bin/docker stop %n\nExecStartPre=-/usr/bin/docker rm %n\nExecStartPre=/usr/bin/docker pull {0}/{1}:{2}\n\nExecStart=/usr/bin/docker run \\\n    -e TD_VCD_USE_TLS=false \\\n    -e TD_VCD_AUTH_PORT={4}\\\n    -e TD_VCD_API_PORT={5}\\\n    -e TD_VCD_INIT_API_KEY \\\n    -p 80:80 \\\n    -p 443:443 \\\n    -v ssl_certs:/etc/ssl/td \\\n    --network ai_unlimited {6} \\\n    --rm --name %n {0}/{1}:{2}   \n\n[Install]\nWantedBy=multi-user.target",
-    "AiUnlimitedSchedulerHttpPort": 50061,
     "AiUnlimitedUIHttpPort": 80,
     "AiUnlimitedUIHttpsPort": 443,
-    "AiUnlimitedSchedulerVersion": "latest",
     "roleAssignmentName": "[guid(subscription().id, parameters('AiUnlimitedName'), subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), parameters('RoleDefinitionId'))]",
     "dnsLabelPrefix": "[format('td{0}', uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('ResourceGroupName')), deployment().name, parameters('AiUnlimitedName')))]",
     "registry": "teradata",
     "workspaceRepository": "ai-unlimited-workspaces",
     "workspaceSchedulerRepository": "ai-unlimited-scheduler",
     "workspaceUIRepository": "ai-unlimited-workspaces-ui",
-    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, '--network-alias ai-unlimited')), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), variables('AiUnlimitedSchedulerVersion'), variables('AiUnlimitedSchedulerHttpPort'))), base64(format(variables('$fxv#3'), variables('registry'), variables('workspaceUIRepository'), parameters('AiUnlimitedUIVersion'), variables('AiUnlimitedUIHttpPort'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), '--network-alias ai-unlimited'))))]"
+    "cloudInitData": "[base64(format(variables('$fxv#0'), base64(format(variables('$fxv#1'), variables('registry'), variables('workspaceRepository'), parameters('AiUnlimitedVersion'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), subscription().subscriptionId, subscription().tenantId, '--network-alias ai-unlimited')), base64(format(variables('$fxv#2'), variables('registry'), variables('workspaceSchedulerRepository'), parameters('AiUnlimitedSchedulerVersion'), parameters('AiUnlimitedSchedulerHttpPort'), parameters('AiUnlimitedGrpcPort'))), base64(format(variables('$fxv#3'), variables('registry'), variables('workspaceUIRepository'), parameters('AiUnlimitedUIVersion'), variables('AiUnlimitedUIHttpPort'), parameters('AiUnlimitedAuthPort'), parameters('AiUnlimitedGrpcPort'), '--network-alias ai-unlimited'))))]"
   },
   "resources": [
     {
@@ -222,8 +234,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.31.92.45157",
-              "templateHash": "29287785012335710"
+              "version": "0.33.93.31351",
+              "templateHash": "2548779574952100617"
             }
           },
           "parameters": {
@@ -341,8 +353,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.31.92.45157",
-              "templateHash": "16095084913002426133"
+              "version": "0.33.93.31351",
+              "templateHash": "5026010387554959122"
             }
           },
           "parameters": {
@@ -402,7 +414,7 @@
             "value": "[parameters('AiUnlimitedGrpcPort')]"
           },
           "aiUnlimitedSchedulerHttpPort": {
-            "value": "[variables('AiUnlimitedSchedulerHttpPort')]"
+            "value": "[parameters('AiUnlimitedSchedulerHttpPort')]"
           },
           "aiUnlimitedUIHttpPort": {
             "value": "[variables('AiUnlimitedUIHttpPort')]"
@@ -426,8 +438,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.31.92.45157",
-              "templateHash": "392354314460473239"
+              "version": "0.33.93.31351",
+              "templateHash": "17468668314943482639"
             }
           },
           "parameters": {
@@ -838,8 +850,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.31.92.45157",
-              "templateHash": "11687747621230861550"
+              "version": "0.33.93.31351",
+              "templateHash": "3242778122595851833"
             }
           },
           "parameters": {
@@ -1119,8 +1131,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.31.92.45157",
-                      "templateHash": "4325662974998231491"
+                      "version": "0.33.93.31351",
+                      "templateHash": "10641070614732364786"
                     }
                   },
                   "parameters": {
@@ -1224,8 +1236,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.31.92.45157",
-              "templateHash": "9690061458974637253"
+              "version": "0.33.93.31351",
+              "templateHash": "16569855712937289121"
             }
           },
           "parameters": {
